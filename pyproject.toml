@@ -49,6 +49,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["slow: runs the real OCR model; needs the ocr extra"]
+addopts = "-m 'not slow'"
 pythonpath = ["."]
 
 [dependency-groups]

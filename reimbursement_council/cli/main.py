@@ -12,6 +12,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from reimbursement_council.adapters.files import load_claim_file, load_reference_file
+from reimbursement_council.adapters.ocr_engine import (
+    CachedOcrEngine,
+    EasyOcrEngine,
+    OcrNotInstalledError,
+)
+from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
@@ -35,6 +41,7 @@ def _parser() -> argparse.ArgumentParser:
     run_claim.add_argument("--reference", type=Path, required=True, help="Members and policies.")
     run_claim.add_argument("--config-dir", type=Path, default=Path("config"))
     run_claim.add_argument("--db", type=Path, default=Path("data/claims.sqlite"))
+    run_claim.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
     return parser
 
 
@@ -72,8 +79,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         settings = load_settings(args.config_dir)
         reference = load_reference_file(args.reference)
         claim = load_claim_file(args.claim_path)
-        decision = process_claim(claim, reference, settings, ClaimStore(args.db), datetime.now(UTC))
-    except (ConfigError, LookupError, FileNotFoundError, ValueError) as error:
+        engine = CachedOcrEngine(EasyOcrEngine(), args.ocr_cache)
+        decision = process_claim(
+            claim,
+            reference,
+            settings,
+            ClaimStore(args.db),
+            datetime.now(UTC),
+            reader_for=make_reader_for(settings, engine),
+        )
+    except (ConfigError, LookupError, FileNotFoundError, ValueError, OcrNotInstalledError) as error:
         # pydantic's ValidationError is a ValueError, so bad files land here too.
         logger.error("could not decide the claim: %s", error)
         return EXIT_BAD_INPUT
