@@ -1,13 +1,13 @@
 # CLAUDE.md
 
 ## Project
-- Name: Claims Council
+- Name: Reimbursement Council
 - One line: Health insurance reimbursement claims that decide themselves when it is safe, ask the member to fix what is missing, and give a human reviewer one clear card when it is not.
 - Owner: Abdulrahman Aljahdali (GitHub: Cloudy-null). I must be able to explain every part of this repo in an interview.
 - Context: Solve for Bupa hackathon, November 2026. Day 5 demo. Not tied to Bupa systems.
 
 ## Read these first, every session
-1. docs/superpowers/specs/2026-11-23-claims-council-design.md (what we are building and why)
+1. docs/superpowers/specs/2026-11-23-reimbursement-council-design.md (what we are building and why)
 2. docs/HANDOVER.md (where things stand)
 3. docs/CONVENTIONS.md (code, data and config rules)
 4. docs/DATA_MODEL.md (the shapes every stage passes around)

@@ -1,4 +1,4 @@
-# Claims Council
+# Reimbursement Council
 
 Health insurance reimbursement claims that decide themselves when it is safe, ask the member to fix what is missing, and give a human reviewer one clear card when it is not.
 
@@ -31,7 +31,7 @@ Built for the Solve for Bupa hackathon, November 2026. Not affiliated with or us
 Design stage. See docs/HANDOVER.md.
 
 ## Docs
-- Design: docs/superpowers/specs/2026-11-23-claims-council-design.md
+- Design: docs/superpowers/specs/2026-11-23-reimbursement-council-design.md
 - Conventions: docs/CONVENTIONS.md
 - Data model: docs/DATA_MODEL.md
 - UI design: docs/DESIGN.md

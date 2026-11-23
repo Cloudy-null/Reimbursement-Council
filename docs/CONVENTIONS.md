@@ -16,7 +16,7 @@ One place for how things are named, stored and configured. If you need to break 
 
 ## Folder map
 ```
-claims_council/
+reimbursement_council/
   config/        load and validate config/*.yaml and .env
   core/          pure logic: rules, council members, combine, calibrate, lanes, payout math
   adapters/      vision model, QR decoder, storage, dataset loaders
@@ -25,14 +25,14 @@ claims_council/
   cli/           commands: generate data, run harness, run ablation, demo mode
 config/          decision.yaml, policy.yaml, prices.yaml, experiments.yaml
 data/            generated and downloaded data (gitignored)
-tests/           mirrors claims_council/
+tests/           mirrors reimbursement_council/
 docs/            everything in CLAUDE.md
 ```
 
 ## Config files (the only place numbers live)
 - config/policy.yaml: made-up policy. Claim window days (90), benefit limits per category, co-pay percents, exclusion list, network price rule.
 - config/prices.yaml: reference price list per service and medicine.
-- config/decision.yaml: council member weights, which members are on, calibration method, hard rule confidence floor, disagreement limit, review_cost in SAR, always-review amount, self-fix max retries.
+- config/decision.yaml: council member weights, which members are on, calibration method, hard rule confidence floor, disagreement limit, reviewer_time_value in SAR, always_review_amount_enabled (off by default), self-fix max retries.
 - config/experiments.yaml: named switch sets for each ablation (see EXPERIMENTS.md).
 - Every config file is validated by a Pydantic model on load. A bad value fails loudly at startup.
 

@@ -1,13 +1,13 @@
 ---
 name: add-council-member
-description: Use when adding a new council member to Claims Council or changing how an existing member scores a claim.
+description: Use when adding a new council member to Reimbursement Council or changing how an existing member scores a claim.
 ---
 
 # Add or change a council member
 
-1. Read docs/superpowers/specs/2026-11-23-claims-council-design.md section 5.2 and docs/DATA_MODEL.md (Vote).
+1. Read docs/superpowers/specs/2026-11-23-reimbursement-council-design.md section 5.2 and docs/DATA_MODEL.md (Vote).
 2. Write down, before coding: what the member looks at, what its score from 0 to 1 means, and what kind of request it can make for self-fix. Add a row to the council table in the spec.
-3. The member lives in claims_council/core/council/<name>.py and follows the shared interface: takes the claim case, returns a Vote. No I/O inside core. If it needs a model call, the call goes through an adapter passed in.
+3. The member lives in reimbursement_council/core/council/<name>.py and follows the shared interface: takes the claim case, returns a Vote. No I/O inside core. If it needs a model call, the call goes through an adapter passed in.
 4. The score must be a real number from 0 to 1, never a yes or no. Only hard rules are yes or no.
 5. Reason text is plain English, one sentence, and points at evidence (field names or document boxes).
 6. Add its weight and an on or off switch to config/decision.yaml. Default weight 1.0 until tuned.

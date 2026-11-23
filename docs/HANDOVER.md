@@ -18,7 +18,7 @@ Nothing to run yet.
 ## 5. Open CHECK items and known bugs
 - CHECK: demo date and pitch length.
 - CHECK: the second required document in the real flow (proof of payment plus what?).
-- CHECK: review_cost value in SAR.
+- CHECK: reviewer_time_value in SAR.
 - CHECK: dataset licenses.
 - CHECK: optional free Gemini API key.
 - CHECK: DESIGN.md color contrast.

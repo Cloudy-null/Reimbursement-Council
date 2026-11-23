@@ -1,6 +1,6 @@
 ---
 name: add-defect-type
-description: Use when adding a new kind of bad or tricky claim to the Claims Council synthetic data generator, or when a real test receipt shows a failure the synthetic data does not cover.
+description: Use when adding a new kind of bad or tricky claim to the Reimbursement Council synthetic data generator, or when a real test receipt shows a failure the synthetic data does not cover.
 ---
 
 # Add a defect type to the synthetic data

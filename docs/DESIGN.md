@@ -2,7 +2,7 @@
 
 The single source for look and feel. Status: approved to build as a draft. The owner corrects things as we go; every correction is made here first, then in the code.
 
-All values below become CSS variables in one file: claims_council/web/static/tokens.css. Pages use only these variables. To restyle the whole app, change that file and this doc together.
+All values below become CSS variables in one file: reimbursement_council/web/static/tokens.css. Pages use only these variables. To restyle the whole app, change that file and this doc together.
 
 ## Direction
 Calm and clear, like a good bank receipt, not like a hospital ad. The member should feel "I know exactly what is happening with my money." The reviewer should feel "everything I need is on one screen." Lots of white space, strong numbers, very little decoration. Color is used only to mean something (lane, confidence), never for decoration.
@@ -12,7 +12,10 @@ Not this: purple gradients, glassy cards, stock photos of doctors, a hero with t
 We are not imitating Bupa's brand. Our own name, our own colors.
 
 ## References
-None picked. Build from this doc. If the owner adds references later, list them here with what to take from each. Kinds of screens worth looking at:
+- https://www.ahmedalluqmani.com (owner's pick): minimal. Take the restraint: lots of space, few colors, type doing the work. The page renders with JavaScript, so its styles could not be read from here.
+  First UI task: open it with Playwright, take desktop and phone screenshots, read its computed fonts, colors and spacing, and update the tokens in this doc to match its feel. Keep our lane colors and the Arabic font. Show the owner the before and after, then build.
+
+Other kinds of screens worth looking at:
 - A banking app's transaction detail screen (how money and status are shown)
 - A tax or receipt scanner app's review screen (how read fields are confirmed)
 - A support or moderation tool's queue card (how a reviewer sees evidence and acts fast)

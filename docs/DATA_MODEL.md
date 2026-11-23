@@ -61,7 +61,7 @@ Vote (one per council member)
 Decision (like FHIR ClaimResponse)
 - claim_id, decided_at, config_version (git commit or config hash)
 - combined_score, p_good (calibrated), disagreement
-- payout_requested, payout_calculated, expected_loss, review_cost
+- payout_requested, payout_calculated, expected_loss, reviewer_time_value
 - lane: auto_approve, auto_reject, self_fix, human_review
 - outcome: complete, partial, error, queued
 - member_message (plain text, Arabic and English)

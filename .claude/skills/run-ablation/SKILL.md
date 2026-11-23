@@ -1,6 +1,6 @@
 ---
 name: run-ablation
-description: Use whenever you measure the effect of a switch, weight, threshold or council member in Claims Council, or when asked to fill in a result in docs/EXPERIMENTS.md.
+description: Use whenever you measure the effect of a switch, weight, threshold or council member in Reimbursement Council, or when asked to fill in a result in docs/EXPERIMENTS.md.
 ---
 
 # Run an ablation

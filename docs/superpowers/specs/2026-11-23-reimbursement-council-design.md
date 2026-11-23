@@ -1,4 +1,4 @@
-# Claims Council: Design
+# Reimbursement Council: Design
 
 Date: 2026-11-23
 Owner: Abdulrahman Aljahdali
@@ -6,7 +6,7 @@ Status: Draft, waiting for owner approval
 
 ## 1. What this is and why
 
-Claims Council is a system for health insurance reimbursement claims. A member pays for treatment out of pocket, takes a photo of the receipt, and asks to be paid back. Today this flow is slow and full of friction: the member does not know if the claim will pass, a human reviews almost every claim, and the member waits days with no idea why.
+Reimbursement Council is a system for health insurance reimbursement claims. A member pays for treatment out of pocket, takes a photo of the receipt, and asks to be paid back. Today this flow is slow and full of friction: the member does not know if the claim will pass, a human reviews almost every claim, and the member waits days with no idea why.
 
 We are building our own version of this flow from scratch, hackathon style, for the Solve for Bupa challenge (day 5 demo on 2026-11-26, CHECK: confirm demo date). It is not tied to Bupa's real systems. The goal is the coolest working solution we can prove with numbers.
 
@@ -111,11 +111,13 @@ Each vote can carry a request, for example "the date is unreadable, please retak
 
 ### 5.4 Lanes
 
-Inputs: p_good, disagreement, payout, review_cost (config, CHECK: pick a realistic SAR value per human review, start with 25 SAR), any hard rule results.
+Inputs: p_good, disagreement, payout, reviewer_time_value, any hard rule results.
+
+reviewer_time_value is not money the member pays. It is what a reviewer's time on one claim is worth, in SAR, plus the cost of making the member wait. It is the single knob that decides how many claims go to humans: raise it and more claims auto approve, lower it and more go to review.
 
 1. Any hard rule fails on confident data: auto reject, with the rule as the reason.
 2. Expected loss = (1 - p_good) x payout.
-3. If expected loss is below review_cost, disagreement is below the disagreement limit, and payout is below the always-review amount: auto approve (full or partial payout as computed).
+3. If expected loss is below reviewer_time_value and disagreement is below the disagreement limit: auto approve (full or partial payout as computed). There is no fixed amount cap. A big claim needs a much higher p_good to pass, because expected loss grows with the amount, but a big claim that is clearly fine still auto approves. An optional cap exists as a switch (always_review_amount_enabled, off by default) for an ablation.
 4. Else, if p_good is low and at least one council member made a specific request, and the member has retries left (max 2): self-fix. The member chooses to upload what was asked now, or to send it to a human and wait longer.
 5. Else: human review.
 
@@ -189,7 +191,7 @@ Demo safety: a demo mode replays saved results for the demo claims so the demo w
 
 These were open in the first draft. Settled here so the overnight build does not guess. Owner can change any of them.
 
-- Starting values in config/decision.yaml, to be tuned on synthetic_tune: hard rule confidence floor 0.90, disagreement limit 0.25, always-review amount 5,000 SAR, review_cost 25 SAR, self-fix max retries 2, all council weights 1.0.
+- Starting values in config/decision.yaml, to be tuned on synthetic_tune: hard rule confidence floor 0.90, disagreement limit 0.25, reviewer_time_value 25 SAR (owner said a review costs time, not member money; this is that time in SAR), always-review cap off, self-fix max retries 2, all council weights 1.0.
 - "Paid at the right amount" in metrics means the payout is within 1 SAR of the correct payout.
 - Reader and model outputs are cached on disk by image hash plus reader version plus model name. Ablation reruns read the cache, so they cost nothing and give the same extraction. A prompt change bumps the prompt version.
 - synthetic_tune starts at 500 claims. Grow it only after checking API cost (see CHECK on budget).
@@ -209,6 +211,6 @@ These were open in the first draft. Settled here so the overnight build does not
 
 - CHECK: demo date and pitch length.
 - CHECK: the second required document in the real Bupa flow (proof of payment plus what?).
-- CHECK: review_cost value.
+- CHECK: reviewer_time_value. Owner may prefer dropping it; if so, cost-based lanes (decision 003) fall back to a fixed threshold.
 - CHECK: dataset licenses.
 - CHECK: owner creates a free Gemini API key if we want the optional reader and case reviewer.
