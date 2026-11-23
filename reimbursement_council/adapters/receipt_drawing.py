@@ -80,6 +80,14 @@ class Damage(Model):
     seed: int = 0
 
 
+DAMAGE_PRESETS: dict[str, Damage | None] = {
+    "none": None,
+    "light": Damage(blur_sigma=0.8, rotate_degrees=1.5, noise_std=4.0, jpeg_quality=80),
+    "heavy": Damage(blur_sigma=1.4, rotate_degrees=3.0, noise_std=10.0, jpeg_quality=55),
+}
+"""How hard a generated receipt is spoiled, like a quick or careless phone photo."""
+
+
 class DrawnReceipt(Model):
     png: bytes
     width: int

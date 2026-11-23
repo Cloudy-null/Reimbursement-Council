@@ -19,6 +19,7 @@ from reimbursement_council.adapters.ocr_engine import (
 )
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
+from reimbursement_council.cli import receipts
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.money import format_sar
@@ -42,6 +43,7 @@ def _parser() -> argparse.ArgumentParser:
     run_claim.add_argument("--config-dir", type=Path, default=Path("config"))
     run_claim.add_argument("--db", type=Path, default=Path("data/claims.sqlite"))
     run_claim.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
+    receipts.add_commands(commands)
     return parser
 
 
@@ -75,6 +77,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         level=logging.INFO, stream=sys.stderr, format="%(levelname)s %(name)s: %(message)s"
     )
     args = _parser().parse_args(argv)
+    if args.command in ("make-receipts", "read-accuracy"):
+        command = (
+            receipts.make_receipts if args.command == "make-receipts" else receipts.read_accuracy
+        )
+        _use_utf8_stdout()
+        try:
+            return command(args)
+        except (ConfigError, ValueError, OcrNotInstalledError, FileNotFoundError) as error:
+            logger.error("command failed: %s", error)
+            return EXIT_BAD_INPUT
     try:
         settings = load_settings(args.config_dir)
         reference = load_reference_file(args.reference)
