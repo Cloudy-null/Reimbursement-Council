@@ -1,13 +1,14 @@
 # Handover
 
 ## 1. Current status
-Planning only. No code yet. The spec is approved (2026-11-23). The first build plan is written and waiting for owner review: docs/superpowers/plans/2026-11-23-walking-skeleton.md. It builds a walking skeleton: every pipeline stage in Python with tests, a fixture reader instead of OCR, and a run-claim CLI. No screens.
+Building the walking skeleton plan (docs/superpowers/plans/2026-11-23-walking-skeleton.md) on branch build/skeleton, native execution. Spec approved 2026-11-23.
+Progress: Task 1 of 15 done (project setup and CI). Every task is one or more commits; git log is the record.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages: intake, extraction (QR first, vision model, arithmetic checks), hard rules, council, decision (combine, calibrate, lanes), explanation. Three screens plus a metrics page. Planned folder map is in docs/CONVENTIONS.md.
 
 ## 3. How to run, test, and deploy
-Nothing to run yet.
+Install uv, then: `uv sync` and `uv run pytest`. Checks: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy`.
 
 ## 4. Data sources and known data issues
 - Synthetic generator (to build) for training and tuning.
@@ -23,12 +24,11 @@ Nothing to run yet.
 - CHECK: optional free Gemini API key.
 - CHECK: DESIGN.md color contrast.
 - CHECK: the walking skeleton plan makes 10 calls the spec left open (list at the top of the plan, "Decisions this plan makes"). Owner to confirm or change.
-- CHECK: uv is not installed on the owner's machine, and Python 3.12 is missing (3.11 and 3.13 are there). uv can install 3.12 itself.
 
 ## 6. Next 3 tasks
-1. Owner reviews the walking skeleton plan and picks how to run it (subagent-driven or native).
-2. Owner installs uv.
-3. Build the plan on branch build/skeleton, starting with Task 1 (project setup and CI).
+1. Task 2: domain models.
+2. Task 3: config files and loader.
+3. Task 4: money parsing and ZATCA QR decoding.
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
