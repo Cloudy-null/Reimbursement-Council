@@ -2,7 +2,7 @@
 
 ## 1. Current status
 Building the walking skeleton plan (docs/superpowers/plans/2026-11-23-walking-skeleton.md) on branch build/skeleton, native execution. Spec approved 2026-11-23.
-Progress: Task 2 of 15 done (domain models). Every task is one or more commits; git log is the record.
+Progress: Task 3 of 15 done (config files and loader). Every task is one or more commits; git log is the record.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages: intake, extraction (QR first, vision model, arithmetic checks), hard rules, council, decision (combine, calibrate, lanes), explanation. Three screens plus a metrics page. Planned folder map is in docs/CONVENTIONS.md.
@@ -26,9 +26,9 @@ Install uv, then: `uv sync` and `uv run pytest`. Checks: `uv run ruff check .`, 
 - CHECK: the walking skeleton plan makes 10 calls the spec left open (list at the top of the plan, "Decisions this plan makes"). Owner to confirm or change.
 
 ## 6. Next 3 tasks
-1. Task 3: config files and loader.
-2. Task 4: money parsing and ZATCA QR decoding.
-3. Task 5: readers and QR from images.
+1. Task 4: money parsing and ZATCA QR decoding.
+2. Task 5: readers and QR from images.
+3. Task 6: extraction stage.
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
