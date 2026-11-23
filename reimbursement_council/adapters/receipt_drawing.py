@@ -274,8 +274,9 @@ def _damage(image: Image.Image, damage: Damage) -> Image.Image:
         pixels = np.clip(pixels.astype(np.float64) + noise, 0, 255).astype(np.uint8)
     if damage.jpeg_quality < 95:
         ok, jpeg = cv2.imencode(".jpg", pixels, [cv2.IMWRITE_JPEG_QUALITY, damage.jpeg_quality])
-        if ok:
-            pixels = cv2.imdecode(jpeg, cv2.IMREAD_COLOR)
+        decoded = cv2.imdecode(jpeg, cv2.IMREAD_COLOR) if ok else None
+        if decoded is not None:
+            pixels = decoded
     return Image.fromarray(pixels)
 
 
