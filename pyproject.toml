@@ -5,6 +5,8 @@ description = "Health insurance reimbursement claims that decide themselves when
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "numpy==2.5.5",
+    "opencv-python-headless==5.1.0.95",
     "pydantic==2.14.4",
     "pyyaml==6.0.4",
 ]
