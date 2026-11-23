@@ -2,7 +2,7 @@
 
 Date: 2026-11-23
 Owner: Abdulrahman Aljahdali
-Status: Draft, waiting for owner approval
+Status: Approved by the owner on 2026-11-23
 
 ## 1. What this is and why
 
@@ -165,7 +165,7 @@ Listed in docs/EXPERIMENTS.md. Each idea has a switch, a hypothesis, a metric an
 
 Each layer must leave a working demo. Tag each finished layer in git (layer-1, layer-2, ...) so any layer can be returned to.
 
-1. Spine. Intake, QR decode, vision extraction, arithmetic checks, hard rules, data model, storage. Done when a receipt image goes in and stored fields plus hard rule results come out, with tests.
+1. Spine. Intake, QR decode, extraction with the offline reader, arithmetic checks, hard rules, data model, storage. Done when a receipt image goes in and stored fields plus hard rule results come out, with tests.
 2. Decision. Council members, weighted combine, calibration, disagreement, lanes, cost-based approval. Done when the synthetic set runs end to end and produces lanes.
 3. Screens. Member upload, preview, result, self-fix choice. Reviewer card. Done when a full claim can be filed and reviewed in the browser, on desktop and phone sizes.
 4. Proof. Test harness, real test set runner, switches, metrics page, ablation runs. Done when docs/EXPERIMENTS.md has real numbers.
