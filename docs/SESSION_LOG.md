@@ -17,3 +17,4 @@
 - Broke: nothing lasting. Ruff 0.17 formats Python inside markdown, so docs/ is excluded from ruff.
 - Decisions: rulings are in the plan ledger and listed in the final report (CI action versions, LF line endings, patient history for limits, ValueError for non-JSON files).
 - Next: owner review of the branch, then the OCR reader plan.
+- Review: a data quality reviewer and a fresh code reviewer checked the whole branch. They found money bugs (payout above the receipt total, VAT under and over paid, duplicates missed or blocking a correct resubmission, dates taken in UTC). All Critical and Important findings were fixed with a failing test first. Calls made and deferred items are in HANDOVER section 5.

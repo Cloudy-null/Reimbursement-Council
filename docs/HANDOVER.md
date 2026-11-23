@@ -26,6 +26,23 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
 - CHECK: optional free Gemini API key.
 - CHECK: DESIGN.md color contrast.
 - CHECK: the walking skeleton plan makes 10 calls the spec left open (list at the top of the plan, "Decisions this plan makes"). Owner to confirm or change.
+- CHECK: calls made while building, owner to confirm:
+  - history and benefit limits come from the patient, not the member filing (limits are per person treated).
+  - the member filing must also be on the claim's policy, or person_not_covered fails.
+  - auto approve is also blocked by: a failed check, a missing or unclear receipt total, a payout above the receipt total, or more than one receipt in the claim.
+  - a possible duplicate (same VAT number, treatment date and total, or a fingerprint match with unclear parts) goes to human review, never to self-fix or rejection.
+  - a rejected claim's receipt can be sent again in a new claim.
+  - VAT paid is never more than the VAT on the receipt.
+  - dates are compared in local time, a fixed UTC+3 offset in config/policy.yaml.
+- Deferred, not built yet:
+  - add-council-member skill steps 9 (ablation run) and 10 (reviewer card row): need the harness and the screens.
+  - a fully used benefit limit gives "approved in part, 0.00 SAR". A clearer message is needed.
+  - a PDF document stops the claim with an input error and stores no decision (PDFs are the next plan).
+  - the provider is matched on a VAT number of any confidence.
+  - the CLI treats any ValueError as bad input, so a code bug can look like bad input.
+  - saving the decision and the receipt are two transactions, not one.
+  - an infinite weight in YAML would give a NaN score.
+  - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
 1. Owner reviews branch build/skeleton and the 10 plan decisions, then merges or asks for changes.

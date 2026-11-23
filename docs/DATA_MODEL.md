@@ -46,7 +46,7 @@ ExtractedField
 - source: qr, ocr, vision, member_confirmed, reviewer. ocr is the default offline reader. vision is the optional Gemini reader.
 - confidence (0 to 1)
 - location: page and box, optional
-- Value format: money fields are halalas as digits ("17250"), treatment_date is YYYY-MM-DD, invoice_timestamp is the raw ISO text from the receipt, the rest is text.
+- Value format: money fields are halalas as digits ("17250"), checked when the field is built, so a reader that hands over "22.50" is refused. treatment_date is YYYY-MM-DD in local time, invoice_timestamp is the raw ISO text from the receipt, the rest is text.
 
 LineItem
 - description, service_code (matched, optional), quantity, unit_price, amount, confidence (0 to 1)
@@ -54,6 +54,8 @@ LineItem
 CheckResult (arithmetic and QR match)
 - name (items_sum_to_subtotal, vat_is_15_percent, subtotal_plus_vat_is_total, qr_matches_text)
 - passed (bool), details, fields (the fields the check looked at)
+- items_sum_to_subtotal compares the items with the subtotal, else with total minus VAT, else with the total.
+- Any failed check blocks auto approve.
 
 ReaderOutput (what a reader returns for one document)
 - fields: list of ExtractedField, line_items: list of LineItem, qr_payloads: list of raw QR strings
@@ -65,6 +67,11 @@ RuleResult (hard rules)
 - rule (late, policy_inactive, person_not_covered, excluded_service, duplicate, multiple_patients)
 - outcome: pass, fail, not_sure (data below the confidence floor)
 - reason (plain text), fields (the fields the rule looked at)
+
+ReceiptKeys and SeenReceipts (duplicate check)
+- fingerprint: VAT number, invoice time in UTC, total. A confident match is a duplicate.
+- weak_key: VAT number, treatment date, total. A match is only a possible duplicate, sent to a human.
+- The store keeps one receipt row per claim with its lane. Receipts of rejected claims are not counted.
 
 ClaimCase (what every council member reads)
 - claim, member, policy, provider, history
