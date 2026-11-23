@@ -1,0 +1,19 @@
+{
+  "claim_id": "00000000-0000-4000-8000-0000000000c3",
+  "member_id": "00000000-0000-4000-8000-0000000000a1",
+  "patient_member_id": "00000000-0000-4000-8000-0000000000a1",
+  "policy_id": "00000000-0000-4000-8000-0000000000b1",
+  "submitted_at": "2026-11-20T09:00:00Z",
+  "status": "submitted",
+  "retries_used": 0,
+  "documents": [
+    {
+      "document_id": "00000000-0000-4000-8000-0000000000d3",
+      "claim_id": "00000000-0000-4000-8000-0000000000c3",
+      "kind": "receipt",
+      "file_path": "blurry_date.reading.json",
+      "image_hash": null,
+      "uploaded_at": "2026-11-20T09:00:00Z"
+    }
+  ]
+}

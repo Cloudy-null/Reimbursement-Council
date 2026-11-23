@@ -1,0 +1,28 @@
+# Every weight, threshold, cost and switch for deciding a claim. Starting values, tuned on synthetic_tune.
+# Money in halalas. Scores and limits from 0 to 1.
+hard_rule_confidence_floor: 0.90
+disagreement_limit: 0.25
+reviewer_time_value_halalas: 2500
+qr_first_enabled: true
+arithmetic_checks_enabled: true
+arithmetic_tolerance_halalas: 1
+failed_check_confidence_factor: 0.5
+partial_payout_tolerance_halalas: 100
+calibration_enabled: false
+calibration_method: platt
+disagreement_routing_enabled: true
+cost_lanes_enabled: true
+fixed_p_good_threshold: 0.90
+always_review_amount_enabled: false
+always_review_amount_halalas: 500000
+self_fix_enabled: true
+self_fix_max_retries: 2
+self_fix_p_good_limit: 0.6
+gemini_reader_enabled: false
+members:
+  document_checker: {enabled: true, weight: 1.0, required_fields: [provider_name, treatment_date, total], failed_check_score_cap: 0.5}
+  coverage_checker: {enabled: true, weight: 1.0, no_items_score: 0.3}
+  price_checker: {enabled: true, weight: 1.0, zero_score_ratio: 3.0, unknown_item_score: 0.5}
+  # provider_trust_weight: share of the score from provider trust; the rest is member history
+  history_member: {enabled: true, weight: 1.0, min_past_claims: 3, provider_trust_weight: 0.5}
+  case_reviewer: {enabled: false, weight: 1.0}

@@ -1,0 +1,55 @@
+# Member messages. Fixed templates, filled with values. The model never writes these.
+en:
+  lanes:
+    approved: "Your claim is approved. We will send you {amount} SAR."
+    approved_partial: "Your claim is approved in part. We will send you {amount} SAR of the {requested} SAR you asked for."
+    rejected: "Your claim was not approved. Reason: {reason}"
+    self_fix: "We need one thing from you to finish your claim. {request}"
+    human_review: "A reviewer from our team will look at your claim. We will tell you the result when it is done."
+  rules:
+    late: "The treatment date is more than {claim_window_days} days before you sent the claim."
+    policy_inactive: "Your policy was not active on the treatment date."
+    person_not_covered: "The patient is not covered by this policy."
+    excluded_service: "The receipt includes a service this policy does not cover."
+    duplicate: "This receipt was already sent in another claim."
+    multiple_patients: "The documents show more than one patient. Please send one claim for each person."
+  requests:
+    retake_photo: "We could not read the {field}. Please take a clearer photo."
+    add_document: "Please add the {field}."
+    confirm_field: "Please check the {field} we read and fix it if needed."
+  fields:
+    provider_name: "provider name"
+    treatment_date: "treatment date"
+    total: "total amount"
+    vat_number: "VAT number"
+    patient_name: "patient name"
+    receipt: "receipt"
+    itemized_invoice: "itemized invoice that lists each service"
+    line_items: "list of services on the receipt"
+ar:
+  lanes:
+    approved: "تمت الموافقة على مطالبتك. سنحول لك {amount} ريال."
+    approved_partial: "تمت الموافقة على جزء من مطالبتك. سنحول لك {amount} ريال من أصل {requested} ريال."
+    rejected: "لم تتم الموافقة على مطالبتك. السبب: {reason}"
+    self_fix: "نحتاج منك أمرا واحدا لإكمال مطالبتك. {request}"
+    human_review: "سيراجع أحد موظفينا مطالبتك. سنخبرك بالنتيجة عند الانتهاء."
+  rules:
+    late: "تاريخ العلاج أقدم من {claim_window_days} يوما قبل تقديم المطالبة."
+    policy_inactive: "لم تكن وثيقتك سارية في تاريخ العلاج."
+    person_not_covered: "المريض غير مشمول في هذه الوثيقة."
+    excluded_service: "الفاتورة تشمل خدمة لا تغطيها وثيقتك."
+    duplicate: "هذه الفاتورة قدمت من قبل في مطالبة أخرى."
+    multiple_patients: "المستندات تخص أكثر من مريض. قدم مطالبة لكل شخص."
+  requests:
+    retake_photo: "لم نتمكن من قراءة {field}. التقط صورة أوضح من فضلك."
+    add_document: "أضف {field} من فضلك."
+    confirm_field: "راجع {field} كما قرأناه وصححه إن لزم."
+  fields:
+    provider_name: "اسم مقدم الخدمة"
+    treatment_date: "تاريخ العلاج"
+    total: "المبلغ الإجمالي"
+    vat_number: "الرقم الضريبي"
+    patient_name: "اسم المريض"
+    receipt: "الفاتورة"
+    itemized_invoice: "فاتورة مفصلة تذكر كل خدمة"
+    line_items: "قائمة الخدمات في الفاتورة"

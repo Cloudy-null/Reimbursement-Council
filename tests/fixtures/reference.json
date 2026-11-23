@@ -1,0 +1,47 @@
+{
+  "members": [
+    {
+      "member_id": "00000000-0000-4000-8000-0000000000a1",
+      "display_name": "Sara Ahmed",
+      "date_joined": "2023-03-01",
+      "policy_id": "00000000-0000-4000-8000-0000000000b1"
+    },
+    {
+      "member_id": "00000000-0000-4000-8000-0000000000a2",
+      "display_name": "Omar Ahmed",
+      "date_joined": "2026-10-01",
+      "policy_id": "00000000-0000-4000-8000-0000000000b1"
+    }
+  ],
+  "policies": [
+    {
+      "policy_id": "00000000-0000-4000-8000-0000000000b1",
+      "tier": "silver",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "status": "active",
+      "covered_people": [
+        "00000000-0000-4000-8000-0000000000a1",
+        "00000000-0000-4000-8000-0000000000a2"
+      ]
+    }
+  ],
+  "providers": [
+    {
+      "provider_id": "00000000-0000-4000-8000-0000000000e1",
+      "name": "Al Noor Clinic",
+      "vat_number": "300000000000003",
+      "city": "Riyadh",
+      "in_network": true,
+      "trust_score": 0.8
+    }
+  ],
+  "histories": [
+    {
+      "member_id": "00000000-0000-4000-8000-0000000000a1",
+      "past_claims": 5,
+      "past_claims_paid": 5,
+      "limits_used": {}
+    }
+  ]
+}

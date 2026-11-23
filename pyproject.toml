@@ -1,0 +1,47 @@
+[project]
+name = "reimbursement-council"
+version = "0.1.0"
+description = "Health insurance reimbursement claims that decide themselves when it is safe."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy==2.5.5",
+    "opencv-python-headless==5.1.0.95",
+    "pydantic==2.14.4",
+    "pyyaml==6.0.4",
+]
+
+[project.scripts]
+reimbursement-council = "reimbursement_council.cli.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["reimbursement_council"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM"]
+
+[tool.mypy]
+strict = true
+files = ["reimbursement_council"]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "mypy==2.4.1",
+    "pytest==9.2.0",
+    "ruff==0.17.6",
+    "types-pyyaml==6.0.12.20261122",
+]
