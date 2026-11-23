@@ -1,0 +1,13 @@
+{
+  "fields": [
+    {
+      "name": "patient_name",
+      "value": "Sara Ahmed",
+      "original_text": "Sara Ahmed",
+      "source": "ocr",
+      "confidence": 0.95
+    }
+  ],
+  "line_items": [],
+  "qr_payloads": []
+}
