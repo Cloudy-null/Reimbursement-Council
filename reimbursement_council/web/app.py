@@ -146,7 +146,7 @@ def create_app(ctx: WebContext) -> FastAPI:
         return {
             "claim": claim,
             "decision": decision,
-            "fields": field_rows(extraction, floor),
+            "fields": field_rows(extraction, floor, ctx.settings.policy.local_utc_offset_hours),
             "items": [] if extraction is None else extraction.line_items,
             "money": payout_lines(payout, [] if extraction is None else extraction.line_items),
             "review": ctx.store.load_review(claim_id),

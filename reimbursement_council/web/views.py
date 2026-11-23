@@ -1,6 +1,7 @@
 """Turn decisions and readings into simple rows for the templates. No HTML here."""
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 from reimbursement_council.core.models.claim import ExtractionResult, LineItem
 from reimbursement_council.core.models.decision import PayoutResult
@@ -35,7 +36,19 @@ class MoneyLine:
     minus: bool
 
 
-def field_rows(extraction: ExtractionResult | None, floor: float) -> list[FieldRow]:
+def _local_stamp(text: str, offset_hours: int) -> str:
+    try:
+        moment = datetime.fromisoformat(text)
+    except ValueError:
+        return text
+    if moment.tzinfo is not None:
+        moment = moment.astimezone(timezone(timedelta(hours=offset_hours)))
+    return moment.strftime("%Y-%m-%d %H:%M")
+
+
+def field_rows(
+    extraction: ExtractionResult | None, floor: float, offset_hours: int = 3
+) -> list[FieldRow]:
     if extraction is None:
         return []
     rows = []
@@ -43,9 +56,11 @@ def field_rows(extraction: ExtractionResult | None, floor: float) -> list[FieldR
         field = extraction.best(name)  # type: ignore[arg-type]
         if field is None:
             continue
-        value = (
-            format_sar(int(field.value)) if name in MONEY and field.value.isdigit() else field.value
-        )
+        value = field.value
+        if name in MONEY and value.isdigit():
+            value = format_sar(int(value))
+        elif name == "invoice_timestamp":
+            value = _local_stamp(value, offset_hours)
         rows.append(
             FieldRow(
                 name=name,
