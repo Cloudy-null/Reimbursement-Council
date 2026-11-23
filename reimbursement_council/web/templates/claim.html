@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid">
+  <img class="receipt-img" src="/claims/{{ claim.claim_id }}/document" alt="">
+  <div class="card" style="background: none; border: 0; padding: 0">
+    <section class="card result lane-{{ decision.lane }}">
+      <span class="pill"><span class="dot"></span>{{ t['lane_' ~ decision.lane] }}</span>
+      <p class="message" dir="auto">{{ decision.member_message[lang] }}</p>
+      {% if decision.lane == 'self_fix' %}
+      <form class="stack" method="post" action="/claims/{{ claim.claim_id }}/fix" enctype="multipart/form-data">
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <label for="fix-photo">{{ t.fix_title }}
+          <input id="fix-photo" type="file" name="photo" accept="image/png,image/jpeg" capture="environment" required>
+        </label>
+        <div class="btns"><button class="btn primary" type="submit">{{ t.fix_send }}</button></div>
+      </form>
+      <form method="post" action="/claims/{{ claim.claim_id }}/to-reviewer">
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <button class="btn" type="submit">{{ t.to_reviewer }}</button>
+      </form>
+      {% endif %}
+    </section>
+    <section class="card">
+      <h2>{{ t.read_title }}</h2>
+      {% if fields %}
+      <p class="note">{{ t.read_sub }}</p>
+      <div class="rows">
+        {% for f in fields %}
+        <div class="row{{ ' low' if f.low }}">
+          <span class="label">{{ t['f_' ~ f.name] }}</span>
+          <span dir="auto" class="{{ 'mono' if f.name in ('vat_number', 'subtotal', 'vat_total', 'total', 'treatment_date', 'invoice_timestamp') }}">{{ f.value }}</span>
+          <span><span class="tag">{{ t['src_' ~ f.source] }}</span> <span class="mono">{{ f.confidence }}</span></span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<p class="note">{{ t.no_receipt }}</p>{% endif %}
+    </section>
+    <section class="card">
+      <h2>{{ t.payout }}</h2>
+      {% if decision.lane == 'auto_reject' %}
+        <div class="amount-big amount">0.00 {{ t.sar }}</div><p class="note">{{ t.nothing }}</p>
+      {% elif decision.payout_calculated is none %}
+        <div class="amount-big">{{ t.no_payout }}</div>
+      {% else %}
+        <div class="amount-big"><span class="amount">{{ '%.2f' % (decision.payout_calculated / 100) }}</span> {{ t.sar }}</div>
+        {% if decision.lane == 'self_fix' %}<p class="note">{{ t.estimate }}</p>{% endif %}
+        {% include "_money.html" %}
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

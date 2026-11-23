@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<form class="card" method="post" action="/claims" enctype="multipart/form-data">
+  <h2>{{ t.nav_claim }}</h2>
+  <input type="hidden" name="lang" value="{{ lang }}">
+  <label for="patient">{{ t.who }}
+    <select id="patient" name="patient">
+      {% for person in people %}<option value="{{ person.member_id }}">{{ person.display_name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label for="photo">{{ t.photo }}
+    <input id="photo" type="file" name="photo" accept="image/png,image/jpeg" capture="environment">
+  </label>
+  <div class="btns"><button class="btn primary" type="submit">{{ t.send }}</button></div>
+  <p class="note">{{ t.reading_note }}</p>
+  <h2>{{ t.or_sample }}</h2>
+  <div class="samples">
+    {% for name in samples %}
+    <button type="submit" name="sample" value="{{ name }}"><img src="/samples/{{ name }}.png" alt="">{{ name.replace('_', ' ') }}</button>
+    {% endfor %}
+  </div>
+</form>
+{% endblock %}

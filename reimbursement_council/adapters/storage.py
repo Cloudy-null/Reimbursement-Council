@@ -5,7 +5,12 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Literal
 
+from pydantic import AwareDatetime
+
+from reimbursement_council.core.models.claim import Claim
+from reimbursement_council.core.models.common import Halalas, Model
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.rules import SeenReceipts
 
@@ -17,6 +22,14 @@ CREATE TABLE IF NOT EXISTS decisions (
     decided_at TEXT NOT NULL,
     json TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS claims (
+    claim_id TEXT PRIMARY KEY,
+    json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reviews (
+    claim_id TEXT PRIMARY KEY,
+    json TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS receipts (
     claim_id TEXT PRIMARY KEY,
     image_hash TEXT,
@@ -25,6 +38,18 @@ CREATE TABLE IF NOT EXISTS receipts (
     lane TEXT NOT NULL
 );
 """
+
+
+class ReviewRecord(Model):
+    """A human reviewer's decision (DATA_MODEL: Review). Also a labeled example for tuning."""
+
+    claim_id: str
+    reviewer: str
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    action: Literal["approve", "approve_amount", "reject", "ask_member"]
+    amount: Halalas | None
+    reason: str
 
 
 class ClaimStore:
@@ -57,6 +82,43 @@ class ClaimStore:
                 "SELECT json FROM decisions WHERE claim_id = ?", (claim_id,)
             ).fetchone()
         return None if row is None else Decision.model_validate_json(row[0])
+
+    def save_claim(self, claim: Claim) -> None:
+        with self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO claims (claim_id, json) VALUES (?, ?)",
+                (claim.claim_id, claim.model_dump_json()),
+            )
+
+    def load_claim(self, claim_id: str) -> Claim | None:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT json FROM claims WHERE claim_id = ?", (claim_id,)
+            ).fetchone()
+        return None if row is None else Claim.model_validate_json(row[0])
+
+    def list_decisions(self, lane: str | None = None) -> list[Decision]:
+        """Newest first. With a lane, only decisions in that lane."""
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT json FROM decisions ORDER BY decided_at DESC"
+            ).fetchall()
+        decisions = [Decision.model_validate_json(row[0]) for row in rows]
+        return [d for d in decisions if lane is None or d.lane == lane]
+
+    def save_review(self, review: ReviewRecord) -> None:
+        with self._connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO reviews (claim_id, json) VALUES (?, ?)",
+                (review.claim_id, review.model_dump_json()),
+            )
+
+    def load_review(self, claim_id: str) -> ReviewRecord | None:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT json FROM reviews WHERE claim_id = ?", (claim_id,)
+            ).fetchone()
+        return None if row is None else ReviewRecord.model_validate_json(row[0])
 
     def record_receipt(
         self,

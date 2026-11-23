@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid">
+  <img class="receipt-img" src="/claims/{{ claim.claim_id }}/document" alt="">
+  <div class="card" style="background: none; border: 0; padding: 0">
+    <section class="card result lane-{{ decision.lane }}">
+      <span class="pill"><span class="dot"></span>{{ decision.lane }}</span>
+      <h2>{{ t.why }}</h2>
+      <p class="message" dir="ltr" style="font-size: 16px">{{ decision.lane_reason }}</p>
+      <div class="stats">
+        <div class="stat"><span>{{ t.p_good }}</span><b class="mono">{{ '%.3f' % decision.p_good }}</b></div>
+        <div class="stat"><span>{{ t.spread }}</span><b class="mono">{{ '%.3f' % decision.disagreement }}</b></div>
+        <div class="stat"><span>{{ t.loss }}</span><b class="mono">{% if decision.expected_loss is not none %}{{ '%.2f' % (decision.expected_loss / 100) }} / {{ '%.2f' % (decision.reviewer_time_value / 100) }}{% else %}-{% endif %}</b></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>{{ t.council }}</h2>
+      {% for v in decision.votes %}
+      <div class="vote">
+        <div class="vote-head"><b>{{ v.member }}</b><span class="mono">{{ '%.2f' % v.score }} · {{ '%.1f' % v.weight }}</span></div>
+        <div class="bar"><i style="width: {{ (v.score * 100) | round | int }}%"></i></div>
+        <p class="note" dir="ltr">{{ v.reason }}{% if v.request %} {{ v.request }}{% endif %}</p>
+      </div>
+      {% endfor %}
+    </section>
+    <div class="two">
+      <section class="card"><h2>{{ t.rules }}</h2>
+        <ul class="list">{% for r in decision.rule_results %}<li><span class="state {{ r.outcome }}">{{ r.outcome }}</span><span dir="ltr"><b>{{ r.rule }}</b> {{ r.reason }}</span></li>{% endfor %}</ul>
+      </section>
+      <section class="card"><h2>{{ t.checks }}</h2>
+        <ul class="list">{% for c in decision.check_results %}<li><span class="state {{ 'pass' if c.passed else 'fail' }}">{{ 'pass' if c.passed else 'fail' }}</span><span dir="ltr"><b>{{ c.name }}</b> {{ c.details }}</span></li>{% else %}<li><span></span><span class="note">-</span></li>{% endfor %}</ul>
+      </section>
+    </div>
+    <section class="card"><h2>{{ t.read_title }}</h2>
+      <div class="rows">{% for f in fields %}<div class="row{{ ' low' if f.low }}"><span class="label">{{ t['f_' ~ f.name] }}</span><span dir="auto">{{ f.value }}</span><span><span class="tag">{{ t['src_' ~ f.source] }}</span> <span class="mono">{{ f.confidence }}</span></span></div>{% endfor %}</div>
+    </section>
+    <section class="card"><h2>{{ t.pay_math }}</h2>{% include "_money.html" %}</section>
+    <form class="card" method="post" action="/review/{{ claim.claim_id }}">
+      <h2>{{ t.decide }}</h2>
+      {% if review %}<p class="note">{{ t.reviewed }}: {{ review.action }}</p>{% endif %}
+      <input type="hidden" name="opened" value="{{ opened }}">
+      <input type="hidden" name="lang" value="{{ lang }}">
+      <label for="amount">{{ t.amount }}<input id="amount" type="text" name="amount" inputmode="decimal" placeholder="150.00"></label>
+      <label for="reason">{{ t.reason }}<input id="reason" type="text" name="reason"></label>
+      <div class="btns">
+        <button class="btn primary" type="submit" name="action" value="approve">{{ t.approve }}</button>
+        <button class="btn" type="submit" name="action" value="approve_amount">{{ t.approve_amount }}</button>
+        <button class="btn" type="submit" name="action" value="reject">{{ t.reject }}</button>
+        <button class="btn" type="submit" name="action" value="ask_member">{{ t.ask_member }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
