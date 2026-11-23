@@ -12,8 +12,7 @@ Not this: purple gradients, glassy cards, stock photos of doctors, a hero with t
 We are not imitating Bupa's brand. Our own name, our own colors.
 
 ## References
-- https://www.ahmedalluqmani.com (owner's pick): minimal. Take the restraint: lots of space, few colors, type doing the work. The page renders with JavaScript, so its styles could not be read from here.
-  First UI task: open it with Playwright, take desktop and phone screenshots, read its computed fonts, colors and spacing, and update the tokens in this doc to match its feel. Keep our lane colors and the Arabic font. Show the owner the before and after, then build.
+- https://www.ahmedalluqmani.com (owner came across it): loose inspiration only, not a style to copy. The idea worth keeping is the restraint: lots of space, few colors, type doing the work. Do not match its fonts, colors or spacing. The tokens in this doc stay the source.
 
 Other kinds of screens worth looking at:
 - A banking app's transaction detail screen (how money and status are shown)
