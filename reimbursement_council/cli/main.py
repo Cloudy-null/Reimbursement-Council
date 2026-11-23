@@ -39,11 +39,12 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _summary(decision: Decision) -> str:
-    payout = (
-        "none"
-        if decision.payout_calculated is None
-        else f"{format_sar(decision.payout_calculated)} SAR"
-    )
+    if decision.lane == "auto_reject":
+        payout = "none (rejected)"
+    elif decision.payout_calculated is None:
+        payout = "none"
+    else:
+        payout = f"{format_sar(decision.payout_calculated)} SAR"
     lines = [
         f"claim: {decision.claim_id}",
         f"lane: {decision.lane}",

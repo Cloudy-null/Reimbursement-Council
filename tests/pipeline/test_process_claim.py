@@ -1,5 +1,6 @@
 """End to end data test: every fixture claim goes through the whole pipeline."""
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -106,3 +107,68 @@ def test_resubmitting_same_claim_is_not_duplicate(tmp_path: Path) -> None:  # Re
     store = ClaimStore(tmp_path / "claims.sqlite")
     run(load("clean"), store)
     assert run(load("clean"), store).lane == "auto_approve"
+
+
+FIXTURE_ORDER = [
+    ("clean", "auto_approve"),
+    ("late", "auto_reject"),
+    ("blurry_date", "self_fix"),
+    ("blurry_date_no_retries", "human_review"),
+    ("overpriced", "human_review"),
+    ("unlisted_service", "human_review"),
+    ("prescription_only", "self_fix"),
+]
+
+
+def test_all_fixtures_in_one_store(tmp_path: Path) -> None:  # final review: shared database
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    assert [(name, run(load(name), store).lane) for name, _ in FIXTURE_ORDER] == FIXTURE_ORDER
+
+
+def test_rejected_then_resent_correctly_is_not_duplicate(tmp_path: Path) -> None:  # final review
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    clean = load("clean")
+    wrong_patient = clean.model_copy(update={"patient_member_id": "not-on-policy"})
+    assert run(wrong_patient, store).lane == "auto_reject"
+    assert run(clean.model_copy(update={"claim_id": NEW_ID}), store).lane == "auto_approve"
+
+
+def claim_with_reading(tmp_path: Path, claim_id: str, reading: dict, extra: str = "") -> Claim:
+    folder = tmp_path / claim_id
+    folder.mkdir()
+    (folder / "r.reading.json").write_text(json.dumps(reading) + extra, encoding="utf-8")
+    claim = json.loads((CLAIMS / "clean.claim.json").read_text(encoding="utf-8"))
+    claim["claim_id"] = claim_id
+    claim["documents"][0]["file_path"] = "r.reading.json"
+    (folder / "c.claim.json").write_text(json.dumps(claim), encoding="utf-8")
+    return load_claim_file(folder / "c.claim.json")
+
+
+def test_new_photo_of_receipt_without_qr_goes_to_human(tmp_path: Path) -> None:  # final review
+    reading = json.loads((CLAIMS / "clean.reading.json").read_text(encoding="utf-8"))
+    reading["qr_payloads"] = []
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    first = run(claim_with_reading(tmp_path, "claim-first", reading), store)
+    second = run(claim_with_reading(tmp_path, "claim-second", reading, extra="\n"), store)
+    assert first.lane == "auto_approve"
+    assert second.lane == "human_review" and "duplicate" in second.lane_reason
+
+
+def test_real_self_fix_resubmission_is_decided(tmp_path: Path) -> None:  # Review Focus 3
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    assert run(load("blurry_date"), store).lane == "self_fix"
+    reading = json.loads((CLAIMS / "blurry_date.reading.json").read_text(encoding="utf-8"))
+    for field in reading["fields"]:
+        if field["name"] == "treatment_date":
+            field["confidence"] = 0.99  # the member confirmed the date
+    fixed = claim_with_reading(tmp_path, "resend", reading)
+    resent = fixed.model_copy(update={"claim_id": load("blurry_date").claim_id, "retries_used": 1})
+    decision = run(resent, store)
+    assert decision.lane == "auto_approve"
+    assert not any(r.rule == "duplicate" and r.outcome != "pass" for r in decision.rule_results)
+
+
+def test_overpriced_and_unlisted_payout_details(tmp_path: Path) -> None:
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    unlisted = run(load("unlisted_service"), store)
+    assert (unlisted.payout_requested, unlisted.payout_calculated) == (23000, 0)

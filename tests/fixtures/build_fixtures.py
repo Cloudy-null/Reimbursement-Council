@@ -81,7 +81,8 @@ READINGS: dict[str, dict[str, Any]] = {
         "2026-11-15", "CONS-GP", "General consultation", 15000, "2026-11-15T10:30:00Z"
     ),
     "late": receipt("2026-07-01", "CONS-GP", "General consultation", 15000, "2026-07-01T10:30:00Z"),
-    "blurry_date": receipt("2026-11-15", "CONS-GP", "General consultation", 15000, None, 0.60),
+    # a different day from clean, so the two are not a possible duplicate in a shared store
+    "blurry_date": receipt("2026-11-14", "CONS-GP", "General consultation", 15000, None, 0.60),
     "overpriced": receipt(
         "2026-11-16", "CONS-GP", "General consultation", 40000, "2026-11-16T11:00:00Z"
     ),
@@ -100,7 +101,8 @@ CLAIM_FILES: dict[str, tuple[int, str, str, int]] = {
     "clean": (1, "clean", "receipt", 0),
     "late": (2, "late", "receipt", 0),
     "blurry_date": (3, "blurry_date", "receipt", 0),
-    "blurry_date_no_retries": (4, "blurry_date", "receipt", 2),
+    # the same claim as blurry_date after two self-fix retries
+    "blurry_date_no_retries": (3, "blurry_date", "receipt", 2),
     "overpriced": (5, "overpriced", "receipt", 0),
     "unlisted_service": (6, "unlisted_service", "receipt", 0),
     "prescription_only": (7, "prescription", "prescription", 0),

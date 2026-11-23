@@ -70,3 +70,9 @@ def test_no_command_shows_usage_and_exits_2(capsys: pytest.CaptureFixture[str]) 
     with pytest.raises(SystemExit) as exit_info:
         main([])
     assert exit_info.value.code == 2
+
+
+def test_rejected_claim_shows_no_payout(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert run(tmp_path, CLAIMS / "late.claim.json") == 0  # final review: misleading payout
+    out = capsys.readouterr().out
+    assert "lane: auto_reject" in out and "payout: none (rejected)" in out
