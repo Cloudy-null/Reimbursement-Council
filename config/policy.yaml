@@ -1,0 +1,8 @@
+# Made-up policy rules. Money in halalas (1 SAR = 100 halalas). Rates are fractions.
+claim_window_days: 90
+vat_rate: 0.15
+exclusions: [DENT-WHITEN, COSM-BOTOX]
+tiers:
+  silver:
+    limits_halalas: {outpatient: 1500000, lab: 500000, pharmacy: 300000}
+    copay_rate: {outpatient: 0.10, lab: 0.0, pharmacy: 0.20}

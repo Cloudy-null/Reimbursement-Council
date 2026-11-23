@@ -1,7 +1,12 @@
 """Small builders for test data. Test-only code, never imported by the package."""
 
 from collections.abc import Sequence
+from functools import cache
+from pathlib import Path
+from typing import Any
 
+from reimbursement_council.config.loader import load_settings
+from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import (
     CheckResult,
     ExtractedField,
@@ -11,6 +16,19 @@ from reimbursement_council.core.models.claim import (
 from reimbursement_council.core.models.common import FieldName, FieldSource
 
 DOC_ID = "00000000-0000-4000-8000-0000000000d1"
+REPO_CONFIG = Path(__file__).resolve().parent.parent / "config"
+
+
+@cache
+def repo_settings() -> Settings:
+    return load_settings(REPO_CONFIG, env={})
+
+
+def settings_with(**decision_changes: Any) -> Settings:
+    """The repo settings with some decision.yaml values changed (not re-validated)."""
+    settings = repo_settings()
+    decision = settings.decision.model_copy(update=decision_changes)
+    return settings.model_copy(update={"decision": decision})
 
 
 def make_field(
