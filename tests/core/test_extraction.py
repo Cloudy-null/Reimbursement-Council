@@ -1,0 +1,140 @@
+import pytest
+
+from reimbursement_council.core.extraction import arithmetic_checks, extract_document
+from reimbursement_council.core.models.claim import ExtractedField, LineItem, ReaderOutput
+from reimbursement_council.core.zatca import ZatcaInvoice, encode_zatca_tlv
+from tests.factories import DOC_ID, make_field, make_item, repo_settings, settings_with
+
+QR = encode_zatca_tlv(
+    ZatcaInvoice(
+        seller_name="Al Noor Clinic",
+        vat_number="300000000000003",
+        timestamp="2026-11-15T10:30:00Z",
+        total_with_vat=17250,
+        vat_total=2250,
+    )
+)
+
+
+def reader_fields(
+    subtotal: str = "15000", vat_total: str = "2250", total: str = "17250"
+) -> list[ExtractedField]:
+    return [
+        make_field("provider_name", "Al Noor Clinic"),
+        make_field("vat_number", "300000000000003"),
+        make_field("treatment_date", "2026-11-15"),
+        make_field("subtotal", subtotal),
+        make_field("vat_total", vat_total),
+        make_field("total", total),
+        make_field("patient_name", "Sara Ahmed"),
+    ]
+
+
+ITEMS: list[LineItem] = [make_item("CONS-GP", 15000)]
+
+
+def reading(
+    fields: list[ExtractedField], payloads: list[str], items: list[LineItem] = ITEMS
+) -> ReaderOutput:
+    return ReaderOutput(fields=fields, line_items=items, qr_payloads=payloads)
+
+
+def check_map(result_checks: list) -> dict[str, bool]:  # type: ignore[type-arg]
+    return {check.name: check.passed for check in result_checks}
+
+
+def test_qr_fields_win_when_qr_first() -> None:
+    result = extract_document(DOC_ID, reading(reader_fields(total="17000"), [QR]), repo_settings())
+    total = result.best("total")
+    assert total is not None
+    assert (total.value, total.source, total.confidence) == ("17250", "qr", 1.0)
+    assert result.best("invoice_timestamp") is not None
+    qr_check = next(c for c in result.checks if c.name == "qr_matches_text")
+    assert qr_check.passed is False and "total" in qr_check.details
+
+
+def test_reader_fields_when_qr_first_disabled() -> None:
+    settings = settings_with(qr_first_enabled=False)
+    result = extract_document(DOC_ID, reading(reader_fields(total="17000"), [QR]), settings)
+    total = result.best("total")
+    assert total is not None and (total.value, total.source) == ("17000", "ocr")
+    assert result.best("invoice_timestamp") is None
+    assert check_map(result.checks)["qr_matches_text"] is False
+
+
+def test_bad_qr_payload_ignored() -> None:  # Review Focus 2
+    fields = reader_fields()
+    result = extract_document(
+        DOC_ID, reading(fields, ["https://example.com", "not base64!!"]), repo_settings()
+    )
+    assert {(f.name, f.value) for f in result.fields} == {(f.name, f.value) for f in fields}
+    assert "qr_matches_text" not in check_map(result.checks)
+
+
+def test_consistent_receipt_passes_all_checks() -> None:
+    result = extract_document(DOC_ID, reading(reader_fields(), [QR]), repo_settings())
+    assert check_map(result.checks) == {
+        "qr_matches_text": True,
+        "items_sum_to_subtotal": True,
+        "vat_is_15_percent": True,
+        "subtotal_plus_vat_is_total": True,
+    }
+    subtotal = result.best("subtotal")
+    assert subtotal is not None and subtotal.confidence == 0.95
+
+
+def test_wrong_vat_lowers_confidence() -> None:
+    fields = reader_fields(subtotal="15000", vat_total="3000", total="18000")
+    result = extract_document(DOC_ID, reading(fields, []), repo_settings())
+    assert check_map(result.checks) == {
+        "items_sum_to_subtotal": True,
+        "vat_is_15_percent": False,
+        "subtotal_plus_vat_is_total": True,
+    }
+    vat_total = result.best("vat_total")
+    total = result.best("total")
+    assert vat_total is not None and vat_total.confidence == pytest.approx(0.95 * 0.5)
+    assert total is not None and total.confidence == 0.95
+
+
+def test_qr_fields_not_penalized() -> None:
+    result = extract_document(
+        DOC_ID, reading(reader_fields(subtotal="14000"), [QR]), repo_settings()
+    )
+    checks = check_map(result.checks)
+    assert checks["items_sum_to_subtotal"] is False
+    assert checks["subtotal_plus_vat_is_total"] is False
+    total = result.best("total")
+    subtotal = result.best("subtotal")
+    assert total is not None and total.confidence == 1.0
+    assert subtotal is not None and subtotal.confidence == pytest.approx(0.95 * 0.5**3)
+    assert result.line_items[0].confidence == pytest.approx(0.95 * 0.5)
+
+
+def test_checks_off_when_disabled() -> None:
+    settings = settings_with(arithmetic_checks_enabled=False)
+    result = extract_document(DOC_ID, reading(reader_fields(subtotal="14000"), [QR]), settings)
+    assert set(check_map(result.checks)) == {"qr_matches_text"}
+    subtotal = result.best("subtotal")
+    assert subtotal is not None and subtotal.confidence == 0.95
+
+
+def test_no_vat_check_when_vat_is_zero() -> None:
+    fields = reader_fields(subtotal="15000", vat_total="0", total="15000")
+    result = extract_document(DOC_ID, reading(fields, []), repo_settings())
+    assert check_map(result.checks) == {
+        "items_sum_to_subtotal": True,
+        "subtotal_plus_vat_is_total": True,
+    }
+
+
+def test_arithmetic_checks_skip_missing_inputs() -> None:
+    assert arithmetic_checks([make_field("total", "17250")], [], 0.15, 1) == []
+    only_subtotal = arithmetic_checks([make_field("subtotal", "15000")], ITEMS, 0.15, 1)
+    assert [c.name for c in only_subtotal] == ["items_sum_to_subtotal"]
+
+
+def test_arithmetic_tolerance_allows_rounding() -> None:
+    fields = [make_field("subtotal", "15001"), make_field("vat_total", "2250")]
+    checks = arithmetic_checks(fields, [make_item("CONS-GP", 15000)], 0.15, 1)
+    assert all(check.passed for check in checks)
