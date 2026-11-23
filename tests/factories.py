@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.config.models import Settings
+from reimbursement_council.core.models.case import ClaimCase
 from reimbursement_council.core.models.claim import (
     CheckResult,
     Claim,
@@ -17,7 +18,8 @@ from reimbursement_council.core.models.claim import (
     LineItem,
 )
 from reimbursement_council.core.models.common import FieldName, FieldSource
-from reimbursement_council.core.models.reference import Policy
+from reimbursement_council.core.models.decision import PayoutResult, RuleResult
+from reimbursement_council.core.models.reference import Member, MemberHistory, Policy, Provider
 
 DOC_ID = "00000000-0000-4000-8000-0000000000d1"
 CLAIM_ID = "00000000-0000-4000-8000-0000000000c1"
@@ -125,4 +127,30 @@ def make_extraction(
         fields=list(fields),
         line_items=list(line_items),
         checks=list(checks),
+    )
+
+
+def make_case(
+    extraction: ExtractionResult | None = None,
+    payout: PayoutResult | None = None,
+    history: MemberHistory | None = None,
+    provider: Provider | None = None,
+    rule_results: Sequence[RuleResult] = (),
+) -> ClaimCase:
+    """A case with a default member, an active silver policy and an unknown provider."""
+    return ClaimCase(
+        claim=make_claim(),
+        member=Member(
+            member_id=MEMBER_ID,
+            display_name="Sara Ahmed",
+            date_joined=date(2023, 3, 1),
+            policy_id=POLICY_ID,
+        ),
+        policy=make_policy(),
+        provider=provider or Provider.unknown(None),
+        history=history
+        or MemberHistory(member_id=MEMBER_ID, past_claims=0, past_claims_paid=0, limits_used={}),
+        extraction=extraction,
+        rule_results=list(rule_results),
+        payout=payout,
     )
