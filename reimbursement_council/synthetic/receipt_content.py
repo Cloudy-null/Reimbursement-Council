@@ -55,6 +55,8 @@ class ReceiptOptions(Model):
     issued_at: datetime | None = None  # local time, no zone
     patient: PersonName | None = None
     provider: ProviderProfile | None = None
+    codes: list[str] | None = None  # force these services instead of picking
+    printed_total_delta: int = 0  # a tampered receipt prints a total this much off
 
 
 class ReceiptContent(Model):
@@ -68,6 +70,7 @@ class ReceiptContent(Model):
     subtotal: Halalas
     vat_total: Halalas
     total: Halalas
+    printed_total: Halalas
     qr_payload: str | None
 
     def truth(self) -> dict[str, object]:
@@ -80,7 +83,7 @@ class ReceiptContent(Model):
             "patient_name": [self.patient.en, self.patient.ar],
             "subtotal": str(self.subtotal),
             "vat_total": str(self.vat_total),
-            "total": str(self.total),
+            "total": str(self.printed_total),
             "items": [
                 {"service_code": i.service_code, "quantity": i.quantity, "amount": i.amount}
                 for i in self.items
@@ -171,9 +174,8 @@ def make_receipt_content(
         days=rng.randrange(0, 18), minutes=rng.randrange(0, 12 * 60)
     )
     count = options.item_count or rng.randint(1, 3)
-    codes = rng.sample(
-        SERVICES_BY_KIND[provider.kind], k=min(count, len(SERVICES_BY_KIND[provider.kind]))
-    )
+    pool = SERVICES_BY_KIND[provider.kind]
+    codes = options.codes or rng.sample(pool, k=min(count, len(pool)))
     items: list[PrintedItem] = []
     for code in codes:
         price = prices[code]
@@ -227,5 +229,6 @@ def make_receipt_content(
         subtotal=subtotal,
         vat_total=vat_total,
         total=total,
+        printed_total=total + options.printed_total_delta,
         qr_payload=qr_payload,
     )

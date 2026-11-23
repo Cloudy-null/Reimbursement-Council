@@ -62,3 +62,10 @@ def test_truth_uses_pipeline_formats() -> None:
     truth = make(1, issued_at=datetime(2026, 11, 15, 13, 30)).truth()
     assert truth["treatment_date"] == "2026-11-15" and truth["invoice_time"] == "13:30"
     assert str(truth["total"]).isdigit()
+
+
+def test_forced_codes_and_tampered_total() -> None:
+    receipt = make(4, provider=PROVIDERS[3], codes=["DENT-WHITEN"], printed_total_delta=5000)
+    assert [item.service_code for item in receipt.items] == ["DENT-WHITEN"]
+    assert receipt.printed_total == receipt.total + 5000
+    assert receipt.truth()["total"] == str(receipt.printed_total)  # a reader sees the printed one

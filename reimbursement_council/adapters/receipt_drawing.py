@@ -82,6 +82,7 @@ class Damage(Model):
 
 DAMAGE_PRESETS: dict[str, Damage | None] = {
     "none": None,
+    "unreadable": Damage(blur_sigma=3.0, rotate_degrees=4.0, noise_std=18.0, jpeg_quality=35),
     "light": Damage(blur_sigma=0.8, rotate_degrees=1.5, noise_std=4.0, jpeg_quality=80),
     "heavy": Damage(blur_sigma=1.4, rotate_degrees=3.0, noise_std=10.0, jpeg_quality=55),
 }
@@ -245,7 +246,7 @@ def _draw(content: ReceiptContent) -> tuple[Image.Image, dict[str, list[Box]]]:
     c.row(labels["vat"], format_sar(content.vat_total), "vat_total", 24, arabic_first=arabic_first)
     c.row(
         labels["total"],
-        format_sar(content.total),
+        format_sar(content.printed_total),
         "total",
         28,
         bold=True,
