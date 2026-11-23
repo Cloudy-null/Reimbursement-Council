@@ -25,6 +25,8 @@ FieldName = Literal[
 ]
 MONEY_FIELDS: frozenset[str] = frozenset({"subtotal", "vat_total", "total"})
 DocumentKind = Literal["receipt", "invoice", "prescription", "medical_report", "other"]
+PRIMARY_DOCUMENT_KINDS: tuple[DocumentKind, ...] = ("receipt", "invoice")
+"""Documents that carry the amounts. The first one is read; more than one blocks auto approve."""
 MemberName = Literal[
     "document_checker", "coverage_checker", "price_checker", "case_reviewer", "history_member"
 ]

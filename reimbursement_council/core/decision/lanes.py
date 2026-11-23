@@ -100,7 +100,9 @@ def choose_lane(
     payout: PayoutResult | None,
     retries_used: int,
     settings: Settings,
+    extra_blockers: Sequence[str] = (),
 ) -> LaneChoice:
+    """extra_blockers: data problems from approval_blockers that stop auto approve."""
     decision = settings.decision
     failed = [result for result in rule_results if result.outcome == "fail"]
     if failed:
@@ -134,6 +136,7 @@ def choose_lane(
         )
 
     blockers, approve_reason = _approval(p_good, disagreement, payout, decision)
+    blockers = list(extra_blockers) + blockers
     if not blockers and payout is not None:
         return LaneChoice(
             lane="auto_approve",

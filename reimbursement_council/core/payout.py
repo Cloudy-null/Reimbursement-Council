@@ -12,6 +12,18 @@ from reimbursement_council.core.models.reference import MemberHistory, Policy
 from reimbursement_council.core.money import apply_rate
 
 
+def _receipt_vat(extraction: ExtractionResult) -> int:
+    """VAT the receipt charged: the VAT line, else total minus subtotal, else none."""
+    vat = extraction.money("vat_total")
+    if vat is not None:
+        return vat
+    total = extraction.money("total")
+    subtotal = extraction.money("subtotal")
+    if total is not None and subtotal is not None and total >= subtotal:
+        return total - subtotal
+    return 0
+
+
 def calculate_payout(
     extraction: ExtractionResult,
     policy: Policy,
@@ -49,8 +61,8 @@ def calculate_payout(
         limit_cut += after_copay - paid
         paid_before_vat += paid
 
-    receipt_vat = extraction.money("vat_total") or 0
-    vat_paid = apply_rate(paid_before_vat, settings.policy.vat_rate) if receipt_vat > 0 else 0
+    receipt_vat = _receipt_vat(extraction)
+    vat_paid = min(apply_rate(paid_before_vat, settings.policy.vat_rate), receipt_vat)
     requested = sum(item.amount for item in extraction.line_items) + receipt_vat
     is_partial = (
         network_cap_cut + limit_cut > settings.decision.partial_payout_tolerance_halalas

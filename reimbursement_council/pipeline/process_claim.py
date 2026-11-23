@@ -9,12 +9,14 @@ from reimbursement_council.adapters.readers import DocumentReader
 from reimbursement_council.adapters.storage import ClaimStore
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.council.registry import run_council
+from reimbursement_council.core.decision.blockers import approval_blockers
 from reimbursement_council.core.decision.combine import combine_votes, p_good_from_score
 from reimbursement_council.core.decision.lanes import choose_lane, expected_loss
 from reimbursement_council.core.explain import build_member_message
 from reimbursement_council.core.extraction import extract_document
 from reimbursement_council.core.models.case import ClaimCase
 from reimbursement_council.core.models.claim import Claim, Document, ExtractionResult
+from reimbursement_council.core.models.common import PRIMARY_DOCUMENT_KINDS
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.models.reference import ReferenceData
 from reimbursement_council.core.payout import calculate_payout
@@ -22,11 +24,9 @@ from reimbursement_council.core.rules import receipt_fingerprint, run_hard_rules
 
 logger = logging.getLogger(__name__)
 
-PRIMARY_KINDS = ("receipt", "invoice")
-
 
 def _primary_document(claim: Claim) -> Document | None:
-    primary = next((doc for doc in claim.documents if doc.kind in PRIMARY_KINDS), None)
+    primary = next((doc for doc in claim.documents if doc.kind in PRIMARY_DOCUMENT_KINDS), None)
     for document in claim.documents:
         if document is not primary:
             logger.info(
@@ -84,7 +84,14 @@ def process_claim(
     combined, disagreement = combine_votes(votes)
     p_good = p_good_from_score(combined, settings)
     choice = choose_lane(
-        rule_results, votes, p_good, disagreement, payout, claim.retries_used, settings
+        rule_results,
+        votes,
+        p_good,
+        disagreement,
+        payout,
+        claim.retries_used,
+        settings,
+        approval_blockers(claim, extraction, payout, settings),
     )
 
     decision = Decision(

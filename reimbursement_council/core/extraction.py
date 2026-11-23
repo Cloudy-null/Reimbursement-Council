@@ -111,6 +111,23 @@ def _qr_text_check(
     )
 
 
+def _items_reference(
+    subtotal: int | None, vat_total: int | None, total: int | None
+) -> tuple[int, list[str]] | None:
+    """What the line items must add up to: the subtotal, else total minus VAT, else the total.
+
+    Without this, a receipt with no subtotal line would never check its items, and a misread
+    quantity could pay more than the receipt.
+    """
+    if subtotal is not None:
+        return subtotal, ["subtotal"]
+    if total is not None and vat_total is not None:
+        return total - vat_total, ["total", "vat_total"]
+    if total is not None:
+        return total, ["total"]
+    return None
+
+
 def arithmetic_checks(
     fields: Sequence[ExtractedField],
     line_items: Sequence[LineItem],
@@ -125,14 +142,17 @@ def arithmetic_checks(
     vat_total = _money(fields, "vat_total")
     total = _money(fields, "total")
     checks: list[CheckResult] = []
-    if line_items and subtotal is not None:
+    reference = _items_reference(subtotal, vat_total, total)
+    if line_items and reference is not None:
+        expected, reference_fields = reference
         items_sum = sum(item.amount for item in line_items)
+        source = " - ".join(reference_fields)
         checks.append(
             CheckResult(
                 name="items_sum_to_subtotal",
-                passed=abs(items_sum - subtotal) <= tolerance,
-                details=f"items sum {items_sum}, subtotal {subtotal}",
-                fields=["subtotal"],
+                passed=abs(items_sum - expected) <= tolerance,
+                details=f"items sum {items_sum}, receipt says {expected} ({source})",
+                fields=reference_fields,
             )
         )
     if subtotal is not None and vat_total is not None and vat_total > 0:

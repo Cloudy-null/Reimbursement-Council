@@ -154,3 +154,10 @@ def test_self_fix_switch_off_goes_to_human() -> None:
 def test_no_reject_without_hard_rule() -> None:
     for payout in (PAYOUT, None, UNMATCHED):
         assert lane(p_good=0.0, disagreement=0.5, payout=payout).lane != "auto_reject"
+
+
+def test_extra_blockers_stop_approval() -> None:  # final review
+    choice = choose_lane(
+        rules(), PLAIN_VOTES, 0.99, 0.0, PAYOUT, 0, repo_settings(), ["failed checks: x"]
+    )
+    assert choice.lane == "human_review" and "failed checks: x" in choice.reason

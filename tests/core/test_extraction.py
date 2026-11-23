@@ -153,3 +153,21 @@ def test_qr_treatment_date_is_local() -> None:  # final review: timezone
     result = extract_document(DOC_ID, reading(reader_fields(), [late_night]), repo_settings())
     treatment = result.best("treatment_date")
     assert treatment is not None and treatment.value == "2026-08-22"
+
+
+def test_items_checked_against_total_when_no_subtotal() -> None:  # final review: overpayment
+    double = [make_item("CONS-GP", 30000, quantity=2)]
+    no_subtotal = [f for f in reader_fields() if f.name != "subtotal"]
+    checks = arithmetic_checks(no_subtotal, double, 0.15, 1)
+    assert check_map(checks)["items_sum_to_subtotal"] is False
+
+
+def test_items_checked_against_total_when_no_vat_either() -> None:
+    total_only = [make_field("total", "15000")]
+    assert check_map(arithmetic_checks(total_only, ITEMS, 0.15, 1)) == {
+        "items_sum_to_subtotal": True
+    }
+    vat_unread = [make_field("total", "17250")]
+    assert check_map(arithmetic_checks(vat_unread, ITEMS, 0.15, 1)) == {
+        "items_sum_to_subtotal": False
+    }

@@ -96,3 +96,21 @@ def test_unknown_tier_names_it() -> None:
     extraction = make_extraction([], [make_item("CONS-GP", 15000)])
     with pytest.raises(LookupError, match="platinum"):
         calculate_payout(extraction, policy, EMPTY_HISTORY, repo_settings())
+
+
+def test_vat_derived_when_unreadable() -> None:  # final review: VAT underpaid
+    fields = [make_field("subtotal", "15000"), make_field("total", "17250")]
+    p = must(
+        calculate_payout(
+            make_extraction(fields, [make_item("CONS-GP", 15000)]),
+            make_policy(),
+            EMPTY_HISTORY,
+            repo_settings(),
+        )
+    )
+    assert (p.vat_paid, p.requested, p.calculated) == (2025, 17250, 15525)
+
+
+def test_vat_paid_never_above_receipt_vat() -> None:  # final review: VAT overpaid
+    p = must(payout([make_item("LAB-CBC", 8000)], "100"))
+    assert (p.vat_paid, p.requested, p.calculated) == (100, 8100, 8100)
