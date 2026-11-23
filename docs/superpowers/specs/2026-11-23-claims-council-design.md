@@ -41,7 +41,8 @@ Anti-goals (failure even if it works)
 
 ## 3. Constraints
 
-- Built mostly overnight by Claude Code, from this spec and a plan.
+- Built mostly overnight by Claude Code, from this spec and a plan, on a Claude Pro plan. Pro has a 5 hour limit and a weekly limit shared with chat, so the build will pause. Work must be saved after every task.
+- No paid AI API. The app must run fully offline with free tools. A free tier vision model (Gemini API free tier) is an optional extra behind a switch, never a requirement. Free tier data may be used by the provider to improve its products, so only synthetic or public dataset images are ever sent to it.
 - No real claims data. We train and tune on synthetic data, and test on real receipts.
 - Money is in SAR. Saudi receipts can be Arabic, English or both, and can have Hijri dates.
 - Saudi simplified tax invoices carry a ZATCA QR code (TLV, base64) with five fields: seller name, seller VAT number, timestamp, total with VAT, VAT total. Not every receipt has one.
@@ -64,7 +65,9 @@ A claim moves through these stages. Each stage is its own module with a clear in
 1. Intake. Member uploads one or more images or PDFs and picks who the claim is for.
 2. Extraction. Get the fields off the documents, in this order:
    - Decode the ZATCA QR if present. Fields from the QR are marked source qr with confidence 1.0.
-   - Read the rest with a vision model into a fixed JSON schema (provider, date, line items, totals, patient name, document type). Each field gets a confidence.
+   - Read the rest with the reader into a fixed schema (provider, date, line items, totals, patient name, document type). Each field gets a confidence. The reader is an adapter with two versions:
+     - Default, offline: open-source OCR with Arabic and English support (start with EasyOCR, PaddleOCR as an ablation), then layout and pattern rules to turn the text into fields. Confidence comes from the OCR score and from whether the field matched its expected pattern.
+     - Optional: Gemini API free tier vision model returning the same schema. Switch gemini_reader_enabled, off by default.
    - Arithmetic checks: line items add up to the subtotal, VAT is 15 percent where VAT applies, subtotal plus VAT equals total. A failed check lowers the confidence of the fields involved.
    - QR versus printed text: if both exist and disagree, flag it.
 3. Hard rules. Yes or no only. Run only on fields with confidence above the hard rule confidence floor in config. If a rule fails on low confidence data, the claim goes to the member as needs info instead of being rejected.
@@ -93,7 +96,7 @@ Each council member is a module with the same interface: it takes the claim case
 | Document checker | Field confidences, arithmetic checks, QR match, image quality | How sure we are the document is valid and read correctly |
 | Coverage checker | Policy, benefit limits used so far, co-pay, network price | How sure we are of the payout amount; also computes the payout |
 | Price checker | Line item prices against a reference price list | How normal the prices are |
-| Case reviewer | An LLM reading the whole case summary | Overall judgment, with a written reason |
+| Case reviewer | An LLM reading the whole case summary (Gemini free tier, optional, switch case_reviewer_enabled) | Overall judgment, with a written reason. When off, the other members carry the decision |
 | History member | Member tenure, past claims, provider trust | How much history supports this claim |
 
 Guardrail for the history member: it can raise trust or push a claim toward review. It can never push a claim to rejection on its own, and a new member with no history gets a neutral score, not a low one.
@@ -147,7 +150,8 @@ Automation rate, precision and recall of auto approve, false reject rate, calibr
 - Synthetic data for building and tuning. A generator creates members, policies, providers, a price list, and receipt images (Arabic, English, mixed; with and without a ZATCA QR) with known truth. It injects defects on purpose: late, inactive policy, excluded service, duplicate, over limit, overpriced, unreadable photo, QR mismatch, arithmetic error, two patients on one receipt, missing prescription. Fixable defects also get a fixed version, used to simulate self-fix.
 - Real data for testing.
   - Extraction accuracy: public receipt datasets. ReceiptSense (Arabic and English receipts), SROIE, CORD. CHECK: licenses allow this use.
-  - End to end: 50 to 100 real medical receipts and invoices collected by the team, anonymized, with fields and correct outcome labeled by hand against our made-up policy.
+  - End to end: real receipt images from the public datasets, each paired with a synthetic claim context (member, policy, history, submission date). The document is real, so reading is tested for real; the claim context is generated, so the correct outcome is known from our policy without hand labeling. Field labels come with the datasets.
+  - Real invoices the team finds online (for example medical and care home invoices) are used to make the generator's templates look realistic. Because they are copied in style, they count as synthetic, not as real test data.
 - Splits: synthetic train and tune; real test is never used for tuning.
 - Raw data is never committed. data/ is in .gitignore. Download and generation are scripts.
 
@@ -177,6 +181,9 @@ Demo safety: a demo mode replays saved results for the demo claims so the demo w
 - Train on synthetic, test on real.
 - Every idea is tested by ablation.
 - Git and GitHub from the start; style and design in shared .md files; use skills.
+- Pro plan only, no paid API (decision 004).
+- Real test data: public dataset receipts with synthetic claim context. Online invoices are mimicked for the generator only.
+- UI: build from the DESIGN.md draft, owner corrects as we go.
 
 ## 11. Calls made during the builder check
 
@@ -184,7 +191,7 @@ These were open in the first draft. Settled here so the overnight build does not
 
 - Starting values in config/decision.yaml, to be tuned on synthetic_tune: hard rule confidence floor 0.90, disagreement limit 0.25, always-review amount 5,000 SAR, review_cost 25 SAR, self-fix max retries 2, all council weights 1.0.
 - "Paid at the right amount" in metrics means the payout is within 1 SAR of the correct payout.
-- Model calls are cached on disk by image hash plus prompt version plus model name. Ablation reruns read the cache, so they cost nothing and give the same extraction. A prompt change bumps the prompt version.
+- Reader and model outputs are cached on disk by image hash plus reader version plus model name. Ablation reruns read the cache, so they cost nothing and give the same extraction. A prompt change bumps the prompt version.
 - synthetic_tune starts at 500 claims. Grow it only after checking API cost (see CHECK on budget).
 - The generator also creates claim history per member and per provider, so the history member and benefit limits used so far have something to read.
 - Self-fix is simulated in the harness: for a fixable defect, the member uploads the fixed version with a probability from config (start 0.7). Unfixable cases or a "no" go to human review.
@@ -199,11 +206,9 @@ These were open in the first draft. Settled here so the overnight build does not
 - Visual details inside docs/DESIGN.md tokens.
 
 ## 13. Open CHECK items
-- CHECK: who labels the real_e2e receipts (fields and correct outcome) and by when. Final numbers depend on it.
 
 - CHECK: demo date and pitch length.
 - CHECK: the second required document in the real Bupa flow (proof of payment plus what?).
 - CHECK: review_cost value.
 - CHECK: dataset licenses.
-- CHECK: Claude API key and budget for the overnight run and the demo.
-- CHECK: UI reference sites (owner picks 3 to 5, see docs/DESIGN.md).
+- CHECK: owner creates a free Gemini API key if we want the optional reader and case reviewer.

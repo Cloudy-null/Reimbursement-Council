@@ -30,6 +30,8 @@ Used when I start a session with "overnight mode". The spec and the plan in docs
 - Work on the branch build/overnight. Never commit to main directly.
 - Commit after each passing task. Tag each finished layer: layer-1, layer-2, layer-3, layer-4.
 - If something is blocked for more than 3 attempts, write CHECK in HANDOVER, take the safest smaller version, and move on.
+- I am on the Pro plan, so the session can hit a usage limit at any time. After every finished task: commit, then update the "Current status" and "Next 3 tasks" in HANDOVER and commit again. A stop at any moment must lose nothing, and the next session must be able to continue from HANDOVER alone.
+- Keep usage lean: read only the files a task needs, do not re-read big files, do not run the full harness when a unit test answers the question.
 - At the end, update HANDOVER and SESSION_LOG and stop. Do not merge to main. I review in the morning.
 
 ## Skills: which one for which job
@@ -90,9 +92,9 @@ If a job matches a skill, use the skill. If you think a new repeated job deserve
 ## Frontend and design (for any UI work)
 - Use the frontend-design skill for building and the Impeccable skill for critique and polish.
 - Never use the default AI look: no Inter-only typography, no purple gradients, no generic hero with three feature cards.
-- docs/DESIGN.md is the single source for look and feel. Wait for my OK on it before building UI.
+- docs/DESIGN.md is the single source for look and feel. Build from it as it is; I will correct things as I see them. When I correct something, update DESIGN.md first, then the code.
 - Colors, fonts and spacing only from the tokens in one file (see DESIGN.md). Reuse components, do not restyle each page.
-- After building, take screenshots (desktop and mobile, Arabic and English) with Playwright, compare against the references, run an Impeccable audit, and fix what looks off before saying it is done.
+- After building, take screenshots (desktop and mobile, Arabic and English) with Playwright, check them against DESIGN.md, run an Impeccable audit, and fix what looks off before saying it is done.
 
 ## Install list (inside Claude Code)
 - Superpowers: /plugin install superpowers@claude-plugins-official

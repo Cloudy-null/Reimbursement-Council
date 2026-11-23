@@ -7,7 +7,9 @@ One place for how things are named, stored and configured. If you need to break 
 - FastAPI for the API and pages. Jinja2 templates plus htmx for the screens. No frontend build step.
 - Pydantic v2 for every data model in docs/DATA_MODEL.md.
 - SQLite for storage, one file under data/ (not committed).
-- Vision model and case reviewer: Claude API through one adapter module. Model name comes from config, never hardcoded.
+- Reader: EasyOCR (offline, Arabic and English) behind a reader adapter. PaddleOCR as an ablation. Optional Gemini API free tier vision reader behind the same adapter, off by default.
+- Case reviewer: Gemini API free tier through one adapter module, optional. Model name comes from config, never hardcoded.
+- No paid API anywhere. The app must run with no keys at all.
 - QR decoding: OpenCV QRCodeDetector (no system packages needed). Fallback library only with a decision record.
 - Tests: pytest. Lint and format: ruff. Types: mypy on core.
 - CI: GitHub Actions running ruff, mypy and pytest.

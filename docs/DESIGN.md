@@ -1,6 +1,6 @@
 # Design
 
-The single source for look and feel. Status: draft, waiting for owner OK. No UI gets built until this is approved.
+The single source for look and feel. Status: approved to build as a draft. The owner corrects things as we go; every correction is made here first, then in the code.
 
 All values below become CSS variables in one file: claims_council/web/static/tokens.css. Pages use only these variables. To restyle the whole app, change that file and this doc together.
 
@@ -12,7 +12,7 @@ Not this: purple gradients, glassy cards, stock photos of doctors, a hero with t
 We are not imitating Bupa's brand. Our own name, our own colors.
 
 ## References
-CHECK: owner picks 3 to 5 reference sites or apps and what to take from each. Until then, building UI is blocked. Suggestions to look at:
+None picked. Build from this doc. If the owner adds references later, list them here with what to take from each. Kinds of screens worth looking at:
 - A banking app's transaction detail screen (how money and status are shown)
 - A tax or receipt scanner app's review screen (how read fields are confirmed)
 - A support or moderation tool's queue card (how a reviewer sees evidence and acts fast)
@@ -86,4 +86,4 @@ Sketch of the reviewer card:
 
 ## Checks before any UI is called done
 - Playwright screenshots: desktop and phone, Arabic and English, for every screen.
-- Compare with the references. Run an Impeccable audit. Fix and re-shoot.
+- Check against this doc. Run an Impeccable audit. Fix and re-shoot.
