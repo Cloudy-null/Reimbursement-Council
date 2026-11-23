@@ -1,7 +1,7 @@
 # Handover
 
 ## 1. Current status
-Overnight build on branch build/overnight (owner said: make what we can, do it). Walking skeleton (PR #1) is merged to main. Layer 1 (reading receipt photos) is built and tested: synthetic receipt maker (three layouts, real Arabic, ZATCA QR, photo damage), EasyOCR engine with disk cache, OCR text parser, QR plus OCR reader in run-claim, make-receipts and read-accuracy commands. Layer 2 is built and tested: synthetic claim sets with defects and right answers (make-claims), harness metrics (run-set), Platt calibration (fit-calibration, config/calibration.yaml). Running now: EasyOCR accuracy on 60 generated receipts (data/receipts/eval_s1). EasyOCR is an optional extra: uv sync --extra ocr. Designs (Claude's, not reviewed): docs/superpowers/specs/2026-11-23-layer1-receipt-reading-design.md, docs/superpowers/specs/2026-11-24-layer2-synthetic-claims-design.md.
+Overnight build on branch build/overnight (owner said: make what we can, do it). Layer 1 done and tagged layer-1 (reading receipt photos with EasyOCR; accuracy in EXPERIMENTS.md). Layer 2 code done (synthetic claim sets, harness metrics, Platt calibration); the EasyOCR runs on data/sets/tune and data/sets/check are running. Layer 3 website built and tested: uv run reimbursement-council serve (http://127.0.0.1:8000): new claim with photo or sample receipt, result with what we read and payout math, self-fix resend, reviewer queue and card with decisions saved, numbers page from harness results. Checked in the browser on desktop and phone, English and Arabic. EasyOCR is an optional extra: uv sync --extra ocr.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -43,9 +43,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
-1. Record reader accuracy in EXPERIMENTS.md and tag layer-1.
-2. Run tune and check claim sets with EasyOCR, fit calibration, record E6 numbers, tag layer-2.
-3. Layer 3 website: member upload and result, reviewer queue and card, metrics page (FastAPI and Jinja2).
+1. Record the tune and check run numbers (E6 calibration off vs on) in EXPERIMENTS.md; commit config/calibration.yaml; tag layer-2.
+2. README and HANDOVER: how to run the website and the commands.
+3. Owner review: designs for layer 1 and 2 were Claude's calls; parser file is 331 lines (proposal: split row grouping into its own module).
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
