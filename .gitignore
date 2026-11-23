@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets
+.env
+
+# Data (never commit raw data)
+data/
+*.sqlite
+*.db
+
+# Screenshots and outputs
+screenshots/
+outputs/
+
+# OS
+.DS_Store
+Thumbs.db
