@@ -1,7 +1,7 @@
 # Handover
 
 ## 1. Current status
-Overnight build on branch build/overnight (owner said: make what we can, do it). The walking skeleton (PR #1) is merged to main. Now finishing layer 1: reading receipt photos. Design and plan, both written by Claude and not yet reviewed: docs/superpowers/specs/2026-11-23-layer1-receipt-reading-design.md and docs/superpowers/plans/2026-11-23-layer1-receipt-reading.md. Done so far: EasyOCR spike (works, about 6 s per receipt on CPU), price list aliases, synthetic receipt content, receipt drawing in three layouts. EasyOCR is an optional extra: uv sync --extra ocr.
+Overnight build on branch build/overnight (owner said: make what we can, do it). Walking skeleton (PR #1) is merged to main. Layer 1 in progress: reading receipt photos. Design and plan written by Claude, not yet reviewed: docs/superpowers/specs/2026-11-23-layer1-receipt-reading-design.md, docs/superpowers/plans/2026-11-23-layer1-receipt-reading.md. Done: EasyOCR spike, price aliases, synthetic receipt content and drawing (three layouts), the OCR text parser (core/receipt_parsing.py, tested on real EasyOCR output saved in tests/fixtures/ocr), and corroboration (all checks pass means the OCR amounts are trusted). EasyOCR is an optional extra: uv sync --extra ocr.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -43,9 +43,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
-1. Receipt text parser: OCR lines to fields and line items (core/receipt_parsing.py).
-2. EasyOCR engine, disk cache and the QR plus OCR reader wired into the pipeline.
-3. make-receipts and read-accuracy commands, accuracy numbers in EXPERIMENTS.md, tag layer-1.
+1. EasyOCR engine adapter, disk cache, QR plus OCR reader, reader setting wired into the pipeline and CLI.
+2. make-receipts and read-accuracy commands; run on generated receipts; numbers into EXPERIMENTS.md; tag layer-1.
+3. Layer 2: synthetic claims set end to end, then calibration.
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
