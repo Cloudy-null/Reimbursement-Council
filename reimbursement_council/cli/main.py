@@ -1,0 +1,85 @@
+"""Command line entrypoint. Thin: load inputs, call the pipeline, print the result.
+
+reimbursement-council run-claim CLAIM_PATH --reference REFERENCE_PATH
+"""
+
+import argparse
+import io
+import logging
+import sys
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from pathlib import Path
+
+from reimbursement_council.adapters.files import load_claim_file, load_reference_file
+from reimbursement_council.adapters.storage import ClaimStore
+from reimbursement_council.config.loader import ConfigError, load_settings
+from reimbursement_council.core.models.decision import Decision
+from reimbursement_council.core.money import format_sar
+from reimbursement_council.pipeline.process_claim import process_claim
+
+logger = logging.getLogger(__name__)
+
+EXIT_OK = 0
+EXIT_BAD_INPUT = 2
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="reimbursement-council",
+        description="Decide health insurance reimbursement claims.",
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+    run_claim = commands.add_parser("run-claim", help="Decide one claim file and print the result.")
+    run_claim.add_argument("claim_path", type=Path, help="A *.claim.json file.")
+    run_claim.add_argument("--reference", type=Path, required=True, help="Members and policies.")
+    run_claim.add_argument("--config-dir", type=Path, default=Path("config"))
+    run_claim.add_argument("--db", type=Path, default=Path("data/claims.sqlite"))
+    return parser
+
+
+def _summary(decision: Decision) -> str:
+    payout = (
+        "none"
+        if decision.payout_calculated is None
+        else f"{format_sar(decision.payout_calculated)} SAR"
+    )
+    lines = [
+        f"claim: {decision.claim_id}",
+        f"lane: {decision.lane}",
+        f"outcome: {decision.outcome}",
+        f"payout: {payout}",
+        f"reason: {decision.lane_reason}",
+        f"message (en): {decision.member_message.en}",
+        f"message (ar): {decision.member_message.ar}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _use_utf8_stdout() -> None:
+    """Arabic text must print even when stdout is redirected on Windows."""
+    if isinstance(sys.stdout, io.TextIOWrapper):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    logging.basicConfig(
+        level=logging.INFO, stream=sys.stderr, format="%(levelname)s %(name)s: %(message)s"
+    )
+    args = _parser().parse_args(argv)
+    try:
+        settings = load_settings(args.config_dir)
+        reference = load_reference_file(args.reference)
+        claim = load_claim_file(args.claim_path)
+        decision = process_claim(claim, reference, settings, ClaimStore(args.db), datetime.now(UTC))
+    except (ConfigError, LookupError, FileNotFoundError, ValueError) as error:
+        # pydantic's ValidationError is a ValueError, so bad files land here too.
+        logger.error("could not decide the claim: %s", error)
+        return EXIT_BAD_INPUT
+    _use_utf8_stdout()
+    sys.stdout.write(_summary(decision))
+    return EXIT_OK
+
+
+if __name__ == "__main__":
+    sys.exit(main())
