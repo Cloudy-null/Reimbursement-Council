@@ -7,6 +7,7 @@ instead of rejecting it on a guess.
 from datetime import date
 
 from reimbursement_council.config.models import Settings
+from reimbursement_council.core.dates import local_date_of
 from reimbursement_council.core.models.claim import Claim, ExtractionResult
 from reimbursement_council.core.models.common import FieldName, Model, RuleName, RuleOutcome
 from reimbursement_council.core.models.decision import RuleResult
@@ -60,7 +61,7 @@ def _late(claim: Claim, extraction: ExtractionResult | None, settings: Settings)
     treated = _confident_date(extraction, settings.decision.hard_rule_confidence_floor)
     if treated is None:
         return _result("late", "not_sure", "Treatment date is missing or unclear.", fields)
-    submitted = claim.submitted_at.date()
+    submitted = local_date_of(claim.submitted_at, settings.policy.local_utc_offset_hours)
     if treated > submitted:
         return _result("late", "not_sure", "Treatment date is after the submission date.", fields)
     days = (submitted - treated).days

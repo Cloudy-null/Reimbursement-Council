@@ -20,6 +20,7 @@ class TierConfig(ConfigModel):
 class PolicyConfig(ConfigModel):
     claim_window_days: int = Field(ge=1)
     vat_rate: Score
+    local_utc_offset_hours: int = Field(ge=-12, le=14)
     exclusions: list[str]
     tiers: dict[str, TierConfig]
 

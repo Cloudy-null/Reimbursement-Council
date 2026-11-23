@@ -7,6 +7,7 @@ import logging
 from collections.abc import Sequence
 
 from reimbursement_council.config.models import Settings
+from reimbursement_council.core.dates import local_date_from_text
 from reimbursement_council.core.models.claim import (
     CheckResult,
     ExtractedField,
@@ -25,7 +26,9 @@ QR_COMPARED: tuple[FieldName, ...] = ("total", "vat_total", "vat_number", "treat
 ITEMS_CHECK = "items_sum_to_subtotal"
 
 
-def _qr_fields(payloads: Sequence[str], document_id: str) -> list[ExtractedField]:
+def _qr_fields(
+    payloads: Sequence[str], document_id: str, offset_hours: int
+) -> list[ExtractedField]:
     """Fields from the first valid ZATCA QR, or none."""
     for payload in payloads:
         invoice = decode_zatca_tlv(payload)
@@ -35,7 +38,7 @@ def _qr_fields(payloads: Sequence[str], document_id: str) -> list[ExtractedField
             ("provider_name", invoice.seller_name),
             ("vat_number", invoice.vat_number),
             ("invoice_timestamp", invoice.timestamp),
-            ("treatment_date", invoice.timestamp[:10]),
+            ("treatment_date", _local_day(invoice.timestamp, offset_hours)),
             ("total", str(invoice.total_with_vat)),
             ("vat_total", str(invoice.vat_total)),
         ]
@@ -51,6 +54,12 @@ def _qr_fields(payloads: Sequence[str], document_id: str) -> list[ExtractedField
             for name, value in values
         ]
     return []
+
+
+def _local_day(timestamp: str, offset_hours: int) -> str:
+    """The QR time as a local date. The decoder already checked the first 10 chars are a date."""
+    day = local_date_from_text(timestamp, offset_hours)
+    return timestamp[:10] if day is None else day.isoformat()
 
 
 def _best(fields: Sequence[ExtractedField], name: FieldName) -> ExtractedField | None:
@@ -177,7 +186,7 @@ def extract_document(
     document_id: str, reading: ReaderOutput, settings: Settings
 ) -> ExtractionResult:
     decision = settings.decision
-    qr = _qr_fields(reading.qr_payloads, document_id)
+    qr = _qr_fields(reading.qr_payloads, document_id, settings.policy.local_utc_offset_hours)
     fields = _merge(reading.fields, qr, decision.qr_first_enabled)
     checks: list[CheckResult] = []
     qr_check = _qr_text_check(reading.fields, qr)

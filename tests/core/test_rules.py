@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
 
@@ -185,3 +185,17 @@ def test_result_order() -> None:
         make_claim(), make_policy(), receipt(), "hash-1", NOTHING_SEEN, repo_settings()
     )
     assert [result.rule for result in results] == ORDER
+
+
+def test_late_uses_local_date_of_submission() -> None:  # final review: timezone
+    # 22:00 UTC on 2026-11-20 is 01:00 on 2026-11-21 in Riyadh: 91 days after 2026-08-22
+    late_evening = datetime(2026, 11, 20, 22, 0, tzinfo=UTC)
+    same_instant = datetime(2026, 11, 21, 1, 0, tzinfo=timezone(timedelta(hours=3)))
+    for submitted in (late_evening, same_instant):
+        assert rules(receipt("2026-08-22"), submitted_at=submitted)["late"].outcome == "fail"
+        assert rules(receipt("2026-08-23"), submitted_at=submitted)["late"].outcome == "pass"
+
+
+def test_same_day_after_midnight_local_is_not_future() -> None:
+    submitted = datetime(2026, 11, 19, 23, 0, tzinfo=UTC)  # 02:00 on 2026-11-20 in Riyadh
+    assert rules(receipt("2026-11-20"), submitted_at=submitted)["late"].outcome == "pass"

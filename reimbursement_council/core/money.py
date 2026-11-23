@@ -11,7 +11,8 @@ _TRANSLATE = {ord(char): str(index) for index, char in enumerate(_ARABIC_INDIC)}
 _TRANSLATE |= {ord(char): str(index) for index, char in enumerate(_PERSIAN)}
 _TRANSLATE |= {ord("٫"): ".", ord("٬"): ","}
 _CURRENCY_TOKENS = ("SAR", "ر.س", "﷼")
-_AMOUNT = re.compile(r"\d+(\.\d{1,2})?", re.ASCII)
+_AMOUNT = re.compile(r"(\d+|\d{1,3}(,\d{3})+)(\.\d{1,2})?", re.ASCII)
+"""Plain digits, or thousands grouped in threes ("1,150.50"). "12,50" is unclear, so None."""
 
 
 def parse_sar_to_halalas(text: str) -> int | None:
@@ -19,10 +20,10 @@ def parse_sar_to_halalas(text: str) -> int | None:
     cleaned = text.translate(_TRANSLATE)
     for token in _CURRENCY_TOKENS:
         cleaned = cleaned.replace(token, "")
-    cleaned = "".join(cleaned.split()).replace(",", "")
+    cleaned = "".join(cleaned.split())
     if not _AMOUNT.fullmatch(cleaned):
         return None
-    return int(Decimal(cleaned) * HALALAS_PER_SAR)
+    return int(Decimal(cleaned.replace(",", "")) * HALALAS_PER_SAR)
 
 
 def format_sar(halalas: int) -> str:

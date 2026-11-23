@@ -1,6 +1,8 @@
 # Made-up policy rules. Money in halalas (1 SAR = 100 halalas). Rates are fractions.
 claim_window_days: 90
 vat_rate: 0.15
+# Dates are compared in local time. Saudi Arabia is UTC+3 with no daylight saving.
+local_utc_offset_hours: 3
 exclusions: [DENT-WHITEN, COSM-BOTOX]
 tiers:
   silver:

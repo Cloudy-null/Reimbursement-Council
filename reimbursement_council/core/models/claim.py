@@ -1,8 +1,9 @@
 """A claim, its documents, and what we read from them."""
 
 from datetime import date
+from typing import Self
 
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, model_validator
 
 from reimbursement_council.core.models.common import (
     MONEY_FIELDS,
@@ -51,6 +52,13 @@ class ExtractedField(Model):
     source: FieldSource
     confidence: Score
     location: FieldLocation | None = None
+
+    @model_validator(mode="after")
+    def money_is_halalas_digits(self) -> Self:
+        """A reader must hand over money as halalas digits. '22.50' is refused, not guessed."""
+        if self.name in MONEY_FIELDS and not (self.value.isascii() and self.value.isdigit()):
+            raise ValueError(f"{self.name} must be halalas as digits, got {self.value!r}")
+        return self
 
 
 class LineItem(Model):

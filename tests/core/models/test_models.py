@@ -139,7 +139,6 @@ def test_extraction_accessors() -> None:
             make_field("total", "17250", 0.6),
             make_field("total", "17000", 0.95),
             make_field("treatment_date", "2026-11-15"),
-            make_field("subtotal", "not digits"),
             make_field("invoice_timestamp", "bad date"),
         ]
     )
@@ -149,7 +148,6 @@ def test_extraction_accessors() -> None:
     assert ex.money("total") == 17000
     assert ex.day("treatment_date") == date(2026, 11, 15)
     assert ex.money("vat_total") is None
-    assert ex.money("subtotal") is None
     assert ex.day("invoice_timestamp") is None
 
 
@@ -216,3 +214,11 @@ def test_reference_lookup_errors_name_the_id() -> None:
         ref.member("m404")
     with pytest.raises(LookupError, match="p404"):
         ref.policy("p404")
+
+
+def test_money_field_value_must_be_digits() -> None:  # final review: "22.50" would pay 0 VAT
+    with pytest.raises(ValidationError):
+        make_field("vat_total", "22.50")
+    with pytest.raises(ValidationError):
+        make_field("total", "١٧٢٥٠")
+    assert make_field("total", "17250").value == "17250"

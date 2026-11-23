@@ -34,3 +34,12 @@ def test_apply_rate_rounds_half_up() -> None:
     assert apply_rate(13500, 0.15) == 2025
     assert apply_rate(13500, 0.0) == 0
     assert isinstance(apply_rate(13500, 0.15), int)
+
+
+@pytest.mark.parametrize("text", ["12,50", "1,2,3", "1,15,0.50", ",115", "115,"])
+def test_parse_rejects_bad_grouping(text: str) -> None:  # Review Focus 1, final review
+    assert parse_sar_to_halalas(text) is None
+
+
+def test_parse_accepts_three_digit_groups() -> None:
+    assert parse_sar_to_halalas("1,234,567.80") == 123456780

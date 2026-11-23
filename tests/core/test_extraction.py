@@ -138,3 +138,18 @@ def test_arithmetic_tolerance_allows_rounding() -> None:
     fields = [make_field("subtotal", "15001"), make_field("vat_total", "2250")]
     checks = arithmetic_checks(fields, [make_item("CONS-GP", 15000)], 0.15, 1)
     assert all(check.passed for check in checks)
+
+
+def test_qr_treatment_date_is_local() -> None:  # final review: timezone
+    late_night = encode_zatca_tlv(
+        ZatcaInvoice(
+            seller_name="Al Noor Clinic",
+            vat_number="300000000000003",
+            timestamp="2026-08-21T22:30:00Z",
+            total_with_vat=17250,
+            vat_total=2250,
+        )
+    )
+    result = extract_document(DOC_ID, reading(reader_fields(), [late_night]), repo_settings())
+    treatment = result.best("treatment_date")
+    assert treatment is not None and treatment.value == "2026-08-22"
