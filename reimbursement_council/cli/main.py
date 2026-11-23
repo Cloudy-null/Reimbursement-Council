@@ -19,7 +19,7 @@ from reimbursement_council.adapters.ocr_engine import (
 )
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
-from reimbursement_council.cli import receipts
+from reimbursement_council.cli import claims_set, receipts
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.money import format_sar
@@ -44,6 +44,7 @@ def _parser() -> argparse.ArgumentParser:
     run_claim.add_argument("--db", type=Path, default=Path("data/claims.sqlite"))
     run_claim.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
     receipts.add_commands(commands)
+    claims_set.add_commands(commands)
     return parser
 
 
@@ -77,10 +78,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         level=logging.INFO, stream=sys.stderr, format="%(levelname)s %(name)s: %(message)s"
     )
     args = _parser().parse_args(argv)
-    if args.command in ("make-receipts", "read-accuracy"):
-        command = (
-            receipts.make_receipts if args.command == "make-receipts" else receipts.read_accuracy
-        )
+    commands = {
+        "make-receipts": receipts.make_receipts,
+        "read-accuracy": receipts.read_accuracy,
+        "make-claims": claims_set.make_claims,
+        "run-set": claims_set.run_set,
+        "fit-calibration": claims_set.fit_calibration,
+    }
+    if args.command in commands:
+        command = commands[args.command]
         _use_utf8_stdout()
         try:
             return command(args)
