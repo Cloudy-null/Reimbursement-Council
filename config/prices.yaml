@@ -1,6 +1,58 @@
 # Reference price list. network_price in halalas, before VAT. category matches the policy tiers.
-- {service_code: CONS-GP, description: General consultation, network_price: 15000, category: outpatient}
-- {service_code: LAB-CBC, description: Complete blood count, network_price: 8000, category: lab}
-- {service_code: MED-PARA, description: Paracetamol 500 mg, network_price: 1500, category: pharmacy}
-- {service_code: DENT-WHITEN, description: Teeth whitening, network_price: 60000, category: outpatient}
-- {service_code: COSM-BOTOX, description: Botox, network_price: 120000, category: outpatient}
+# aliases: how the service is written on receipts, in English and Arabic. Used to match line item
+# text to a service code. Each alias belongs to one code only.
+- service_code: CONS-GP
+  description: General consultation
+  network_price: 15000
+  category: outpatient
+  aliases: [general consultation, gp consultation, consultation, كشف عام, استشارة عامة]
+- service_code: CONS-SPEC
+  description: Specialist consultation
+  network_price: 30000
+  category: outpatient
+  aliases: [specialist consultation, specialist visit, كشف استشاري, استشارة اخصائي]
+- service_code: LAB-CBC
+  description: Complete blood count
+  network_price: 8000
+  category: lab
+  aliases: [complete blood count, cbc, تحليل دم شامل, صورة دم كاملة]
+- service_code: LAB-VITD
+  description: Vitamin D test
+  network_price: 12000
+  category: lab
+  aliases: [vitamin d test, vitamin d, تحليل فيتامين د, فيتامين د]
+- service_code: XRAY-CHEST
+  description: Chest X-ray
+  network_price: 20000
+  category: radiology
+  aliases: [chest x-ray, chest xray, x-ray chest, اشعة صدر, اشعة سينية للصدر]
+- service_code: MED-PARA
+  description: Paracetamol 500 mg
+  network_price: 1500
+  category: pharmacy
+  aliases: [paracetamol 500 mg, paracetamol, باراسيتامول]
+- service_code: MED-AMOX
+  description: Amoxicillin 500 mg
+  network_price: 3500
+  category: pharmacy
+  aliases: [amoxicillin 500 mg, amoxicillin, اموكسيسيلين]
+- service_code: MED-IBU
+  description: Ibuprofen 400 mg
+  network_price: 2000
+  category: pharmacy
+  aliases: [ibuprofen 400 mg, ibuprofen, ايبوبروفين]
+- service_code: DENT-CLEAN
+  description: Dental cleaning
+  network_price: 25000
+  category: dental
+  aliases: [dental cleaning, scaling and polishing, تنظيف اسنان]
+- service_code: DENT-WHITEN
+  description: Teeth whitening
+  network_price: 60000
+  category: dental
+  aliases: [teeth whitening, تبييض اسنان]
+- service_code: COSM-BOTOX
+  description: Botox
+  network_price: 120000
+  category: outpatient
+  aliases: [botox, بوتوكس]

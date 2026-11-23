@@ -6,5 +6,5 @@ local_utc_offset_hours: 3
 exclusions: [DENT-WHITEN, COSM-BOTOX]
 tiers:
   silver:
-    limits_halalas: {outpatient: 1500000, lab: 500000, pharmacy: 300000}
-    copay_rate: {outpatient: 0.10, lab: 0.0, pharmacy: 0.20}
+    limits_halalas: {outpatient: 1500000, lab: 500000, pharmacy: 300000, radiology: 800000, dental: 400000}
+    copay_rate: {outpatient: 0.10, lab: 0.0, pharmacy: 0.20, radiology: 0.10, dental: 0.20}

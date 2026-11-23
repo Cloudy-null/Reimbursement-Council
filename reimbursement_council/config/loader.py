@@ -17,6 +17,7 @@ from reimbursement_council.config.models import (
     Settings,
 )
 from reimbursement_council.core.models.reference import PriceListItem
+from reimbursement_council.core.text import normalize_text
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,15 @@ def _load_prices(data: Any, policy: PolicyConfig) -> dict[str, PriceListItem]:
         if item.service_code in prices:
             raise ConfigError(f"prices.yaml: duplicate service_code {item.service_code}")
         prices[item.service_code] = item
+    alias_owner: dict[str, str] = {}
+    for item in items:
+        for alias in item.aliases:
+            key = normalize_text(alias)
+            owner = alias_owner.setdefault(key, item.service_code)
+            if owner != item.service_code:
+                raise ConfigError(
+                    f"prices.yaml: alias {key!r} is used by both {owner} and {item.service_code}"
+                )
     for item in items:
         for tier_name, tier in policy.tiers.items():
             if item.category not in tier.limits_halalas or item.category not in tier.copay_rate:

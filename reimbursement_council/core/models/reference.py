@@ -66,6 +66,7 @@ class PriceListItem(Model):
     description: str
     network_price: Halalas
     category: str
+    aliases: list[str] = Field(default_factory=list)
 
 
 class ReferenceData(Model):

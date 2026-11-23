@@ -119,10 +119,10 @@ def test_gemini_reader_not_built_yet(tmp_path: Path) -> None:
 
 def test_price_category_missing_from_tier_rejected(tmp_path: Path) -> None:
     def new_category(data: Any) -> Any:
-        data[0]["category"] = "dental"
+        data[0]["category"] = "optical"
         return data
 
-    with pytest.raises(ConfigError, match=r"dental.*silver"):
+    with pytest.raises(ConfigError, match=r"optical.*silver"):
         load_settings(changed_config(tmp_path, "prices.yaml", new_category), env={})
 
 
@@ -183,3 +183,18 @@ def test_rule_fields_have_labels() -> None:  # final review: raw "line_items" in
     s = load_settings(REPO_CONFIG, env={})
     for language in (s.messages.en, s.messages.ar):
         assert {"line_items", "treatment_date", "receipt", "patient_name"} <= set(language.fields)
+
+
+def test_aliases_load_and_belong_to_one_code() -> None:
+    s = load_settings(REPO_CONFIG, env={})
+    assert "كشف عام" in s.prices["CONS-GP"].aliases
+    assert s.prices["XRAY-CHEST"].category == "radiology"
+
+
+def test_shared_alias_rejected(tmp_path: Path) -> None:
+    def share(data: Any) -> Any:
+        data[1]["aliases"] = data[1]["aliases"] + ["Consultation"]
+        return data
+
+    with pytest.raises(ConfigError, match=r"prices\.yaml.*consultation"):
+        load_settings(changed_config(tmp_path, "prices.yaml", share), env={})
