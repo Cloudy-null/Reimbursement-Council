@@ -1,9 +1,7 @@
 # Handover
 
 ## 1. Current status
-Walking skeleton built on branch build/skeleton (plan: docs/superpowers/plans/2026-11-23-walking-skeleton.md, all 15 tasks done, native execution). Not merged to main; owner reviews first.
-Progress: Task 15 of 15 done (CLI, README and handover). Every task is one or more commits; git log is the record.
-What works: a claim file goes in and a stored decision comes out with fields, checks, hard rules, four council votes, a lane, a payout breakdown and a member message in Arabic and English. Text reading uses a fixture reader; images give QR codes only.
+Overnight build on branch build/overnight (owner said: make what we can, do it). The walking skeleton (PR #1) is merged to main. Now finishing layer 1: reading receipt photos. Design and plan, both written by Claude and not yet reviewed: docs/superpowers/specs/2026-11-23-layer1-receipt-reading-design.md and docs/superpowers/plans/2026-11-23-layer1-receipt-reading.md. Done so far: EasyOCR spike (works, about 6 s per receipt on CPU), price list aliases, synthetic receipt content, receipt drawing in three layouts. EasyOCR is an optional extra: uv sync --extra ocr.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -45,9 +43,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
-1. Owner reviews branch build/skeleton and the 10 plan decisions, then merges or asks for changes.
-2. Plan the next layer: EasyOCR text reader behind the reader adapter, Hijri dates, PDFs.
-3. Synthetic generator and test harness, so calibration and ablations have data.
+1. Receipt text parser: OCR lines to fields and line items (core/receipt_parsing.py).
+2. EasyOCR engine, disk cache and the QR plus OCR reader wired into the pipeline.
+3. make-receipts and read-accuracy commands, accuracy numbers in EXPERIMENTS.md, tag layer-1.
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
