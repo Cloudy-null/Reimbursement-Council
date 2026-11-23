@@ -45,3 +45,11 @@ def test_history_low() -> None:
 def test_history_never_requests() -> None:
     vote = history_member.vote(make_case(), repo_settings())
     assert vote.request is None and vote.member == "history_member"
+
+
+def test_provider_trust_weight_comes_from_config() -> None:  # final review: no hardcoded weight
+    from tests.core.council.test_registry import with_member
+
+    settings = with_member("history_member", provider_trust_weight=1.0)
+    case = make_case(history=history(5, 0), provider=TRUSTED_PROVIDER)
+    assert history_member.vote(case, settings).score == pytest.approx(0.8)

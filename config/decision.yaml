@@ -23,5 +23,6 @@ members:
   document_checker: {enabled: true, weight: 1.0, required_fields: [provider_name, treatment_date, total], failed_check_score_cap: 0.5}
   coverage_checker: {enabled: true, weight: 1.0, no_items_score: 0.3}
   price_checker: {enabled: true, weight: 1.0, zero_score_ratio: 3.0, unknown_item_score: 0.5}
-  history_member: {enabled: true, weight: 1.0, min_past_claims: 3}
+  # provider_trust_weight: share of the score from provider trust; the rest is member history
+  history_member: {enabled: true, weight: 1.0, min_past_claims: 3, provider_trust_weight: 0.5}
   case_reviewer: {enabled: false, weight: 1.0}

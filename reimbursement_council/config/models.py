@@ -46,6 +46,7 @@ class PriceCheckerConfig(MemberConfig):
 
 class HistoryMemberConfig(MemberConfig):
     min_past_claims: int = Field(ge=1)
+    provider_trust_weight: Score
 
 
 class MembersConfig(ConfigModel):
@@ -105,6 +106,17 @@ class DecisionConfig(ConfigModel):
         return self
 
 
+TEMPLATE_PLACEHOLDERS = {
+    "amount": "0.00",
+    "requested": "0.00",
+    "reason": "",
+    "request": "",
+    "claim_window_days": 0,
+    "field": "",
+}
+"""Every value a member message template may use."""
+
+
 class LaneMessages(ConfigModel):
     approved: str
     approved_partial: str
@@ -144,6 +156,24 @@ class MessageConfig(ConfigModel):
         missing = set(self.en.fields) ^ set(self.ar.fields)
         if missing:
             raise ValueError(f"field labels must exist in both languages: {sorted(missing)}")
+        return self
+
+    @model_validator(mode="after")
+    def known_placeholders(self) -> Self:
+        """A typo like {amout} fails here at startup, not when a member gets a message."""
+        for language_name, language in (("en", self.en), ("ar", self.ar)):
+            for section_name, section in (
+                ("lanes", language.lanes),
+                ("rules", language.rules),
+                ("requests", language.requests),
+            ):
+                for key, template in section.model_dump().items():
+                    try:
+                        template.format(**TEMPLATE_PLACEHOLDERS)
+                    except (KeyError, IndexError, ValueError) as error:
+                        raise ValueError(
+                            f"{language_name}.{section_name}.{key}: bad placeholder {error}"
+                        ) from error
         return self
 
 

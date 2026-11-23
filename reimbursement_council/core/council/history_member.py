@@ -22,6 +22,7 @@ def vote(case: ClaimCase, settings: Settings) -> Vote:
     else:
         member_part = NEUTRAL
         member_reason = f"only {history.past_claims} past claims, neutral"
-    score = (member_part + case.provider.trust_score) / 2
+    trust_weight = config.provider_trust_weight
+    score = (1 - trust_weight) * member_part + trust_weight * case.provider.trust_score
     reason = f"History {member_reason}; provider trust {case.provider.trust_score:.2f}."
     return Vote(member=MEMBER, score=score, reason=reason, evidence=["history", "provider"])

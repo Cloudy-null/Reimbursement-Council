@@ -25,6 +25,7 @@ en:
     patient_name: "patient name"
     receipt: "receipt"
     itemized_invoice: "itemized invoice that lists each service"
+    line_items: "list of services on the receipt"
 ar:
   lanes:
     approved: "تمت الموافقة على مطالبتك. سنحول لك {amount} ريال."
@@ -51,3 +52,4 @@ ar:
     patient_name: "اسم المريض"
     receipt: "الفاتورة"
     itemized_invoice: "فاتورة مفصلة تذكر كل خدمة"
+    line_items: "قائمة الخدمات في الفاتورة"

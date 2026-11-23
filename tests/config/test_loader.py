@@ -167,3 +167,19 @@ def test_bad_yaml_names_the_file(tmp_path: Path) -> None:
     (config_dir / "decision.yaml").write_text("members: [unclosed", encoding="utf-8")
     with pytest.raises(ConfigError, match=r"decision\.yaml"):
         load_settings(config_dir, env={})
+
+
+def test_template_placeholder_typo_rejected(tmp_path: Path) -> None:  # final review
+    config = changed_config(
+        tmp_path,
+        "messages.yaml",
+        set_key("en", "lanes", "approved", value="We will send you {amout} SAR."),
+    )
+    with pytest.raises(ConfigError, match=r"messages\.yaml.*amout"):
+        load_settings(config, env={})
+
+
+def test_rule_fields_have_labels() -> None:  # final review: raw "line_items" in Arabic text
+    s = load_settings(REPO_CONFIG, env={})
+    for language in (s.messages.en, s.messages.ar):
+        assert {"line_items", "treatment_date", "receipt", "patient_name"} <= set(language.fields)
