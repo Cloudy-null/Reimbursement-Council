@@ -161,3 +161,16 @@ def test_extra_blockers_stop_approval() -> None:  # final review
         rules(), PLAIN_VOTES, 0.99, 0.0, PAYOUT, 0, repo_settings(), ["failed checks: x"]
     )
     assert choice.lane == "human_review" and "failed checks: x" in choice.reason
+
+
+def test_possible_duplicate_goes_to_human_not_self_fix() -> None:  # final review
+    choice = lane(rule_results=rules(duplicate="not_sure"), votes=REQUEST_VOTES)
+    assert choice.lane == "human_review" and "duplicate" in choice.reason
+
+
+def test_self_fix_asks_for_the_field_the_rule_needs() -> None:  # final review
+    other = REQUEST_VOTES[0].model_copy(
+        update={"request_field": "provider_name", "request": "Please confirm the provider_name."}
+    )
+    choice = lane(rule_results=rules(late="not_sure"), votes=[other, REQUEST_VOTES[0]])
+    assert choice.request is not None and choice.request.field == "treatment_date"

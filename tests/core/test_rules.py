@@ -4,7 +4,7 @@ import pytest
 
 from reimbursement_council.core.models.claim import ExtractedField, ExtractionResult, LineItem
 from reimbursement_council.core.models.decision import RuleResult
-from reimbursement_council.core.rules import SeenReceipts, receipt_fingerprint, run_hard_rules
+from reimbursement_council.core.rules import SeenReceipts, receipt_keys, run_hard_rules
 from tests.factories import (
     SUBMITTED_AT,
     make_claim,
@@ -130,10 +130,29 @@ def test_duplicate_by_image_hash() -> None:
     assert rules(seen=seen)["duplicate"].outcome == "fail"
 
 
+def seen_keys(fingerprint: str = "", weak_key: str = "") -> SeenReceipts:
+    return SeenReceipts(
+        fingerprints=frozenset({fingerprint} - {""}),
+        image_hashes=frozenset(),
+        weak_keys=frozenset({weak_key} - {""}),
+    )
+
+
+def test_receipt_keys() -> None:
+    keys = receipt_keys(receipt(), 3)
+    assert keys.fingerprint == "300000000000003|2026-11-15T10:30:00Z|17250"
+    assert keys.weak_key == "300000000000003|2026-11-15|17250"
+    empty = receipt_keys(make_extraction([]), 3)
+    assert (empty.fingerprint, empty.weak_key) == (None, None)
+
+
+def test_fingerprint_is_the_same_instant_in_any_zone() -> None:
+    local = receipt(extra=[make_field("invoice_timestamp", "2026-11-15T13:30:00+03:00", 0.99)])
+    assert receipt_keys(local, 3).fingerprint == "300000000000003|2026-11-15T10:30:00Z|17250"
+
+
 def test_duplicate_by_fingerprint() -> None:
-    fingerprint = receipt_fingerprint(receipt(), 0.9)
-    assert fingerprint == "300000000000003|2026-11-15T10:30:00Z|17250"
-    seen = SeenReceipts(fingerprints=frozenset({fingerprint}), image_hashes=frozenset())
+    seen = seen_keys(fingerprint="300000000000003|2026-11-15T10:30:00Z|17250")
     assert rules(seen=seen, image_hash="other-hash")["duplicate"].outcome == "fail"
 
 
@@ -145,16 +164,25 @@ def test_same_day_same_total_new_timestamp_not_duplicate() -> None:
     assert rules(seen=seen)["duplicate"].outcome == "pass"
 
 
-def test_fingerprint_none_when_low_confidence() -> None:
-    low_total = make_extraction(
-        [
-            make_field("vat_number", "300000000000003"),
-            make_field("invoice_timestamp", "2026-11-15T10:30:00Z"),
-            make_field("total", "17250", 0.5),
-        ]
+def test_low_confidence_fingerprint_match_is_not_sure() -> None:  # final review
+    low_total = receipt(extra=[make_field("total", "17250", 0.5)])
+    unclear = make_extraction(
+        [f for f in low_total.fields if not (f.name == "total" and f.confidence > 0.5)]
     )
-    assert receipt_fingerprint(low_total, 0.9) is None
-    assert receipt_fingerprint(make_extraction([]), 0.9) is None
+    seen = seen_keys(fingerprint="300000000000003|2026-11-15T10:30:00Z|17250")
+    assert rules(unclear, seen=seen, image_hash="other")["duplicate"].outcome == "not_sure"
+
+
+def test_same_provider_date_and_total_is_not_sure() -> None:  # final review: new photo, no QR
+    no_timestamp = make_extraction([f for f in receipt().fields if f.name != "invoice_timestamp"])
+    seen = seen_keys(weak_key="300000000000003|2026-11-15|17250")
+    assert rules(no_timestamp, seen=seen, image_hash="other")["duplicate"].outcome == "not_sure"
+
+
+def test_claimant_must_be_on_the_policy() -> None:  # final review
+    stranger = make_claim().model_copy(update={"member_id": "someone-else"})
+    results = run_hard_rules(stranger, make_policy(), receipt(), "h", NOTHING_SEEN, repo_settings())
+    assert results[2].rule == "person_not_covered" and results[2].outcome == "fail"
 
 
 def test_two_patients_fail_same_name_spacing_passes() -> None:

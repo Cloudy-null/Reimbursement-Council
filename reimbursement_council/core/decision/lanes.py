@@ -36,12 +36,16 @@ def expected_loss(p_good: float, payout_calculated: int) -> int:
     return int(exact.quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
-def _first_vote_request(votes: Sequence[Vote]) -> SelfFixRequest | None:
+def _first_vote_request(
+    votes: Sequence[Vote], wanted_fields: Sequence[str] | None = None
+) -> SelfFixRequest | None:
+    """The first member request, or the first one about one of wanted_fields."""
     for vote in votes:
-        if vote.request is not None and vote.request_kind is not None and vote.request_field:
-            return SelfFixRequest(
-                kind=vote.request_kind, field=vote.request_field, text=vote.request
-            )
+        if vote.request is None or vote.request_kind is None or not vote.request_field:
+            continue
+        if wanted_fields is not None and vote.request_field not in wanted_fields:
+            continue
+        return SelfFixRequest(kind=vote.request_kind, field=vote.request_field, text=vote.request)
     return None
 
 
@@ -115,6 +119,13 @@ def choose_lane(
         )
 
     unsure = [result for result in rule_results if result.outcome == "not_sure"]
+    if any(result.rule == "duplicate" for result in unsure):
+        return LaneChoice(
+            lane="human_review",
+            outcome="queued",
+            reason="Possible duplicate of a receipt in another claim. A person must check.",
+            request=None,
+        )
     if unsure:
         first = unsure[0]
         if not _retries_left(retries_used, decision):
@@ -125,8 +136,12 @@ def choose_lane(
                 request=None,
             )
         field = first.fields[0] if first.fields else first.rule
-        request = _first_vote_request(votes) or SelfFixRequest(
-            kind="confirm_field", field=field, text=f"Please confirm the {field}."
+        request = (
+            _first_vote_request(votes, wanted_fields=first.fields)
+            or _first_vote_request(votes)
+            or SelfFixRequest(
+                kind="confirm_field", field=field, text=f"Please confirm the {field}."
+            )
         )
         return LaneChoice(
             lane="self_fix",

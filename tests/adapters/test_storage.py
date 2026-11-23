@@ -46,7 +46,7 @@ def test_save_replaces_same_claim(tmp_path: Path) -> None:
 
 def test_seen_excludes_own_claim(tmp_path: Path) -> None:  # Review Focus 3
     store = ClaimStore(tmp_path / "claims.sqlite")
-    store.record_receipt("claim-a", "hash1", "fp1")
+    store.record_receipt("claim-a", "hash1", "fp1", None, "auto_approve")
     assert store.seen_receipts("claim-a") == SeenReceipts(
         fingerprints=frozenset(), image_hashes=frozenset()
     )
@@ -56,12 +56,35 @@ def test_seen_excludes_own_claim(tmp_path: Path) -> None:  # Review Focus 3
 
 def test_missing_parts_are_not_seen(tmp_path: Path) -> None:
     store = ClaimStore(tmp_path / "claims.sqlite")
-    store.record_receipt("claim-a", None, None)
+    store.record_receipt("claim-a", None, None, None, "auto_approve")
     assert store.seen_receipts("claim-b") == SeenReceipts(
         fingerprints=frozenset(), image_hashes=frozenset()
     )
 
 
 def test_store_survives_reopen(tmp_path: Path) -> None:
-    ClaimStore(tmp_path / "claims.sqlite").record_receipt("claim-a", "hash1", None)
+    ClaimStore(tmp_path / "claims.sqlite").record_receipt(
+        "claim-a", "hash1", None, None, "auto_approve"
+    )
     assert "hash1" in ClaimStore(tmp_path / "claims.sqlite").seen_receipts("claim-b").image_hashes
+
+
+def test_rejected_claims_do_not_block_resubmission(tmp_path: Path) -> None:  # final review
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    store.record_receipt("claim-a", "hash1", "fp1", "wk1", "auto_reject")
+    assert store.seen_receipts("claim-b") == SeenReceipts(
+        fingerprints=frozenset(), image_hashes=frozenset()
+    )
+
+
+def test_record_replaces_the_claims_old_receipt(tmp_path: Path) -> None:
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    store.record_receipt("claim-a", "hash1", "fp1", "wk1", "auto_approve")
+    store.record_receipt("claim-a", "hash1", "fp1", "wk1", "auto_reject")
+    assert store.seen_receipts("claim-b").image_hashes == frozenset()
+
+
+def test_weak_keys_are_seen(tmp_path: Path) -> None:
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    store.record_receipt("claim-a", None, None, "wk1", "human_review")
+    assert store.seen_receipts("claim-b").weak_keys == frozenset({"wk1"})

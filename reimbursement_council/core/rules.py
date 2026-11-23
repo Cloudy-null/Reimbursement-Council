@@ -7,7 +7,7 @@ instead of rejecting it on a guess.
 from datetime import date
 
 from reimbursement_council.config.models import Settings
-from reimbursement_council.core.dates import local_date_of
+from reimbursement_council.core.dates import local_date_of, utc_timestamp
 from reimbursement_council.core.models.claim import Claim, ExtractionResult
 from reimbursement_council.core.models.common import FieldName, Model, RuleName, RuleOutcome
 from reimbursement_council.core.models.decision import RuleResult
@@ -17,10 +17,24 @@ NO_RECEIPT = ["receipt"]
 
 
 class SeenReceipts(Model):
-    """Receipts already sent in other claims."""
+    """Receipts already sent in other claims that were not rejected."""
 
     fingerprints: frozenset[str]
     image_hashes: frozenset[str]
+    weak_keys: frozenset[str] = frozenset()
+
+
+class ReceiptKeys(Model):
+    """How we recognize a receipt again, whatever the confidence of its parts.
+
+    fingerprint: seller VAT number, invoice time (in UTC) and total. A match on a confident
+    fingerprint is a duplicate. weak_key: VAT number, treatment date and total. A match is
+    only a possible duplicate (two family members can pay the same clinic the same price on
+    the same day), so it goes to a human, never to rejection.
+    """
+
+    fingerprint: str | None
+    weak_key: str | None
 
 
 def _result(rule: RuleName, outcome: RuleOutcome, reason: str, fields: list[str]) -> RuleResult:
@@ -34,15 +48,27 @@ def _confident_value(extraction: ExtractionResult, name: FieldName, floor: float
     return field.value
 
 
-def receipt_fingerprint(extraction: ExtractionResult, floor: float) -> str | None:
-    """Seller VAT number, full invoice timestamp and total. None if any part is unclear."""
-    parts = [
-        _confident_value(extraction, name, floor)
+def _value(extraction: ExtractionResult, name: FieldName) -> str | None:
+    field = extraction.best(name)
+    return None if field is None else field.value
+
+
+def receipt_keys(extraction: ExtractionResult, offset_hours: int) -> ReceiptKeys:
+    vat = _value(extraction, "vat_number")
+    total = _value(extraction, "total")
+    timestamp = _value(extraction, "invoice_timestamp")
+    day = _value(extraction, "treatment_date")
+    instant = None if timestamp is None else utc_timestamp(timestamp, offset_hours)
+    fingerprint = f"{vat}|{instant}|{total}" if vat and instant and total else None
+    weak_key = f"{vat}|{day}|{total}" if vat and day and total else None
+    return ReceiptKeys(fingerprint=fingerprint, weak_key=weak_key)
+
+
+def _fingerprint_confident(extraction: ExtractionResult, floor: float) -> bool:
+    return all(
+        _confident_value(extraction, name, floor) is not None
         for name in ("vat_number", "invoice_timestamp", "total")
-    ]
-    if any(part is None for part in parts):
-        return None
-    return "|".join(part for part in parts if part is not None)
+    )
 
 
 def _confident_date(extraction: ExtractionResult, floor: float) -> date | None:
@@ -89,9 +115,13 @@ def _policy_inactive(
 
 
 def _person_not_covered(claim: Claim, policy: Policy) -> RuleResult:
-    fields = ["patient_member_id"]
+    fields = ["patient_member_id", "member_id"]
     if claim.patient_member_id not in policy.covered_people:
         return _result("person_not_covered", "fail", "Patient is not on the policy.", fields)
+    if claim.member_id not in policy.covered_people:
+        return _result(
+            "person_not_covered", "fail", "The member filing is not on this policy.", fields
+        )
     return _result("person_not_covered", "pass", "Patient is on the policy.", fields)
 
 
@@ -121,12 +151,24 @@ def _duplicate(
     fields = ["image_hash", "vat_number", "invoice_timestamp", "total"]
     if image_hash is not None and image_hash in seen.image_hashes:
         return _result("duplicate", "fail", "The same image was sent in another claim.", fields)
-    if extraction is not None:
-        fingerprint = receipt_fingerprint(extraction, settings.decision.hard_rule_confidence_floor)
-        if fingerprint is not None and fingerprint in seen.fingerprints:
+    if extraction is None:
+        return _result("duplicate", "pass", "Not seen in another claim.", fields)
+    keys = receipt_keys(extraction, settings.policy.local_utc_offset_hours)
+    if keys.fingerprint is not None and keys.fingerprint in seen.fingerprints:
+        if _fingerprint_confident(extraction, settings.decision.hard_rule_confidence_floor):
             return _result(
                 "duplicate", "fail", "The same receipt was sent in another claim.", fields
             )
+        return _result(
+            "duplicate", "not_sure", "May be a receipt already sent; parts are unclear.", fields
+        )
+    if keys.weak_key is not None and keys.weak_key in seen.weak_keys:
+        return _result(
+            "duplicate",
+            "not_sure",
+            "Same provider, date and total as a receipt in another claim.",
+            fields,
+        )
     return _result("duplicate", "pass", "Not seen in another claim.", fields)
 
 

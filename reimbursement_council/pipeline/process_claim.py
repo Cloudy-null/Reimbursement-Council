@@ -20,7 +20,7 @@ from reimbursement_council.core.models.common import PRIMARY_DOCUMENT_KINDS
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.models.reference import ReferenceData
 from reimbursement_council.core.payout import calculate_payout
-from reimbursement_council.core.rules import receipt_fingerprint, run_hard_rules
+from reimbursement_council.core.rules import receipt_keys, run_hard_rules
 
 logger = logging.getLogger(__name__)
 
@@ -115,12 +115,18 @@ def process_claim(
         check_results=[] if extraction is None else extraction.checks,
     )
     store.save_decision(decision)
-    fingerprint = (
+    keys = (
         None
         if extraction is None
-        else receipt_fingerprint(extraction, settings.decision.hard_rule_confidence_floor)
+        else receipt_keys(extraction, settings.policy.local_utc_offset_hours)
     )
-    store.record_receipt(claim.claim_id, image_hash, fingerprint)
+    store.record_receipt(
+        claim.claim_id,
+        image_hash,
+        None if keys is None else keys.fingerprint,
+        None if keys is None else keys.weak_key,
+        decision.lane,
+    )
     logger.info(
         "claim %s: lane %s, p_good %.3f, disagreement %.3f",
         claim.claim_id,

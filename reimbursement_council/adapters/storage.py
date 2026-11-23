@@ -18,9 +18,11 @@ CREATE TABLE IF NOT EXISTS decisions (
     json TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS receipts (
-    claim_id TEXT NOT NULL,
+    claim_id TEXT PRIMARY KEY,
     image_hash TEXT,
-    fingerprint TEXT
+    fingerprint TEXT,
+    weak_key TEXT,
+    lane TEXT NOT NULL
 );
 """
 
@@ -57,22 +59,35 @@ class ClaimStore:
         return None if row is None else Decision.model_validate_json(row[0])
 
     def record_receipt(
-        self, claim_id: str, image_hash: str | None, fingerprint: str | None
+        self,
+        claim_id: str,
+        image_hash: str | None,
+        fingerprint: str | None,
+        weak_key: str | None,
+        lane: str,
     ) -> None:
+        """One receipt row per claim; a newer decision for the same claim replaces it."""
         with self._connection() as connection:
             connection.execute(
-                "INSERT INTO receipts (claim_id, image_hash, fingerprint) VALUES (?, ?, ?)",
-                (claim_id, image_hash, fingerprint),
+                "INSERT OR REPLACE INTO receipts"
+                " (claim_id, image_hash, fingerprint, weak_key, lane) VALUES (?, ?, ?, ?, ?)",
+                (claim_id, image_hash, fingerprint, weak_key, lane),
             )
 
     def seen_receipts(self, excluding_claim_id: str) -> SeenReceipts:
-        """Receipts from every other claim. A claim never duplicates itself (self-fix resends)."""
+        """Receipts from every other claim that was not rejected.
+
+        A claim never duplicates itself (self-fix resends), and a rejected claim's receipt
+        can be sent again correctly.
+        """
         with self._connection() as connection:
             rows = connection.execute(
-                "SELECT image_hash, fingerprint FROM receipts WHERE claim_id != ?",
+                "SELECT image_hash, fingerprint, weak_key FROM receipts"
+                " WHERE claim_id != ? AND lane != 'auto_reject'",
                 (excluding_claim_id,),
             ).fetchall()
         return SeenReceipts(
             image_hashes=frozenset(row[0] for row in rows if row[0] is not None),
             fingerprints=frozenset(row[1] for row in rows if row[1] is not None),
+            weak_keys=frozenset(row[2] for row in rows if row[2] is not None),
         )
