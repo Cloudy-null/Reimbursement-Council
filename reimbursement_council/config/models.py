@@ -75,6 +75,14 @@ class MembersConfig(ConfigModel):
         ]
 
 
+class OcrConfig(ConfigModel):
+    label_match_ratio: Score
+    alias_match_ratio: Score
+    pattern_miss_factor: Score
+    heuristic_factor: Score
+    row_overlap: Score
+
+
 class DecisionConfig(ConfigModel):
     hard_rule_confidence_floor: Score
     disagreement_limit: Score
@@ -95,6 +103,9 @@ class DecisionConfig(ConfigModel):
     self_fix_max_retries: int = Field(ge=0)
     self_fix_p_good_limit: Score
     gemini_reader_enabled: bool
+    reader: Literal["easyocr", "qr_only"]
+    passed_check_confidence: Score
+    ocr: OcrConfig
     members: MembersConfig
 
     @model_validator(mode="after")

@@ -202,6 +202,34 @@ def _apply_penalties(
     return new_fields, new_items
 
 
+def _corroborate(
+    fields: Sequence[ExtractedField],
+    line_items: Sequence[LineItem],
+    checks: Sequence[CheckResult],
+    floor: float,
+) -> tuple[list[ExtractedField], list[LineItem]]:
+    """When two or more arithmetic checks ran and all passed, the amounts agree with each
+    other, so the money fields and items they used are trusted at least up to floor."""
+    arithmetic = [check for check in checks if check.name != "qr_matches_text"]
+    if len(arithmetic) < 2 or not all(check.passed for check in arithmetic):
+        return list(fields), list(line_items)
+    used = {name for check in arithmetic for name in check.fields}
+    new_fields = [
+        field.model_copy(update={"confidence": max(field.confidence, floor)})
+        if field.name in used and field.source != "qr"
+        else field
+        for field in fields
+    ]
+    items_checked = any(check.name == ITEMS_CHECK for check in arithmetic)
+    new_items = [
+        item.model_copy(update={"confidence": max(item.confidence, floor)})
+        if items_checked
+        else item
+        for item in line_items
+    ]
+    return new_fields, new_items
+
+
 def extract_document(
     document_id: str, reading: ReaderOutput, settings: Settings
 ) -> ExtractionResult:
@@ -222,6 +250,7 @@ def extract_document(
     fields, items = _apply_penalties(
         fields, reading.line_items, checks, decision.failed_check_confidence_factor
     )
+    fields, items = _corroborate(fields, items, checks, decision.passed_check_confidence)
     failed = [check.name for check in checks if not check.passed]
     logger.info(
         "document %s: %d fields, QR %s, failed checks %s",
