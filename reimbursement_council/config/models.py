@@ -4,6 +4,7 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from reimbursement_council.core.decision.calibration import PlattParams
 from reimbursement_council.core.models.common import FieldName, Halalas, MemberName, Score
 from reimbursement_council.core.models.reference import PriceListItem
 
@@ -102,6 +103,7 @@ class DecisionConfig(ConfigModel):
     self_fix_enabled: bool
     self_fix_max_retries: int = Field(ge=0)
     self_fix_p_good_limit: Score
+    paid_right_tolerance_halalas: Halalas
     gemini_reader_enabled: bool
     reader: Literal["easyocr", "qr_only"]
     passed_check_confidence: Score
@@ -110,8 +112,8 @@ class DecisionConfig(ConfigModel):
 
     @model_validator(mode="after")
     def only_built_features(self) -> Self:
-        if self.calibration_enabled:
-            raise ValueError("calibration is not built yet, keep calibration_enabled false")
+        if self.calibration_enabled and self.calibration_method != "platt":
+            raise ValueError("only platt calibration is built; isotonic is not built yet")
         if self.gemini_reader_enabled:
             raise ValueError("gemini reader is not built yet, keep gemini_reader_enabled false")
         return self
@@ -194,5 +196,6 @@ class Settings(ConfigModel):
     prices: dict[str, PriceListItem]
     messages: MessageConfig
     config_version: str
+    calibration: PlattParams | None = None
     gemini_api_key: str | None
     demo_mode: bool

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, TypeAdapter, ValidationError
+from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
 from reimbursement_council.config.models import (
     DecisionConfig,
@@ -16,12 +16,14 @@ from reimbursement_council.config.models import (
     PolicyConfig,
     Settings,
 )
+from reimbursement_council.core.decision.calibration import PlattParams
 from reimbursement_council.core.models.reference import PriceListItem
 from reimbursement_council.core.text import normalize_text
 
 logger = logging.getLogger(__name__)
 
 CONFIG_FILES = ("decision.yaml", "messages.yaml", "policy.yaml", "prices.yaml")
+CALIBRATION_FILE = "calibration.yaml"
 VERSION_LENGTH = 12
 TRUE_WORDS = frozenset({"true", "1", "yes"})
 FALSE_WORDS = frozenset({"false", "0", "no", ""})
@@ -86,11 +88,35 @@ def _load_prices(data: Any, policy: PolicyConfig) -> dict[str, PriceListItem]:
     return prices
 
 
+class CalibrationFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    method: str
+    a: float
+    b: float
+    fitted_on: str
+
+
+def _load_calibration(config_dir: Path, decision: DecisionConfig) -> PlattParams | None:
+    """config/calibration.yaml holds fitted Platt parameters; needed only when calibration is on."""
+    path = config_dir / CALIBRATION_FILE
+    if not path.is_file():
+        if decision.calibration_enabled:
+            raise ConfigError(
+                f"calibration_enabled is true but {CALIBRATION_FILE} is missing; "
+                "run fit-calibration first"
+            )
+        return None
+    data = _validate(CalibrationFile, _read_yaml(path), CALIBRATION_FILE)
+    return PlattParams(a=data.a, b=data.b)
+
+
 def _config_version(config_dir: Path) -> str:
     digest = hashlib.sha256()
-    for name in sorted(CONFIG_FILES):
-        digest.update(name.encode("utf-8"))
-        digest.update((config_dir / name).read_bytes())
+    for name in sorted((*CONFIG_FILES, CALIBRATION_FILE)):
+        path = config_dir / name
+        if path.is_file():
+            digest.update(name.encode("utf-8"))
+            digest.update(path.read_bytes())
     return digest.hexdigest()[:VERSION_LENGTH]
 
 
@@ -110,7 +136,9 @@ def load_settings(config_dir: Path, env: Mapping[str, str] | None = None) -> Set
     decision = _validate(DecisionConfig, _read_yaml(config_dir / "decision.yaml"), "decision.yaml")
     messages = _validate(MessageConfig, _read_yaml(config_dir / "messages.yaml"), "messages.yaml")
     prices = _load_prices(_read_yaml(config_dir / "prices.yaml"), policy)
+    calibration = _load_calibration(config_dir, decision)
     settings = Settings(
+        calibration=calibration,
         policy=policy,
         decision=decision,
         prices=prices,

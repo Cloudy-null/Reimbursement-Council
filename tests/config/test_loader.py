@@ -105,10 +105,18 @@ def test_case_reviewer_not_built_yet(tmp_path: Path) -> None:
         load_settings(config, env={})
 
 
-def test_calibration_not_built_yet(tmp_path: Path) -> None:
+def test_calibration_needs_its_file(tmp_path: Path) -> None:
     config = changed_config(tmp_path, "decision.yaml", set_key("calibration_enabled", value=True))
-    with pytest.raises(ConfigError, match="calibration is not built yet"):
+    with pytest.raises(ConfigError, match=r"calibration\.yaml"):
         load_settings(config, env={})
+
+
+def test_calibration_file_loads_when_enabled(tmp_path: Path) -> None:
+    config = changed_config(tmp_path, "decision.yaml", set_key("calibration_enabled", value=True))
+    params = "method: platt\na: 8.0\nb: -5.0\nfitted_on: test\n"
+    (config / "calibration.yaml").write_text(params, encoding="utf-8")
+    s = load_settings(config, env={})
+    assert s.calibration is not None and s.calibration.a == 8.0
 
 
 def test_gemini_reader_not_built_yet(tmp_path: Path) -> None:

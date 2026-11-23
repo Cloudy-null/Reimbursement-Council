@@ -18,6 +18,8 @@ always_review_amount_halalas: 500000
 self_fix_enabled: true
 self_fix_max_retries: 2
 self_fix_p_good_limit: 0.6
+# a claim counts as paid right when within this of the correct payout (main spec section 11)
+paid_right_tolerance_halalas: 100
 gemini_reader_enabled: false
 # reader for images: easyocr (QR plus OCR text) or qr_only (QR codes only, no OCR install needed)
 reader: easyocr
