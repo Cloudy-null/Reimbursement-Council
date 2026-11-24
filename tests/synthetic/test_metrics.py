@@ -10,6 +10,7 @@ def row(
     correct: int,
     p_good: float = 0.9,
     hard_rule_failed: bool = False,
+    damage: str = "none",
 ) -> RunRow:
     return RunRow(
         name="x",
@@ -22,6 +23,7 @@ def row(
         correct_payout=correct,
         defects=[],
         hard_rule_failed=hard_rule_failed,
+        damage=damage,
     )
 
 
@@ -81,3 +83,20 @@ def test_an_empty_run_is_an_error_not_zeros() -> None:
 def test_ece_refuses_lists_of_different_length() -> None:
     with pytest.raises(ValueError, match="same length"):
         expected_calibration_error([0.5, 0.5], [1])
+
+
+def test_heavy_damage_lane_shares_and_wrong_auto_approves() -> None:
+    rows = [
+        row("self_fix", True, None, 15525, damage="unreadable"),
+        row("self_fix", True, None, 15525, damage="unreadable"),
+        row("auto_approve", True, 9000, 15525, damage="unreadable"),  # wrong auto approve
+        row("auto_reject", True, None, 15525, damage="heavy"),
+        row("auto_approve", True, 15525, 15525, damage="light"),  # not heavy, left out
+    ]
+    result = metrics(rows, reviewer_time_value=2500, tolerance=100)
+    assert result["heavy_damage_claims"] == 4
+    assert result["heavy_damage_self_fix_share"] == 0.5
+    assert result["heavy_damage_auto_approve_share"] == 0.25
+    assert result["heavy_damage_auto_reject_share"] == 0.25
+    assert result["heavy_damage_human_review_share"] == 0.0
+    assert result["heavy_damage_wrong_auto_approves"] == 1

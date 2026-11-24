@@ -11,6 +11,8 @@ from collections.abc import Sequence
 from reimbursement_council.core.models.common import Halalas, Lane, Model, Outcome, Score
 
 AUTOMATED: frozenset[str] = frozenset({"auto_approve", "auto_reject"})
+HEAVY_DAMAGE: frozenset[str] = frozenset({"heavy", "unreadable"})
+HEAVY_DAMAGE_LANES = ("self_fix", "auto_approve", "auto_reject", "human_review")
 ECE_BINS = 10
 
 
@@ -25,6 +27,7 @@ class RunRow(Model):
     correct_payout: Halalas
     defects: list[str]
     hard_rule_failed: bool
+    damage: str
 
 
 def paid_right(row: RunRow, tolerance: int) -> bool:
@@ -68,6 +71,21 @@ def calibration_rows(rows: Sequence[RunRow]) -> list[RunRow]:
     return [r for r in rows if not r.hard_rule_failed]
 
 
+def heavy_damage_metrics(rows: Sequence[RunRow], tolerance: int) -> dict[str, float]:
+    """Where badly damaged photos end up. The safe lane is self_fix (ask for a new photo); an
+    auto approve on a photo we could not read is the mistake that matters most."""
+    damaged = [r for r in rows if r.damage in HEAVY_DAMAGE]
+    result: dict[str, float] = {"heavy_damage_claims": len(damaged)}
+    for lane in HEAVY_DAMAGE_LANES:
+        result[f"heavy_damage_{lane}_share"] = _share(
+            sum(r.lane == lane for r in damaged), len(damaged)
+        )
+    result["heavy_damage_wrong_auto_approves"] = sum(
+        r.lane == "auto_approve" and not paid_right(r, tolerance) for r in damaged
+    )
+    return result
+
+
 def metrics(rows: Sequence[RunRow], reviewer_time_value: int, tolerance: int) -> dict[str, float]:
     if not rows:
         raise ValueError("no claims in the run: nothing to score")
@@ -104,4 +122,4 @@ def metrics(rows: Sequence[RunRow], reviewer_time_value: int, tolerance: int) ->
         else 0.0,
         "ece": expected_calibration_error([r.p_good for r in judged], labels),
         "total_cost_sar": round((wrong_money + reviews * reviewer_time_value) / 100, 2),
-    }
+    } | heavy_damage_metrics(rows, tolerance)

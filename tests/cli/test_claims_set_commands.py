@@ -150,6 +150,7 @@ def calibration_rows() -> list[dict[str, object]]:
             "correct_payout": 15525,
             "defects": [],
             "hard_rule_failed": False,
+            "damage": "none",
         }
         for i, s in enumerate([0.2, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.97, 0.99])
     ]

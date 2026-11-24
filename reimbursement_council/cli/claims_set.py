@@ -193,6 +193,7 @@ def run_set(args: argparse.Namespace) -> int:
                 should_pay=truth["should_pay"],
                 correct_payout=truth["correct_payout"],
                 defects=truth["defects"],
+                damage=truth["damage"],
                 hard_rule_failed=any(r.outcome == "fail" for r in result.rule_results),
             )
         )
