@@ -174,3 +174,13 @@ def test_self_fix_asks_for_the_field_the_rule_needs() -> None:  # final review
     )
     choice = lane(rule_results=rules(late="not_sure"), votes=[other, REQUEST_VOTES[0]])
     assert choice.request is not None and choice.request.field == "treatment_date"
+
+
+def test_unclear_rule_asks_about_its_own_field_even_when_no_vote_does() -> None:
+    # Seen in the E12 run: an unclear treatment date asked the member to confirm the provider.
+    other = REQUEST_VOTES[0].model_copy(
+        update={"request_field": "provider_name", "request": "Please confirm the provider_name."}
+    )
+    choice = lane(rule_results=rules(late="not_sure"), votes=[other])
+    assert choice.lane == "self_fix"
+    assert choice.request is not None and choice.request.field == "treatment_date"

@@ -142,12 +142,14 @@ def choose_lane(
     if unsure:
         first = unsure[0]
         field = first.fields[0] if first.fields else first.rule
-        extra = (
+        # Ask about the field the rule needs. Another field's request would not clear the rule.
+        vote_request = (
             _first_vote_request(votes, wanted_fields=first.fields)
-            or _first_vote_request(votes)
-            or SelfFixRequest(
-                kind="confirm_field", field=field, text=f"Please confirm the {field}."
-            )
+            if first.fields
+            else _first_vote_request(votes)
+        )
+        extra = vote_request or SelfFixRequest(
+            kind="confirm_field", field=field, text=f"Please confirm the {field}."
         )
         if all((r.kind, r.field) != (extra.kind, extra.field) for r in fixable):
             fixable.append(extra)
