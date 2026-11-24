@@ -9,6 +9,7 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from reimbursement_council.adapters.receipt_drawing import DAMAGE_PRESETS, draw_receipt
@@ -101,7 +102,11 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             files = [(f"{sample}.png", (ctx.samples / f"{sample}.png").read_bytes())]
         else:
             files = await collect(photos)
-        kept, refused = accept(files, ctx.settings.documents.max_upload_megabytes)
+        kept, refused = accept(
+            files,
+            ctx.settings.documents.max_upload_megabytes,
+            ctx.settings.documents.max_files_per_upload,
+        )
         if not kept:
             text = text_for(lang)
             detail = "; ".join(f"{r.name}: {text[r.reason]}" for r in refused)
@@ -110,7 +115,7 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         claim_id = str(uuid4())
         now = datetime.now(UTC)
         documents = store_documents(ctx, claim_id, kept, now)
-        read_and_store(ctx, claim_id, documents)
+        await run_in_threadpool(read_and_store, ctx, claim_id, documents)  # OCR: off the loop
         policy = ctx.reference.policy(person.policy_id)
         claimant = patient if patient in policy.covered_people else policy.covered_people[0]
         claim = Claim(

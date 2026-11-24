@@ -45,14 +45,16 @@ async def collect(files: list[UploadFile] | None) -> list[tuple[str, bytes]]:
 
 
 def accept(
-    files: list[tuple[str, bytes]], max_megabytes: int
+    files: list[tuple[str, bytes]], max_megabytes: int, max_files: int
 ) -> tuple[list[Upload], list[Refusal]]:
-    """(kept uploads, refused files with the reason)."""
+    """(kept uploads, refused files with the reason). Only the first max_files are kept."""
     kept: list[Upload] = []
     refused: list[Refusal] = []
     for name, data in files:
         suffix = Path(name).suffix.lower()
-        if suffix not in IMAGE_SUFFIXES:
+        if len(kept) >= max_files:
+            refused.append(Refusal(name, "refused_count"))
+        elif suffix not in IMAGE_SUFFIXES:
             refused.append(Refusal(name, "refused_type"))
         elif not data or len(data) > max_megabytes * 1024 * 1024:
             refused.append(Refusal(name, "refused_size"))

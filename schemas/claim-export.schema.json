@@ -132,6 +132,18 @@
           "title": "P Good",
           "type": "number"
         },
+        "payout_calculated_halalas": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Payout Calculated Halalas"
+        },
         "decided_at": {
           "format": "date-time",
           "title": "Decided At",
@@ -167,6 +179,7 @@
         "outcome",
         "reason",
         "p_good",
+        "payout_calculated_halalas",
         "decided_at",
         "config_version",
         "self_fix_request",

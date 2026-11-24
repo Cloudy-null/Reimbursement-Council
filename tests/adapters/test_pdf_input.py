@@ -53,15 +53,17 @@ def test_a_pdf_receipt_gives_the_same_qr_as_the_photo(tmp_path: Path) -> None:
 def test_pages_are_stacked_up_to_the_limit() -> None:
     png = draw_receipt(content(5)).png
     settings = repo_settings().documents
-    one = height(pdf_as_image(as_pdf(png), settings.max_pdf_pages, settings.pdf_render_scale))
+    one = height(
+        pdf_as_image(as_pdf(png), settings.max_pdf_pages, settings.pdf_render_scale, 10**8)
+    )
     many = as_pdf(*[png] * (settings.max_pdf_pages + 2))
-    stacked = height(pdf_as_image(many, settings.max_pdf_pages, settings.pdf_render_scale))
+    stacked = height(pdf_as_image(many, settings.max_pdf_pages, settings.pdf_render_scale, 10**8))
     assert stacked == one * settings.max_pdf_pages
 
 
 def test_a_broken_pdf_is_a_value_error() -> None:
     with pytest.raises(ValueError, match="PDF"):
-        pdf_as_image(b"%PDF-1.4 not really", 3, 2.0)
+        pdf_as_image(b"%PDF-1.4 not really", 3, 2.0, 10**8)
 
 
 def test_the_easyocr_picker_also_takes_pdfs(tmp_path: Path) -> None:

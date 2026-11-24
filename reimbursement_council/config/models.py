@@ -222,6 +222,8 @@ class DocumentsConfig(ConfigModel):
     max_upload_megabytes: int = Field(gt=0)
     max_pdf_pages: int = Field(gt=0)
     pdf_render_scale: float = Field(gt=0)
+    max_pdf_pixels: int = Field(gt=0)
+    max_files_per_upload: int = Field(gt=0)
 
 
 class SyntheticConfig(ConfigModel):

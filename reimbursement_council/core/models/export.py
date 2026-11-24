@@ -98,6 +98,9 @@ class ExportDecision(Model):
     outcome: Outcome
     reason: str
     p_good: Score
+    # The payout decided (what to pay on an auto approve). The payout section above is the
+    # breakdown worked out again from the stored reading; ready_for_processing needs both to agree.
+    payout_calculated_halalas: Halalas | None
     decided_at: AwareDatetime
     config_version: str
     self_fix_request: SelfFixRequest | None
@@ -123,7 +126,7 @@ class ClaimExport(Model):
     policy_id: str
     categories: list[str]
     consented_at: AwareDatetime | None
-    ready_for_processing: bool  # auto approved, or a person has approved it
+    ready_for_processing: bool  # auto approved with an agreed payout, or a person approved it
     provider: ExportProvider
     invoice: ExportInvoice | None  # None when no billing document could be read
     documents: list[ExportDocument]

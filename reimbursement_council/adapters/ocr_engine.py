@@ -109,7 +109,8 @@ class CachedOcrEngine:
         self._dir.mkdir(parents=True, exist_ok=True)
         # Write to a temporary file first, then rename: a run killed mid-write leaves no cut off
         # cache file behind.
-        partial = path.with_suffix(".json.partial")
+        # A name of its own per write, so two readers of the same image never collide.
+        partial = path.with_suffix(f".{os.getpid()}-{threading.get_ident()}.partial")
         partial.write_text(
             json.dumps([line.model_dump() for line in lines], ensure_ascii=False), encoding="utf-8"
         )

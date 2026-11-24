@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from reimbursement_council.adapters.readers import PDF_SUFFIX
@@ -123,9 +124,13 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         claim = load_claim(ctx, claim_id)
         if claim.status != "draft":
             raise HTTPException(status_code=409, detail="This claim was already sent.")
-        kept, refused = accept(await collect(photos), ctx.settings.documents.max_upload_megabytes)
+        kept, refused = accept(
+            await collect(photos),
+            ctx.settings.documents.max_upload_megabytes,
+            ctx.settings.documents.max_files_per_upload,
+        )
         added = store_documents(ctx, claim_id, kept, datetime.now(UTC))
-        read_and_store(ctx, claim_id, added)
+        await run_in_threadpool(read_and_store, ctx, claim_id, added)  # OCR: off the loop
         claim = claim.model_copy(update={"documents": [*claim.documents, *added]})
         ctx.store.save_claim(claim)
         if refused:
@@ -163,7 +168,7 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
                 "submitted_at": datetime.now(UTC),
             }
         )
-        decide(ctx, sent)
+        await run_in_threadpool(decide, ctx, sent)
         return RedirectResponse(f"/claims/{claim_id}?lang={lang}", status_code=303)
 
     @app.post("/claims/{claim_id}/fix", response_model=None)
@@ -186,7 +191,11 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             or claim.retries_used >= ctx.settings.decision.self_fix_max_retries
         ):
             raise HTTPException(status_code=409, detail="This claim is not waiting for a fix.")
-        kept, refused = accept(await collect(photos), ctx.settings.documents.max_upload_megabytes)
+        kept, refused = accept(
+            await collect(photos),
+            ctx.settings.documents.max_upload_megabytes,
+            ctx.settings.documents.max_files_per_upload,
+        )
         if refused or not kept:  # change nothing, so a bad file never removes a good one
             values = claim_view(ctx, claim_id, lang) | {"refused": refused, "status_code": 400}
             return page(request, "claim.html", lang, **values)
@@ -195,7 +204,7 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         if asked_request.kind in ASKED_KINDS and asked_request.field not in asked:
             asked.append(asked_request.field)
         added = store_documents(ctx, claim_id, kept, datetime.now(UTC))
-        read_and_store(ctx, claim_id, added)
+        await run_in_threadpool(read_and_store, ctx, claim_id, added)  # OCR: off the loop
         documents = [d for d in claim.documents if d.document_id != replace]
         draft = claim.model_copy(
             update={

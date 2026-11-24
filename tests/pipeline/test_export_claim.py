@@ -86,3 +86,32 @@ def test_a_draft_has_no_export(tmp_path: Path) -> None:
 
 def test_schema_refuses_money_as_a_float() -> None:
     assert schema_errors({"claim_id": 1}) != []
+
+
+def test_a_claim_sent_back_to_draft_has_no_export(tmp_path: Path) -> None:
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    claim = load("clean")
+    run(claim, store)
+    reference = load_reference_file(FIXTURES / "reference.json")
+    back = claim.model_copy(update={"status": "draft"})  # after /fix or "no" on the date
+    assert export_claim(back, store, reference, repo_settings(), EXPORTED) is None
+
+
+def test_the_export_carries_the_decided_payout(tmp_path: Path) -> None:
+    export = exported("clean", tmp_path)
+    assert export is not None and export.decision.payout_calculated_halalas == 15525
+
+
+def test_an_approval_without_a_payout_now_is_not_ready(tmp_path: Path) -> None:
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    claim = load("clean")
+    run(claim, store)
+    old = ClaimStore(tmp_path / "old.sqlite")  # decided before readings were stored
+    decision = store.load_decision(claim.claim_id)
+    assert decision is not None
+    old.save_decision(decision)
+    old.save_claim(claim)
+    reference = load_reference_file(FIXTURES / "reference.json")
+    export = export_claim(claim, old, reference, repo_settings(), EXPORTED)
+    assert export is not None and export.decision.lane == "auto_approve"
+    assert export.payout is None and not export.ready_for_processing

@@ -10,7 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
-from reimbursement_council.adapters.ocr_engine import OcrEngine
+from reimbursement_council.adapters.ocr_engine import OcrEngine, OcrNotInstalledError
 from reimbursement_council.adapters.pdf_pages import pdf_as_image
 from reimbursement_council.adapters.qr_image import find_qr_payloads
 from reimbursement_council.config.models import Settings
@@ -55,7 +55,10 @@ def document_image(document: Document, settings: Settings | None) -> bytes:
         return data
     if settings is None:
         raise ValueError("reading a PDF needs the settings (max pages and zoom)")
-    return pdf_as_image(data, settings.documents.max_pdf_pages, settings.documents.pdf_render_scale)
+    documents = settings.documents
+    return pdf_as_image(
+        data, documents.max_pdf_pages, documents.pdf_render_scale, documents.max_pdf_pixels
+    )
 
 
 class QrImageReader:
@@ -80,7 +83,13 @@ class QrOcrReader:
     def read(self, document: Document) -> ReaderOutput:
         image = document_image(document, self._settings)
         payloads = find_qr_payloads(image)
-        lines = self._engine.read(image)
+        try:
+            lines = self._engine.read(image)
+        except OcrNotInstalledError:
+            raise
+        except Exception as error:  # an untrusted file: OpenCV and torch raise their own
+            # error types (cv2.error is not a ValueError); here they mean an unread file.
+            raise ValueError(f"the file could not be read: {error}") from error
         parsed = parse_receipt_lines(document.document_id, lines, self._settings)
         logger.info(
             "document %s: %d QR codes, %d text boxes, %d fields, %d items",

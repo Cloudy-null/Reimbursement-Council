@@ -139,6 +139,8 @@ def build_claim_export(
 ) -> ClaimExport:
     primary = None if primary_id is None else readings.get(primary_id)
     approved_by_person = review is not None and review.action in APPROVING_REVIEWS
+    decided = decision.payout_calculated
+    paid_as_decided = payout is not None and decided is not None and payout.calculated == decided
     return ClaimExport(
         exported_at=now,
         claim_id=claim.claim_id,
@@ -149,7 +151,8 @@ def build_claim_export(
         policy_id=claim.policy_id,
         categories=list(categories),
         consented_at=claim.consented_at,
-        ready_for_processing=decision.lane == "auto_approve" or approved_by_person,
+        ready_for_processing=(decision.lane == "auto_approve" and paid_as_decided)
+        or approved_by_person,
         provider=_provider(primary, provider),
         invoice=_invoice(primary, prices),
         documents=[_document(d, readings.get(d.document_id), primary_id) for d in documents],
@@ -162,6 +165,7 @@ def build_claim_export(
             outcome=decision.outcome,
             reason=decision.lane_reason,
             p_good=decision.p_good,
+            payout_calculated_halalas=decided,
             decided_at=decision.decided_at,
             config_version=decision.config_version,
             self_fix_request=decision.self_fix_request,

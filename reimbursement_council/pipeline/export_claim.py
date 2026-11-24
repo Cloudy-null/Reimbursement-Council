@@ -24,9 +24,10 @@ class _StoredReadingsOnly:
 def export_claim(
     claim: Claim, store: ClaimStore, reference: ReferenceData, settings: Settings, now: datetime
 ) -> ClaimExport | None:
-    """The claim's export, or None when it has no decision yet (a draft)."""
+    """The claim's export, or None when it is a draft: never sent, or sent back to the check
+    step by a fix (its old decision no longer holds)."""
     decision = store.load_decision(claim.claim_id)
-    if decision is None:
+    if decision is None or claim.status == "draft":
         return None
     member = reference.member(claim.member_id)
     documents = read_document_set(
