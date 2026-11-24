@@ -22,7 +22,8 @@ def generated_schema() -> dict[str, Any]:
 
 def write_schema(path: Path = SCHEMA_PATH) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(generated_schema(), indent=2) + "\n", encoding="utf-8")
+    text = json.dumps(generated_schema(), indent=2) + "\n"
+    path.write_text(text, encoding="utf-8", newline="\n")  # same bytes on Windows and Linux
 
 
 def load_schema(path: Path = SCHEMA_PATH) -> dict[str, Any]:

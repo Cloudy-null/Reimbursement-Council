@@ -66,10 +66,10 @@ def test_fix_with_only_refused_files_changes_nothing(web: tuple[TestClient, WebC
     assert before is not None
     response = client.post(
         f"/claims/{claim_id}/fix",
-        files=[("photos", ("x.pdf", b"%PDF", "application/pdf"))],
+        files=[("photos", ("x.gif", b"GIF89a", "image/gif"))],
         data={"replace": before.documents[1].document_id},
     )
-    assert response.status_code == 400 and "x.pdf" in response.text
+    assert response.status_code == 400 and "x.gif" in response.text
     assert ctx.store.load_claim(claim_id) == before
 
 

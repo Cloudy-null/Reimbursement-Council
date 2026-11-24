@@ -220,6 +220,8 @@ class DocumentsConfig(ConfigModel):
     provider_check_categories: list[str]
     unbacked_edit_confidence: Score
     max_upload_megabytes: int = Field(gt=0)
+    max_pdf_pages: int = Field(gt=0)
+    pdf_render_scale: float = Field(gt=0)
 
 
 class Settings(ConfigModel):

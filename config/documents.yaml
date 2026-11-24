@@ -34,3 +34,7 @@ provider_check_categories: [outpatient, dental]
 unbacked_edit_confidence: 0.6
 # The largest photo a member can upload. A phone photo is a few MB; this only stops abuse.
 max_upload_megabytes: 15
+# A PDF (digital or scanned) is drawn as one image: at most this many pages, at this zoom
+# (2.0 is about 144 dots per inch, enough for the OCR to read small print).
+max_pdf_pages: 3
+pdf_render_scale: 2.0

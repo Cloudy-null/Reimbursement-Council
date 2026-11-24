@@ -5,11 +5,14 @@ Also: add documents to a draft, and go back to the check step from a self-fix re
 """
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
+from reimbursement_council.adapters.readers import PDF_SUFFIX
+from reimbursement_council.adapters.readers import document_image as document_image_bytes
 from reimbursement_council.core.decision.document_requests import (
     document_label,
     mismatch_documents,
@@ -207,9 +210,13 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         return RedirectResponse(f"/claims/{claim_id}/check?lang={lang}", status_code=303)
 
     @app.get("/claims/{claim_id}/documents/{document_id}")
-    def document_image(claim_id: str, document_id: str) -> FileResponse:
+    def document_image(claim_id: str, document_id: str) -> Response:
+        """The document's file; a PDF is shown as the image the reader reads."""
         claim = load_claim(ctx, claim_id)
         for document in claim.documents:
             if document.document_id == document_id:
+                if Path(document.file_path).suffix.lower() == PDF_SUFFIX:
+                    image = document_image_bytes(document, ctx.settings)
+                    return Response(image, media_type="image/png")
                 return FileResponse(document.file_path)
         raise HTTPException(status_code=404, detail="No such document.")

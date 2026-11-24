@@ -49,7 +49,7 @@ files = ["reimbursement_council"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["easyocr", "arabic_reshaper", "bidi", "bidi.*"]
+module = ["easyocr", "arabic_reshaper", "bidi", "bidi.*", "pypdfium2"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

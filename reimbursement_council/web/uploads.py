@@ -20,7 +20,7 @@ from reimbursement_council.web.context import WebContext
 
 logger = logging.getLogger(__name__)
 
-IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg"})
+IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".pdf"})  # a PDF is drawn as an image
 
 
 @dataclass(frozen=True)
