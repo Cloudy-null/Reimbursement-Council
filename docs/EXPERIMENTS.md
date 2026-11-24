@@ -12,6 +12,13 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 - Total cost: wrong payouts plus review cost, in SAR. A false reject counts as the payout that should have been made (decision 007).
 - Heavy damage lanes: for claims whose photo has heavy or unreadable damage, the share that went to self_fix, auto_approve, auto_reject and human_review, and the count of wrong auto approves among them. Wrong auto approves on unreadable photos is the number we care about most; it should be 0.
 - Extraction field accuracy (for extraction experiments).
+- Document metrics (synthetic/document_metrics.py, in every run-set output since Task 11). Each is a share with its group size next to it (name_count), so a 0.0 from an empty group is not a bad result.
+  - document_kind_accuracy: of all documents, share whose found type equals the true type (strict: a billing document read as receipt when it is an invoice counts as wrong).
+  - missing_document_recall: of the required groups that are truly missing, share the pipeline flagged.
+  - missing_document_precision: of the groups the pipeline flagged as missing, share that are truly missing.
+  - cross_check_catch_rate: of claims with a patient or date mismatch put in on purpose, share where a cross check failed.
+  - cross_check_false_alarm_rate: of the other claims, share where a cross check failed anyway.
+  - expected_lane_match: of claims whose document defect decides the lane (missing document, mismatch, contradicting edit), share that went to that lane.
 
 ## Test sets
 - synthetic_tune: generated, used for tuning weights and calibration. Never used for final numbers.
@@ -33,6 +40,7 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 | E9 | History member | history_member_enabled | Raises automation for trusted members and providers | Automation rate; false reject rate new vs tenured | pending |
 | E11 | Reader: EasyOCR vs PaddleOCR vs Gemini free tier | reader | A vision model reads messy and Arabic receipts better than OCR plus rules | Field accuracy | pending |
 | E10 | Member preview before submit | preview_enabled (simulated) | Fewer bad submissions reach the pipeline | Claims needing self-fix | pending |
+| E12 | Cross-document checks | cross_checks_enabled (run-set --cross-checks on or off) | Checking patient and date across the receipt, prescription and report catches mismatches with few false alarms, and sends them to self-fix instead of approving them | cross_check_catch_rate, cross_check_false_alarm_rate, auto approve precision | pending |
 
 E9 has a fairness check: the false reject rate for new members must not be higher than for tenured members. If it is, the history member is off until fixed.
 

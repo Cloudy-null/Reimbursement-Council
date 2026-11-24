@@ -69,6 +69,24 @@ class MemberMessage(Model):
     ar: str
 
 
+class DocumentNeed(Model):
+    """One group of documents the claim needs: any one kind in the group is enough."""
+
+    group: list[DocumentKind]
+    satisfied: bool
+    request: MemberMessage
+
+
+class CrossCheckResult(Model):
+    """Whether documents agree. passed is None when there is not enough data to compare."""
+
+    name: CrossCheckName
+    passed: bool | None
+    field: FieldName
+    document_ids: list[str]
+    details: str
+
+
 class Decision(Model):
     claim_id: str
     decided_at: AwareDatetime
@@ -89,21 +107,7 @@ class Decision(Model):
     rule_results: list[RuleResult]
     check_results: list[CheckResult]
     edits: list[FieldEdit] = Field(default_factory=list)
-
-
-class DocumentNeed(Model):
-    """One group of documents the claim needs: any one kind in the group is enough."""
-
-    group: list[DocumentKind]
-    satisfied: bool
-    request: MemberMessage
-
-
-class CrossCheckResult(Model):
-    """Whether documents agree. passed is None when there is not enough data to compare."""
-
-    name: CrossCheckName
-    passed: bool | None
-    field: FieldName
-    document_ids: list[str]
-    details: str
+    # What the pipeline found about the documents, so a run can be scored (Task 11).
+    document_kinds: dict[str, DocumentKind] = Field(default_factory=dict)
+    needs_missing: list[list[DocumentKind]] = Field(default_factory=list)
+    cross_checks: list[CrossCheckResult] = Field(default_factory=list)

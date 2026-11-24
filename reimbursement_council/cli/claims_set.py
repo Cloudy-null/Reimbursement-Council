@@ -23,6 +23,7 @@ from reimbursement_council.core.decision.calibration import fit_platt
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.pipeline.process_claim import process_claim
 from reimbursement_council.synthetic.claims import make_claim_set
+from reimbursement_council.synthetic.document_metrics import MISMATCH_DEFECTS, document_metrics
 from reimbursement_council.synthetic.metrics import RunRow, calibration_rows, metrics, paid_right
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     run.add_argument("folder", type=Path)
     run.add_argument("--reader", choices=["easyocr", "qr_only"], default=None)
     run.add_argument("--calibration", choices=["config", "on", "off"], default="config")
+    run.add_argument("--cross-checks", choices=["config", "on", "off"], default="config")
     run.add_argument("--config-dir", type=Path, default=Path("config"))
     run.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
     run.add_argument("--results-name", default="results.json")
@@ -133,6 +135,7 @@ def _open_store(
         "set_seed": manifest.get("seed"),
         "reader": settings.decision.reader,
         "calibration": settings.decision.calibration_enabled,
+        "cross_checks": settings.decision.cross_checks_enabled,
         "config_version": settings.config_version,
     }
     if args.resume and db.is_file():
@@ -162,6 +165,8 @@ def run_set(args: argparse.Namespace) -> int:
         decision = decision.model_copy(update={"reader": args.reader})
     if args.calibration != "config":
         decision = decision.model_copy(update={"calibration_enabled": args.calibration == "on"})
+    if args.cross_checks != "config":
+        decision = decision.model_copy(update={"cross_checks_enabled": args.cross_checks == "on"})
     settings = settings.model_copy(update={"decision": decision})
     claim_paths = sorted(args.folder.glob("*.claim.json"))
     if not claim_paths:
@@ -206,13 +211,20 @@ def run_set(args: argparse.Namespace) -> int:
                 defects=truth["defects"],
                 damage=truth["damage"],
                 hard_rule_failed=any(r.outcome == "fail" for r in result.rule_results),
+                kinds_read=dict(result.document_kinds),
+                kinds_true=truth.get("document_kinds", {}),
+                needs_flagged=[list(g) for g in result.needs_missing],
+                needs_missing=truth.get("needs_missing", []),
+                cross_check_failed=any(c.passed is False for c in result.cross_checks),
+                cross_check_expected=bool(MISMATCH_DEFECTS & set(truth["defects"])),
+                expected_lane=truth.get("expected_lane"),
             )
         )
     if resumed:
         logger.info("resumed: %d of %d claims came from the stored run", resumed, len(rows))
     scores = metrics(
         rows, decision.reviewer_time_value_halalas, decision.paid_right_tolerance_halalas
-    )
+    ) | document_metrics(rows)
     lanes: dict[str, int] = {}
     for row in rows:
         lanes[row.lane] = lanes.get(row.lane, 0) + 1
@@ -220,6 +232,7 @@ def run_set(args: argparse.Namespace) -> int:
         "set": manifest,
         "reader": decision.reader,
         "calibration": decision.calibration_enabled,
+        "cross_checks": decision.cross_checks_enabled,
         "config_version": settings.config_version,
         "seconds": round(time.time() - started, 1),
         "lanes": lanes,
@@ -230,7 +243,7 @@ def run_set(args: argparse.Namespace) -> int:
     calibrated = decision.calibration_enabled
     lines = [f"claims: {len(rows)}  reader: {decision.reader}  calibration: {calibrated}"]
     lines += [f"lanes: {lanes}"]
-    lines += [f"{name:<24} {value}" for name, value in scores.items()]
+    lines += [f"{name:<36} {value}" for name, value in scores.items()]
     sys.stdout.write("\n".join(lines) + "\n")
     return 0
 

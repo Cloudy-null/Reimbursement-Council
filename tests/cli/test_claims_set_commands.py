@@ -73,6 +73,40 @@ def test_run_set_scores_every_claim(tmp_path: Path, capsys: pytest.CaptureFixtur
         results["metrics"]
     )
     assert "automation_rate" in capsys.readouterr().out
+    assert {"document_kind_accuracy", "expected_lane_match_count"} <= set(results["metrics"])
+    first = results["rows"][0]
+    assert first["kinds_true"] and first["kinds_read"].keys() == first["kinds_true"].keys()
+    assert results["cross_checks"] is True
+
+
+def test_run_set_can_turn_cross_checks_off(tmp_path: Path) -> None:
+    out = tmp_path / "set"
+    run(
+        "make-claims",
+        "--count",
+        "3",
+        "--seed",
+        "4",
+        "--out",
+        str(out),
+        "--config-dir",
+        str(REPO_CONFIG),
+    )
+    code = run(
+        "run-set",
+        str(out),
+        "--reader",
+        "qr_only",
+        "--cross-checks",
+        "off",
+        "--config-dir",
+        str(REPO_CONFIG),
+        "--ocr-cache",
+        str(tmp_path / "c"),
+    )
+    results = json.loads((out / "results.json").read_text(encoding="utf-8"))
+    assert code == 0 and results["cross_checks"] is False
+    assert not any(row["cross_check_failed"] for row in results["rows"])
 
 
 def make_set(out: Path, count: int = 8) -> None:

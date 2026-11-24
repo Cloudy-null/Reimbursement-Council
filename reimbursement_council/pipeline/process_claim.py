@@ -138,6 +138,9 @@ def process_claim(
         rule_results=rule_results,
         check_results=[] if extraction is None else extraction.checks,
         edits=documents.edits,
+        document_kinds={d.document_id: d.kind for d in documents.documents},
+        needs_missing=[list(n.group) for n in documents.missing],
+        cross_checks=documents.cross_checks,
     )
     store.save_decision(decision)
     keys = (

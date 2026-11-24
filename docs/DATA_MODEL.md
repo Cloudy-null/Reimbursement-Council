@@ -109,7 +109,7 @@ PayoutResult
 - is_partial (true when the network cap or a limit cut the payout, or an item is unmatched; co-pay alone does not make it partial)
 
 SelfFixRequest
-- kind (retake_photo, add_document, confirm_field), field, text
+- kind (retake_photo, add_document, confirm_field, check_photo, fix_mismatch), field, text, documents (the kinds that disagree, for fix_mismatch)
 
 Decision (like FHIR ClaimResponse)
 - claim_id, decided_at, config_version (hash of the config files)
@@ -121,6 +121,8 @@ Decision (like FHIR ClaimResponse)
 - self_fix_request (for the self_fix lane)
 - member_message (plain text, Arabic and English)
 - votes, rule_results, check_results
+- edits (the judged FieldEdits)
+- document_kinds (document_id to the kind the pipeline used), needs_missing (required groups not found), cross_checks (CrossCheckResult list). Used to score a run.
 
 Review (human)
 - claim_id, reviewer, started_at, finished_at
