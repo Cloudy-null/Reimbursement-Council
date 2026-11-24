@@ -120,3 +120,17 @@ def test_reviews_are_stored(tmp_path: Path) -> None:
     store.save_review(review)
     assert store.load_review("claim-a") == review
     assert store.load_review("claim-b") is None
+
+
+def test_readings_round_trip_and_claims_list(tmp_path: Path) -> None:
+    from reimbursement_council.core.models.claim import ReaderOutput
+    from tests.factories import make_claim
+
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    reading = ReaderOutput(fields=[], line_items=[], qr_payloads=["qr"], text_lines=["Invoice"])
+    store.save_readings("claim-a", {"doc-1": reading})
+    store.save_readings("claim-a", {"doc-2": reading})  # adds, keeps doc-1
+    assert set(store.load_readings("claim-a")) == {"doc-1", "doc-2"}
+    assert store.load_readings("claim-b") == {}
+    store.save_claim(make_claim())
+    assert [c.claim_id for c in store.list_claims()] == [make_claim().claim_id]

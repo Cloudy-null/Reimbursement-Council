@@ -2,14 +2,14 @@
 
 import logging
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal
 
 from pydantic import AwareDatetime
 
-from reimbursement_council.core.models.claim import Claim
+from reimbursement_council.core.models.claim import Claim, ReaderOutput
 from reimbursement_council.core.models.common import Halalas, Model
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.rules import SeenReceipts
@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS decisions (
 CREATE TABLE IF NOT EXISTS claims (
     claim_id TEXT PRIMARY KEY,
     json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS readings (
+    claim_id TEXT NOT NULL,
+    document_id TEXT NOT NULL,
+    json TEXT NOT NULL,
+    PRIMARY KEY (claim_id, document_id)
 );
 CREATE TABLE IF NOT EXISTS reviews (
     claim_id TEXT PRIMARY KEY,
@@ -96,6 +102,27 @@ class ClaimStore:
                 "SELECT json FROM claims WHERE claim_id = ?", (claim_id,)
             ).fetchone()
         return None if row is None else Claim.model_validate_json(row[0])
+
+    def list_claims(self) -> list[Claim]:
+        with self._connection() as connection:
+            rows = connection.execute("SELECT json FROM claims").fetchall()
+        return [Claim.model_validate_json(row[0]) for row in rows]
+
+    def save_readings(self, claim_id: str, readings: Mapping[str, ReaderOutput]) -> None:
+        """What was read from each document when the member saw the check screen. The pipeline
+        judges exactly this later, so the member and the decision see the same reading."""
+        with self._connection() as connection:
+            connection.executemany(
+                "INSERT OR REPLACE INTO readings (claim_id, document_id, json) VALUES (?, ?, ?)",
+                [(claim_id, doc_id, r.model_dump_json()) for doc_id, r in readings.items()],
+            )
+
+    def load_readings(self, claim_id: str) -> dict[str, ReaderOutput]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT document_id, json FROM readings WHERE claim_id = ?", (claim_id,)
+            ).fetchall()
+        return {row[0]: ReaderOutput.model_validate_json(row[1]) for row in rows}
 
     def list_decisions(self, lane: str | None = None) -> list[Decision]:
         """Newest first. With a lane, only decisions in that lane."""

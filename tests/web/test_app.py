@@ -37,7 +37,11 @@ def send_sample(client: TestClient, patient: int = 0, lang: str = "en") -> str:
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return response.headers["location"].split("/claims/")[1].split("?")[0]
+    claim_id = response.headers["location"].split("/claims/")[1].split("/")[0]
+    assert response.headers["location"].startswith(f"/claims/{claim_id}/check")
+    sent = client.post(f"/claims/{claim_id}/submit", data={"lang": lang}, follow_redirects=False)
+    assert sent.status_code == 303  # Task 13: upload, check, then submit
+    return claim_id
 
 
 def png() -> bytes:
@@ -74,14 +78,14 @@ def test_uploaded_photo_and_bad_inputs(web: tuple[TestClient, WebContext]) -> No
     ok = client.post(
         "/claims",
         data={"patient": member_id(1)},
-        files={"photo": ("r.png", png(), "image/png")},
+        files={"photos": ("r.png", png(), "image/png")},
         follow_redirects=False,
     )
     assert ok.status_code == 303
     gif = client.post(
         "/claims",
         data={"patient": member_id(1)},
-        files={"photo": ("r.gif", b"GIF89a", "image/gif")},
+        files={"photos": ("r.gif", b"GIF89a", "image/gif")},
     )
     assert gif.status_code == 400
     assert client.post("/claims", data={"patient": "nobody", "sample": "clinic"}).status_code == 400
@@ -122,7 +126,7 @@ def test_self_fix_resend_counts_a_retry(web: tuple[TestClient, WebContext]) -> N
     response = client.post(
         f"/claims/{claim_id}/fix",
         data={"lang": "en"},
-        files={"photo": ("again.png", png(), "image/png")},
+        files={"photos": ("again.png", png(), "image/png")},
         follow_redirects=False,
     )
     assert response.status_code == 303

@@ -94,3 +94,15 @@ table.numbers th, table.numbers td { text-align: start; padding: 8px; border-blo
 table.numbers td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 @media (max-width: 700px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.doc-img { width: 100%; max-height: 360px; object-fit: contain; object-position: top; border-radius: 8px; background: #FFFFFF; }
+.doc-stack { display: grid; gap: 16px; align-content: start; }
+.notice { border-inline-start: 4px solid var(--lane); background: var(--tint); border-radius: 8px; padding: 12px 16px; }
+.notice.selffix { --lane: var(--lane-selffix); --tint: var(--tint-selffix); }
+.notice.review { --lane: var(--lane-review); --tint: var(--tint-review); }
+.notice h3 { margin: 0 0 4px; font-size: 14px; }
+ul.plain { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
+.field-error { color: var(--lane-reject); font-size: 13px; }
+p.note.low { background: var(--confidence-low); color: var(--confidence-low-ink); padding: 8px; border-radius: 6px; }
+details.card summary { cursor: pointer; font-weight: 600; }
+.row input { width: 100%; }
