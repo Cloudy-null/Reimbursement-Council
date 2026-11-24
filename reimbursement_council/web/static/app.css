@@ -2,7 +2,7 @@
 :root {
   --ink: #14211F; --ink-muted: #5B6866; --paper: #F7F6F2; --surface: #FFFFFF; --line: #E3E1DA;
   --accent: #0F5C55; --accent-ink: #FFFFFF;
-  --lane-approve: #1E7A46; --lane-selffix: #2D5FA8; --lane-review: #B7791F; --lane-reject: #B4322B;
+  --lane-approve: #1E7A46; --lane-selffix: #2D5FA8; --lane-review: #8A5B16; --lane-reject: #B4322B;
   --tint-approve: #E4F2EA; --tint-selffix: #E6EEF9; --tint-review: #FBF0DC; --tint-reject: #F8E3E1;
   --confidence-low: #FCE9B2; --confidence-low-ink: #5A4300;
   --font-latin: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
@@ -61,7 +61,7 @@ nav a.lang { color: var(--accent); }
 .row.low { background: var(--confidence-low); color: var(--confidence-low-ink); }
 .row .label { color: var(--ink-muted); font-size: 14px; }
 .row.low .label { color: inherit; }
-.tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid currentColor; border-radius: 999px; padding: 1px 8px; }
+.tag { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid currentColor; border-radius: 999px; padding: 1px 8px; }
 dl.money { display: grid; gap: 6px; margin: 0; }
 dl.money div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
 dl.money dt { color: var(--ink-muted); }
@@ -87,7 +87,7 @@ select, input[type="text"], input[type="file"], textarea { font: inherit; color:
 .bar i { display: block; height: 100%; background: var(--accent); }
 ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 ul.list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 14px; }
-.state { font-size: 11px; font-weight: 600; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.state { font-size: 12px; font-weight: 600; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
 .state.pass { color: var(--lane-approve); background: var(--tint-approve); }
 .state.fail { color: var(--lane-reject); background: var(--tint-reject); }
 .state.not_sure { color: var(--lane-review); background: var(--tint-review); }

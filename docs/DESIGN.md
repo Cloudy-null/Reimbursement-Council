@@ -35,7 +35,7 @@ Other kinds of screens worth looking at:
 | --accent | Primary buttons, links | #0F5C55 |
 | --lane-approve | Auto approve, paid | #1E7A46 |
 | --lane-selffix | Member can fix | #2D5FA8 |
-| --lane-review | Human review | #B7791F |
+| --lane-review | Human review | #8A5B16 |
 | --lane-reject | Rejected | #B4322B |
 | --confidence-low | Highlight for low confidence fields | #FCE9B2 |
 
@@ -89,3 +89,8 @@ Sketch of the reviewer card:
 ## Checks before any UI is called done
 - Playwright screenshots: desktop and phone, Arabic and English, for every screen.
 - Check against this doc. Run an Impeccable audit. Fix and re-shoot.
+
+## Accessibility check (2026-11-25)
+- `--lane-review` was #B7791F, which is 3.2 to 3.6 to 1 as text on the light backgrounds (WCAG AA needs 4.5). It is now #8A5B16, the same amber made darker (4.5 or more on surface, paper and its tint).
+- No text is smaller than 12px (tags and states were 11px).
+- tests/web/test_accessibility.py checks contrast of every text color pair in light and dark, labels on every control, alt text, and the page language, on every screen in Arabic and English.
