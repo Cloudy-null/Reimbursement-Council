@@ -54,7 +54,7 @@
     {% endfor %}
   </div>
   <details class="card"{{ ' open' if not chosen_categories or unread }}>
-    <summary>{{ t.category }}{% if chosen_categories %}: {% for c in chosen_categories %}{{ t['cat_' ~ c] }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}</summary>
+    <summary>{{ t.category }}{% if chosen_categories %} {% for c in chosen_categories %}{{ t['cat_' ~ c] }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}</summary>
     <label for="category">{{ t.category }}
       <select id="category" name="category">
         <option value="">{{ t.category_auto }}</option>
