@@ -41,6 +41,8 @@ class RunRow(Model):
     # Self-fix simulation (run-set --simulate-fix): the lane before the fixed file was sent.
     first_lane: Lane | None = None
     fix_tried: bool = False
+    # The patient's past claims, for the fairness check (E9: new vs tenured members).
+    past_claims: int | None = None
 
 
 def paid_right(row: RunRow, tolerance: int) -> bool:
@@ -149,3 +151,23 @@ def self_fix_metrics(rows: Sequence[RunRow], tolerance: int) -> dict[str, float]
         "self_fix_success_rate": _share(success, len(tried)),
         "self_fix_to_human_rate": _share(sum(r.lane == "human_review" for r in tried), len(tried)),
     }
+
+
+def fairness_metrics(rows: Sequence[RunRow], min_past_claims: int) -> dict[str, float]:
+    """E9 fairness: is a payable claim from a new member (fewer past claims than the history
+    member needs) rejected or sent away from auto approve more often than a tenured one's?"""
+    known = [r for r in rows if r.past_claims is not None and r.should_pay]
+    groups = {
+        "new": [r for r in known if (r.past_claims or 0) < min_past_claims],
+        "tenured": [r for r in known if (r.past_claims or 0) >= min_past_claims],
+    }
+    result: dict[str, float] = {}
+    for name, group in groups.items():
+        result[f"payable_{name}_members"] = len(group)
+        result[f"false_reject_rate_{name}"] = _share(
+            sum(r.lane == "auto_reject" for r in group), len(group)
+        )
+        result[f"payable_recall_{name}"] = _share(
+            sum(r.lane == "auto_approve" for r in group), len(group)
+        )
+    return result

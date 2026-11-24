@@ -19,13 +19,16 @@ from reimbursement_council.adapters.storage import ClaimStore
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.config.models import DecisionConfig, Settings
 from reimbursement_council.core.decision.calibration import fit_platt
+from reimbursement_council.core.models.claim import Claim
 from reimbursement_council.core.models.decision import Decision
+from reimbursement_council.core.models.reference import ReferenceData
 from reimbursement_council.pipeline.process_claim import process_claim
 from reimbursement_council.synthetic.apply_fix import claim_after_fix
 from reimbursement_council.synthetic.document_metrics import MISMATCH_DEFECTS, document_metrics
 from reimbursement_council.synthetic.metrics import (
     RunRow,
     calibration_rows,
+    fairness_metrics,
     metrics,
     paid_right,
     self_fix_metrics,
@@ -158,7 +161,13 @@ def _stored_result(store: ClaimStore, claim_id: str) -> Decision | None:
     return decision if decision is not None and store.has_receipt(claim_id) else None
 
 
-def _row(name: str, result: Decision, truth: dict[str, Any], first: Decision | None) -> RunRow:
+def _row(
+    name: str,
+    result: Decision,
+    truth: dict[str, Any],
+    first: Decision | None,
+    past_claims: int | None,
+) -> RunRow:
     return RunRow(
         name=name,
         lane=result.lane,
@@ -180,7 +189,15 @@ def _row(name: str, result: Decision, truth: dict[str, Any], first: Decision | N
         expected_lane=truth.get("expected_lane"),
         first_lane=None if first is None else first.lane,
         fix_tried=first is not None,
+        past_claims=past_claims,
     )
+
+
+def _past_claims(reference: ReferenceData, claim: Claim) -> int | None:
+    try:
+        return reference.history(claim.patient_member_id).past_claims
+    except LookupError:
+        return None
 
 
 def run_set(args: argparse.Namespace) -> int:
@@ -223,7 +240,7 @@ def run_set(args: argparse.Namespace) -> int:
         else:
             resumed += 1
         name = claim_path.name.replace(".claim.json", "")
-        rows.append(_row(name, result, truth, first))
+        rows.append(_row(name, result, truth, first, _past_claims(reference, claim)))
     if resumed:
         logger.info("resumed: %d of %d claims came from the stored run", resumed, len(rows))
     tolerance = decision.paid_right_tolerance_halalas
@@ -231,6 +248,7 @@ def run_set(args: argparse.Namespace) -> int:
         metrics(rows, decision.reviewer_time_value_halalas, tolerance)
         | document_metrics(rows)
         | self_fix_metrics(rows, tolerance)
+        | fairness_metrics(rows, decision.members.history_member.min_past_claims)
     )
     lanes: dict[str, int] = {}
     for row in rows:
