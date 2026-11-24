@@ -320,3 +320,23 @@ def test_export_set_writes_one_valid_file_per_claim_and_a_summary(tmp_path: Path
     assert len(files) == 6
     first = json.loads(files[0].read_text(encoding="utf-8"))
     assert first["schema_version"] == "1.0" and "decision" in first
+
+
+def test_make_real_claims_wraps_each_receipt_in_a_claim(tmp_path: Path) -> None:
+    sroie = tmp_path / "sroie"
+    (sroie / "img").mkdir(parents=True)
+    (sroie / "key").mkdir()
+    for name in ("000", "010"):
+        (sroie / "img" / f"{name}.jpg").write_bytes(b"\xff\xd8 fake jpg")
+        (sroie / "key" / f"{name}.json").write_text(
+            json.dumps({"company": "SHOP", "date": "25/12/2018", "total": "9.00"}), encoding="utf-8"
+        )
+    out = tmp_path / "real"
+    assert (
+        run("make-real-claims", str(sroie), "--out", str(out), "--config-dir", str(REPO_CONFIG))
+        == 0
+    )
+    assert len(list(out.glob("*.claim.json"))) == 2 and len(list(out.glob("*.jpg"))) == 2
+    truth = json.loads(next(out.glob("*.truth.json")).read_text(encoding="utf-8"))
+    assert truth["should_pay"] is True and truth["truth"]["total"] == 900
+    assert (out / "reference.json").is_file() and (out / "set.json").is_file()

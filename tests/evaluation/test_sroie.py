@@ -70,3 +70,18 @@ def test_summary_counts_only_known_truth() -> None:
     summary = summarize_real(rows)
     assert summary["total"] == 0.5 and summary["treatment_date"] == 1.0
     assert summary["treatment_date_count"] == 1 and summary["receipts"] == 2
+
+
+def test_a_real_claim_is_on_time_and_covered_by_its_policy() -> None:
+    from datetime import date
+
+    from reimbursement_council.evaluation.real_claims import real_claim, real_reference
+
+    truth = parse_sroie_key({"company": "x", "date": "25/12/2018", "total": "9.00"})
+    claim = real_claim(1, 3, "000.jpg", truth)
+    reference = real_reference()
+    policy = reference.policy(claim.policy_id)
+    assert policy.start_date <= date(2018, 12, 25) <= policy.end_date
+    assert 1 <= (claim.submitted_at.date() - date(2018, 12, 25)).days <= 5
+    assert claim.patient_member_id in policy.covered_people
+    assert real_claim(1, 3, "000.jpg", truth) == claim
