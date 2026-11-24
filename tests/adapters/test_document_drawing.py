@@ -9,16 +9,16 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+
 from reimbursement_council.adapters.document_drawing import draw_clinical_document
+from reimbursement_council.adapters.receipt_drawing import DAMAGE_PRESETS, draw_receipt
+from reimbursement_council.core.document_kinds import detect_kind
+from reimbursement_council.core.models.claim import Document
 from reimbursement_council.synthetic.document_content import (
     HEADERS,
     ClinicalDocument,
     make_clinical_document,
 )
-
-from reimbursement_council.adapters.receipt_drawing import DAMAGE_PRESETS, draw_receipt
-from reimbursement_council.core.document_kinds import detect_kind
-from reimbursement_council.core.models.claim import Document
 from reimbursement_council.synthetic.receipt_content import PATIENTS, PROVIDERS
 from tests.adapters.test_receipt_drawing import content
 from tests.factories import repo_settings
