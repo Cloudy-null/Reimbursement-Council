@@ -15,6 +15,7 @@ from reimbursement_council.adapters.qr_image import find_qr_payloads
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Document, ReaderOutput
 from reimbursement_council.core.receipt_parsing import parse_receipt_lines
+from reimbursement_council.core.receipt_rows import group_rows, join_row
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,9 @@ class QrOcrReader:
             len(parsed.fields),
             len(parsed.line_items),
         )
-        return parsed.model_copy(update={"qr_payloads": payloads})
+        rows = group_rows(lines, self._settings.decision.ocr.row_overlap)
+        text_lines = [join_row(row) for row in rows]
+        return parsed.model_copy(update={"qr_payloads": payloads, "text_lines": text_lines})
 
 
 def make_reader_for(settings: Settings, engine: OcrEngine) -> Callable[[Document], DocumentReader]:
