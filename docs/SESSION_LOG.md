@@ -42,7 +42,7 @@
 - Not done: saved Playwright screenshots and the Impeccable audit (neither installed in this session); defect weights are still in code; no fixed version of fixable defects.
 - Next: owner review of the PR, then why self-fix is so common.
 
-## 2026-11-25: overnight day 4 (branch overnight/day4, tags day4-a to day4-e)
+## 2026-11-25: overnight day 4 (branch overnight/day4, tags day4-a to day4-f)
 - Done, part A: claim export (model, builder, JSON Schema, API route, download button, export-set; 60 of 60 and 120 of 120 valid), docs/INTEGRATION.md with a base FHIR R4 mapping, PDF and scanned input, consent step, log masking, CSS version hash, defect weights in config/synthetic.yaml, one-tap date confirm.
 - Done, part B: 60 SROIE receipts (real) read with EasyOCR: total 0.317, date 0.367, name 0.35; after two parser fixes from the failure review: 0.333, 0.533, 0.35. 50 real receipts end to end: all self_fix, no wrong approval, no wrong rejection.
 - Done, part C: fixed versions of fixable defects, run-set --set and --simulate-fix, fairness metric; ablations E2, E3, E5, E6, E7, E8, E9 on the synthetic check set.
