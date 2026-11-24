@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from reimbursement_council.adapters.files import load_claim_file, load_reference_file
+from reimbursement_council.adapters.log_privacy import mask_all_logs
 from reimbursement_council.adapters.ocr_engine import (
     CachedOcrEngine,
     EasyOcrEngine,
@@ -109,6 +110,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.INFO, stream=sys.stderr, format="%(levelname)s %(name)s: %(message)s"
     )
+    mask_all_logs()  # no personal data in logs (brief: data sensitivity)
     args = _parser().parse_args(argv)
     commands = {
         "make-receipts": receipts.make_receipts,
