@@ -1,5 +1,38 @@
 # Handover
 
+## Overnight day 4 report (read this first)
+
+Branch overnight/day4, not merged. Built on feat/document-set-2 (PR 6, still open). Tags day4-a to day4-f. Final commit is the last commit on the branch; numbers below were checked at 98c360a. Tests: 583 pass, ruff and mypy clean, the Playwright e2e test passes (2 of 2, real OCR, Microsoft Edge). CI green on every pushed commit.
+
+Done (all 20 items were attempted):
+- Part A: claim export with JSON Schema, API route, download button and export-set (deliverable 2); docs/INTEGRATION.md with a base FHIR R4 mapping; PDF and scanned input; consent step; log masking; CSS version hash; defect weights in config/synthetic.yaml; one-tap date confirm.
+- Part B: 60 real SROIE receipts read with EasyOCR, 10 worst failures looked at by eye, two parser fixes, 50 real receipts end to end.
+- Part C: fixed versions of fixable defects, run-set --set and --simulate-fix, fairness metric; ablations E2, E3, E5, E6, E7, E8, E9.
+- Part D: demo mode (five demo claims, OCR warm-up, /api/ready), Playwright e2e test, 36 screenshots, accessibility pass, friendly error pages.
+- Part E: data-quality review and code review (no Critical; every Important finding fixed with tests, the rest are CHECKs below); README, docs/pitch/numbers.md, docs/SUMMARY.md.
+
+Headline numbers (every one with its command and commit in docs/pitch/numbers.md):
+- Synthetic check set (60 claims with documents): auto approve precision 1.0 and false rejects 0 in all 9 ablation runs.
+- Self-fix with the member's fix simulated: 10 of 60 reach a person (24 still wait for the member), against 37 of 60 with self-fix off; 5 of 8 fixed claims then paid right with no person.
+- Cross checks (E12): 3 of 3 and 7 of 7 mismatches caught; false alarms 0 of 57 and 2 of 113; one wrong auto approve stopped in each set.
+- Calibration (E6): ECE 0.202 to 0.065.
+- Export: 60 of 60 and 120 of 120 claims valid against the schema.
+- Real SROIE receipts (60): total 0.333, date 0.533, shop name 0.35 (from 0.317, 0.367, 0.35 before the fixes). Real end to end (50): all ask the member (self_fix), 0 wrong approvals, 0 false rejects, 0 automation.
+
+What failed or is weak:
+- Real receipts read badly: EasyOCR (Arabic and English loaded) turns faint Latin print into Arabic glyphs. On real documents the system asks the member instead of deciding, which is safe but not fast.
+- Playwright's own Chromium could not be installed: the C: drive had 445 MB free. Edge is used instead. Please free disk space.
+- First tries that I corrected before recording: a total-row rule that made real totals worse, and a stricter date rule that dropped 5 real dates. Both are written up in EXPERIMENTS.
+- ReceiptSense was not used (images only in 1 to 9 GB zips). E11 compares nothing yet (EasyOCR only).
+- Not done from the reviews (CHECKs below): English error pages after a POST, lane changes still in some routes, two files past 300 lines (cli/run_set.py, core/receipt_parsing.py).
+
+CHECKs for you are in section 5. The day 4 ones start with "CHECK (day 4". The most important:
+1. Date confidence: a right date on a clean receipt often reads below the 0.90 floor because the whole row's lowest confidence is used. This one cause sends most claims to self-fix. Worth fixing next.
+2. One-tap date confirm sends "yes" to a person (safest). Decide if a confirmed date may count when another document shows the same date.
+3. NPHIES is not claimed to use FHIR (not verified).
+4. calibration_enabled is still off (E6 says it helps on synthetic data).
+5. Disk space on this PC.
+
 ## 1. Current status
 Overnight day 4 (branch overnight/day4) progress: (1) Claim export done: core/models/export.py (ClaimExport, schema_version 1.0, money in halalas), core/export.py builder, pipeline/export_claim.py rebuilds from stored readings (process_claim now saves the claim and raw readings), schemas/claim-export.schema.json (write-schema), GET /api/claims/{id}/export (?download=1), download button on the result page and review card, export-set command. New libraries jsonschema and pypdfium2 (decision 009 to write). (2) PDF and scanned input done: adapters/pdf_pages.py draws up to max_pdf_pages pages (config/documents.yaml, scale pdf_render_scale) into one PNG; readers, uploads and the image route take .pdf. TIFF scans are not taken (CHECK). (3) Consent step done: a required box on the new claim form, POST /claims refuses without it (400, nothing saved), Claim.consented_at is kept and exported. (4) Log masking done (core/privacy.py, adapters/log_privacy.py on every CLI and serve log: long numbers, emails, Arabic text). (5) CSS link carries a file hash (no stale CSS). (6) Defect weights and QR share in config/synthetic.yaml; a set made now is the same as before. (7) One-tap date confirm: yes sends to a person with the confirmed date, no goes back to the check step (CHECK: a tap never decides a hard rule). (8) export-set on the synthetic sets at 55431ba with EasyOCR: check set 60 of 60 valid against the schema (16 ready_for_processing), tune set 120 of 120 valid (21 ready). (9) docs/INTEGRATION.md written (field by field, how to consume, FHIR R4 mapping; NPHIES not verified). Decision 009. (10) read-sroie and make-real-claims commands (evaluation/sroie.py, evaluation/real_claims.py); 60 SROIE receipts downloaded to data/real/sroie (not committed). ReceiptSense not used: Hugging Face metadata says CC-BY-4.0 (a search summary said MIT), images only in 1 to 9 GB zips. (11) Fixed versions of fixable defects (synthetic/fixes.py, -fix.png files, truth fix). (12) run-set split into cli/run_set.py with --set KEY=VALUE and --simulate-fix (self_fix_success_rate). (13) Fairness metric in run-set (new vs tenured payable claims). (14) Friendly error pages (web/errors.py), Arabic and English, API keeps JSON. (15) Accessibility pass: review amber #B7791F to #8A5B16 (was 3.2 to 1, now AA), 11px text to 12px, tests/web/test_accessibility.py checks labels, alt text, language and contrast on every screen. (16) Demo mode: five demo claims (web/demo.py, synthetic/demo_claims.py) as buttons on the new claim page, drawn daily; serve loads EasyOCR and reads every demo file at startup. (17) Ablations E2, E3, E5, E6, E7, E8, E9 with fairness at 95745da on data/sets/abl/check (60): precision 1.0 and false rejects 0 in every run; E8 with the fix simulated: 37 of 60 to a person with self-fix off, 10 with it on; details in EXPERIMENTS. (18) Numbers page finds every run by content and shows what it changed. (19) Real receipts: 60 SROIE scans, EasyOCR. Baseline 6943ee7 provider 0.35, date 0.367, total 0.317; after two parser fixes from the failure review (day-first dates with dashes, dots, short years; skip count, payment and tax-only total rows) at 79f9aac: provider 0.35, date 0.533, total 0.333. Real end to end (50 claims): all self_fix, 0 wrong approves, 0 false rejects. Main unfixed cause: EasyOCR reads faint Latin print as Arabic glyphs (CHECK). (20) Playwright e2e test (tests/e2e, run with: uv run pytest -m e2e) passes 2 of 2 in 84 s with real OCR: demo upload, check, send, fix with the right report, send, decided; changed total to a person, JSON download valid against the schema, reviewer rejects. Found and fixed: one EasyOCR model used by two threads at once (now a lock), GET /api/ready for the warm-up. Uses Microsoft Edge: the disk had 445 MB free, too little for Playwright's Chromium (CHECK). (21) Screenshots: tests/e2e/screenshots.py writes 36 (9 screens x desktop and phone x Arabic and English) to screenshots/ (not committed); two copied to docs/images for the README. Checked by eye: layout and RTL right; the tagline said 'One photo in', now names documents.
 Working on the desktop PC, branch feat/document-set-2 cut from main at 5a6cd51 (PRs #1 to #5 are merged, so the document set work so far is on main). Layers 1, 2 and 3 are done and tagged layer-1 and layer-2; both tags are on GitHub (layer-1 pushed from the desktop on 2026-11-24, points to 18308e6).
@@ -97,9 +130,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
-1. Part E: data-quality reviewer and code review on the branch, fix findings
-2. Part E: README, docs/pitch/numbers.md, docs/SUMMARY.md
-3. Final: HANDOVER report at the top, SESSION_LOG, CI green
+1. Owner reviews PR 6 (feat/document-set-2) and this branch (overnight/day4); merge PR 6 first.
+2. Fix the date confidence (use the date text's own confidence, not the row's lowest) and measure it with run-set on data/sets/abl/check; it should cut self-fix the most.
+3. Split cli/run_set.py and core/receipt_parsing.py under 300 lines, move the remaining lane changes from routes into core, and make POST error pages follow the page language.
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
