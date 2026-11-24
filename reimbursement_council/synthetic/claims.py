@@ -27,7 +27,7 @@ from reimbursement_council.synthetic.cases import (
     member_id,
 )
 from reimbursement_council.synthetic.document_sets import (
-    DOCUMENT_DEFECT_WEIGHTS,
+    DOCUMENT_DEFECTS,
     add_documents,
     receipt_options,
 )
@@ -42,23 +42,24 @@ from reimbursement_council.synthetic.receipt_content import (
 
 __all__ = ["PEOPLE", "GroundTruth", "SyntheticCase", "SyntheticSet", "make_claim_set", "member_id"]
 
-DEFECT_WEIGHTS: dict[str, int] = {
-    "clean": 45,
-    "late": 6,
-    "inactive": 4,
-    "not_covered": 4,
-    "excluded": 5,
-    "duplicate": 6,
-    "over_limit": 6,
-    "overpriced": 7,
-    "unlisted": 7,
-    "unreadable": 6,
-    "tampered_total": 4,
-    **DOCUMENT_DEFECT_WEIGHTS,
-}
-DEFECTS = tuple(name for name in DEFECT_WEIGHTS if name != "clean")
+# The defects this generator knows how to make. How often each appears is in
+# config/synthetic.yaml (defect_weights), which may name only these.
+KNOWN_DEFECTS: tuple[str, ...] = (
+    "clean",
+    "late",
+    "inactive",
+    "not_covered",
+    "excluded",
+    "duplicate",
+    "over_limit",
+    "overpriced",
+    "unlisted",
+    "unreadable",
+    "tampered_total",
+    *DOCUMENT_DEFECTS,
+)
+DEFECTS = tuple(name for name in KNOWN_DEFECTS if name != "clean")
 HARD_RULE_DEFECTS = frozenset({"late", "inactive", "not_covered", "excluded", "duplicate"})
-QR_SHARE = 0.7
 
 REGULAR = range(len(PATIENTS))
 ENDED, LIMIT_USED, OUTSIDER = len(PATIENTS), len(PATIENTS) + 1, len(PATIENTS) + 2
@@ -162,7 +163,12 @@ def _correct_payout(
 def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
     reference = _reference(random.Random(seed), settings)
     cases: list[SyntheticCase] = []
-    names, weights = zip(*DEFECT_WEIGHTS.items(), strict=True)
+    unknown = set(settings.synthetic.defect_weights) - set(KNOWN_DEFECTS)
+    if unknown:
+        raise ValueError(
+            f"synthetic.yaml names defects the generator cannot make: {sorted(unknown)}"
+        )
+    names, weights = zip(*settings.synthetic.defect_weights.items(), strict=True)
     for index in range(count):
         rng = random.Random(seed * 1_000_003 + index)
         defect = rng.choices(names, weights=weights)[0]
@@ -183,7 +189,7 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
         duplicate_of: str | None = None
         inherited: list[str] = []
         original: SyntheticCase | None = None
-        options = ReceiptOptions(with_qr=rng.random() < QR_SHARE)
+        options = ReceiptOptions(with_qr=rng.random() < settings.synthetic.qr_share)
         if defect == "inactive":
             claimant = patient = ENDED
             policy_id = ENDED_POLICY

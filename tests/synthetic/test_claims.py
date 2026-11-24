@@ -73,3 +73,31 @@ def test_duplicates_can_be_caught_and_keep_the_original_defects() -> None:
             assert case.claim.submitted_at > original.claim.submitted_at, case.name
             assert original.damage != "unreadable", case.name
             assert set(original.truth.defects) | {"duplicate"} == set(case.truth.defects)
+
+
+def test_defect_weights_come_from_config() -> None:
+    from reimbursement_council.config.models import SyntheticConfig
+
+    settings = repo_settings()
+    only_late = SyntheticConfig(qr_share=0.0, defect_weights={"late": 1})
+    claim_set = make_claim_set(3, 20, settings.model_copy(update={"synthetic": only_late}))
+    assert all(case.truth.defects == ["late"] for case in claim_set.cases)
+    assert all(case.receipt.qr_payload is None for case in claim_set.cases)
+
+
+def test_a_defect_the_generator_cannot_make_is_refused() -> None:
+    import pytest
+
+    from reimbursement_council.config.models import SyntheticConfig
+
+    settings = repo_settings().model_copy(
+        update={"synthetic": SyntheticConfig(qr_share=0.5, defect_weights={"made_up": 1})}
+    )
+    with pytest.raises(ValueError, match="made_up"):
+        make_claim_set(3, 5, settings)
+
+
+def test_the_repo_config_weights_name_every_known_defect() -> None:
+    from reimbursement_council.synthetic.claims import KNOWN_DEFECTS
+
+    assert set(repo_settings().synthetic.defect_weights) == set(KNOWN_DEFECTS)
