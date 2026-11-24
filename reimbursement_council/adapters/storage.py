@@ -136,6 +136,13 @@ class ClaimStore:
                 (claim_id, image_hash, fingerprint, weak_key, lane),
             )
 
+    def has_receipt(self, claim_id: str) -> bool:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT 1 FROM receipts WHERE claim_id = ?", (claim_id,)
+            ).fetchone()
+        return row is not None
+
     def seen_receipts(self, excluding_claim_id: str) -> SeenReceipts:
         """Receipts from every other claim that was not rejected.
 

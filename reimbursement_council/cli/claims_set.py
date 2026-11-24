@@ -17,7 +17,9 @@ from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.receipt_drawing import DAMAGE_PRESETS, draw_receipt
 from reimbursement_council.adapters.storage import ClaimStore
 from reimbursement_council.config.loader import load_settings
+from reimbursement_council.config.models import Settings
 from reimbursement_council.core.decision.calibration import fit_platt
+from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.pipeline.process_claim import process_claim
 from reimbursement_council.synthetic.claims import make_claim_set
 from reimbursement_council.synthetic.metrics import RunRow, metrics, paid_right
@@ -39,6 +41,11 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     run.add_argument("--config-dir", type=Path, default=Path("config"))
     run.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
     run.add_argument("--results-name", default="results.json")
+    run.add_argument(
+        "--resume",
+        action="store_true",
+        help="Keep the results already stored for this run and only run the claims without one.",
+    )
 
     fit = commands.add_parser("fit-calibration", help="Fit Platt calibration on a run-set result.")
     fit.add_argument("results", type=Path)
@@ -68,6 +75,41 @@ def make_claims(args: argparse.Namespace) -> int:
     return 0
 
 
+def _open_store(args: argparse.Namespace, settings: Settings) -> ClaimStore:
+    """The run's own database, named after the results file so two runs in one folder (for
+    example calibration off and on) never share stored decisions.
+
+    With --resume the database is kept, but only if it was made with the same reader,
+    calibration and config. Otherwise it is started fresh.
+    """
+    stem = Path(args.results_name).stem
+    db = args.folder / f"{stem}.sqlite"
+    meta_path = args.folder / f"{stem}.run.json"
+    meta = {
+        "reader": settings.decision.reader,
+        "calibration": settings.decision.calibration_enabled,
+        "config_version": settings.config_version,
+    }
+    if args.resume and db.is_file():
+        stored = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else None
+        if stored != meta:
+            raise ValueError(
+                f"cannot resume {db}: it was made with {stored}, this run is {meta}. "
+                "Run again without --resume to start fresh."
+            )
+    else:
+        db.unlink(missing_ok=True)
+    meta_path.write_text(json.dumps(meta), encoding="utf-8")
+    return ClaimStore(db)
+
+
+def _stored_result(store: ClaimStore, claim_id: str) -> Decision | None:
+    """A claim is done only when both its decision and its receipt are stored (they are saved
+    in two steps, so a run killed between them must run that claim again)."""
+    decision = store.load_decision(claim_id)
+    return decision if decision is not None and store.has_receipt(claim_id) else None
+
+
 def run_set(args: argparse.Namespace) -> int:
     settings = load_settings(args.config_dir)
     decision = settings.decision
@@ -77,22 +119,27 @@ def run_set(args: argparse.Namespace) -> int:
         decision = decision.model_copy(update={"calibration_enabled": args.calibration == "on"})
     settings = settings.model_copy(update={"decision": decision})
     reference = load_reference_file(args.folder / "reference.json")
-    db = args.folder / "run.sqlite"
-    db.unlink(missing_ok=True)
-    store = ClaimStore(db)
+    store = _open_store(args, settings)
     pick = make_reader_for(settings, CachedOcrEngine(EasyOcrEngine(), args.ocr_cache))
     rows: list[RunRow] = []
     started = time.time()
-    for claim_path in sorted(args.folder.glob("*.claim.json")):
+    claim_paths = sorted(args.folder.glob("*.claim.json"))
+    resumed = 0
+    for number, claim_path in enumerate(claim_paths, start=1):
         truth = json.loads(
             claim_path.with_name(claim_path.name.replace(".claim.json", ".truth.json")).read_text(
                 encoding="utf-8"
             )
         )
         claim = load_claim_file(claim_path)
-        result = process_claim(
-            claim, reference, settings, store, datetime.now(UTC), reader_for=pick
-        )
+        result = _stored_result(store, claim.claim_id) if args.resume else None
+        if result is None:
+            logger.info("claim %d/%d %s: start", number, len(claim_paths), claim.claim_id)
+            result = process_claim(
+                claim, reference, settings, store, datetime.now(UTC), reader_for=pick
+            )
+        else:
+            resumed += 1
         rows.append(
             RunRow(
                 name=claim_path.name.replace(".claim.json", ""),
@@ -106,6 +153,8 @@ def run_set(args: argparse.Namespace) -> int:
                 defects=truth["defects"],
             )
         )
+    if resumed:
+        logger.info("resumed: %d of %d claims came from the stored run", resumed, len(rows))
     scores = metrics(
         rows, decision.reviewer_time_value_halalas, decision.paid_right_tolerance_halalas
     )

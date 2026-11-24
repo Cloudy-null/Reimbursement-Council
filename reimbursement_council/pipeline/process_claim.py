@@ -1,6 +1,7 @@
 """Wire the stages together for one claim: read, rules, payout, council, decide, explain, store."""
 
 import logging
+import time
 from collections.abc import Callable
 from datetime import datetime
 
@@ -53,6 +54,7 @@ def process_claim(
     now: datetime,
     reader_for: Callable[[Document], DocumentReader] = readers.reader_for,
 ) -> Decision:
+    started = time.perf_counter()
     member = reference.member(claim.member_id)
     policy = reference.policy(claim.policy_id)
     history = reference.history(claim.patient_member_id)
@@ -63,6 +65,7 @@ def process_claim(
         if primary is None
         else extract_document(primary.document_id, reader_for(primary).read(primary), settings)
     )
+    read_seconds = time.perf_counter() - started
     provider = reference.provider_by_vat(_vat_number(extraction))
     image_hash = None if primary is None else primary.image_hash
 
@@ -128,10 +131,12 @@ def process_claim(
         decision.lane,
     )
     logger.info(
-        "claim %s: lane %s, p_good %.3f, disagreement %.3f",
+        "claim %s: lane %s, p_good %.3f, disagreement %.3f, read %.1fs, total %.1fs",
         claim.claim_id,
         decision.lane,
         p_good,
         disagreement,
+        read_seconds,
+        time.perf_counter() - started,
     )
     return decision

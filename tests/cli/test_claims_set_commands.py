@@ -1,10 +1,15 @@
 import json
+import logging
+import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
 
+from reimbursement_council.cli import claims_set
 from reimbursement_council.cli.main import main
+from reimbursement_council.core.models.claim import Claim
 from tests.factories import REPO_CONFIG
 
 
@@ -65,6 +70,71 @@ def test_run_set_scores_every_claim(tmp_path: Path, capsys: pytest.CaptureFixtur
         results["metrics"]
     )
     assert "automation_rate" in capsys.readouterr().out
+
+
+def make_set(out: Path, count: int = 8) -> None:
+    args = ["make-claims", "--count", str(count), "--seed", "4", "--out", str(out)]
+    assert run(*args, "--config-dir", str(REPO_CONFIG)) == 0
+
+
+def run_set(out: Path, cache: Path, *extra: str) -> int:
+    args = ["run-set", str(out), "--reader", "qr_only", "--config-dir", str(REPO_CONFIG)]
+    return run(*args, "--ocr-cache", str(cache), *extra)
+
+
+def result_rows(out: Path, name: str = "results.json") -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = json.loads((out / name).read_text(encoding="utf-8"))["rows"]
+    return rows
+
+
+def test_resume_runs_only_the_claims_without_a_stored_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clean, broken = tmp_path / "clean", tmp_path / "broken"
+    make_set(clean)
+    make_set(broken)
+    assert run_set(clean, tmp_path / "c") == 0
+
+    real = claims_set.process_claim
+    calls: list[str] = []
+
+    def dies_after_five(claim: Claim, *args: Any, **kwargs: Any) -> Any:
+        if len(calls) == 5:
+            raise RuntimeError("process killed")
+        calls.append(claim.claim_id)
+        return real(claim, *args, **kwargs)
+
+    monkeypatch.setattr(claims_set, "process_claim", dies_after_five)
+    with pytest.raises(RuntimeError):
+        run_set(broken, tmp_path / "c")
+
+    calls.clear()
+    monkeypatch.setattr(
+        claims_set, "process_claim", lambda c, *a, **k: calls.append(c) or real(c, *a, **k)
+    )
+    assert run_set(broken, tmp_path / "c", "--resume") == 0
+    assert len(calls) == 3
+    assert result_rows(broken) == result_rows(clean)
+
+
+def test_resume_refuses_a_run_made_with_other_settings(tmp_path: Path) -> None:
+    out = tmp_path / "set"
+    make_set(out, count=2)
+    assert run_set(out, tmp_path / "c") == 0
+    args = ["run-set", str(out), "--reader", "easyocr", "--config-dir", str(REPO_CONFIG)]
+    assert run(*args, "--ocr-cache", str(tmp_path / "c"), "--resume") == 2
+
+
+def test_each_claim_logs_one_finish_line_with_timings(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    out = tmp_path / "set"
+    make_set(out, count=3)
+    with caplog.at_level(logging.INFO):
+        assert run_set(out, tmp_path / "c") == 0
+    finished = [r.getMessage() for r in caplog.records if r.name.endswith("process_claim")]
+    assert len(finished) == 3
+    assert all(re.search(r"read \d+\.\d+s, total \d+\.\d+s$", line) for line in finished)
 
 
 def test_fit_calibration_writes_params(tmp_path: Path) -> None:
