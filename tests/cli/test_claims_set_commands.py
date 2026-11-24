@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 import yaml
 
-from reimbursement_council.cli import claims_set
+from reimbursement_council.cli import run_set as run_set_module
 from reimbursement_council.cli.main import main
 from reimbursement_council.config.loader import CONFIG_FILES
 from reimbursement_council.core.models.claim import Claim
@@ -132,7 +132,7 @@ def test_resume_runs_only_the_claims_without_a_stored_result(
     make_set(broken)
     assert run_set(clean, tmp_path / "c") == 0
 
-    real = claims_set.process_claim
+    real = run_set_module.process_claim
     calls: list[str] = []
 
     def dies_after_five(claim: Claim, *args: Any, **kwargs: Any) -> Any:
@@ -141,13 +141,13 @@ def test_resume_runs_only_the_claims_without_a_stored_result(
         calls.append(claim.claim_id)
         return real(claim, *args, **kwargs)
 
-    monkeypatch.setattr(claims_set, "process_claim", dies_after_five)
+    monkeypatch.setattr(run_set_module, "process_claim", dies_after_five)
     with pytest.raises(RuntimeError):
         run_set(broken, tmp_path / "c")
 
     calls.clear()
     monkeypatch.setattr(
-        claims_set, "process_claim", lambda c, *a, **k: calls.append(c) or real(c, *a, **k)
+        run_set_module, "process_claim", lambda c, *a, **k: calls.append(c) or real(c, *a, **k)
     )
     assert run_set(broken, tmp_path / "c", "--resume") == 0
     assert len(calls) == 3
@@ -341,3 +341,60 @@ def test_make_real_claims_wraps_each_receipt_in_a_claim(tmp_path: Path) -> None:
     truth = json.loads(next(out.glob("*.truth.json")).read_text(encoding="utf-8"))
     assert truth["should_pay"] is True and truth["truth"]["total"] == 900
     assert (out / "reference.json").is_file() and (out / "set.json").is_file()
+
+
+def test_set_changes_one_decision_setting_and_refuses_unknown_keys() -> None:
+    from reimbursement_council.cli.run_set import with_overrides
+    from tests.factories import repo_settings
+
+    decision = repo_settings().decision
+    changed = with_overrides(
+        decision, ["self_fix_enabled=false", "members.history_member.enabled=false"]
+    )
+    assert changed.self_fix_enabled is False and changed.members.history_member.enabled is False
+    assert changed.cost_lanes_enabled == decision.cost_lanes_enabled
+    for bad in ("no_such_switch=true", "members.nobody.enabled=false", "self_fix_enabled"):
+        with pytest.raises(ValueError):
+            with_overrides(decision, [bad])
+
+
+def test_run_set_with_a_switch_off_and_the_fix_simulation(tmp_path: Path) -> None:
+    out = tmp_path / "set"
+    run(
+        "make-claims",
+        "--count",
+        "12",
+        "--seed",
+        "4",
+        "--out",
+        str(out),
+        "--config-dir",
+        str(REPO_CONFIG),
+    )
+    common = [
+        "--reader",
+        "qr_only",
+        "--config-dir",
+        str(REPO_CONFIG),
+        "--ocr-cache",
+        str(tmp_path / "c"),
+    ]
+    assert (
+        run(
+            "run-set",
+            str(out),
+            "--set",
+            "self_fix_enabled=false",
+            "--results-name",
+            "off.json",
+            *common,
+        )
+        == 0
+    )
+    off = json.loads((out / "off.json").read_text(encoding="utf-8"))
+    assert off["overrides"] == ["self_fix_enabled=false"] and "self_fix" not in off["lanes"]
+    assert run("run-set", str(out), "--simulate-fix", "--results-name", "fix.json", *common) == 0
+    fixed = json.loads((out / "fix.json").read_text(encoding="utf-8"))
+    assert fixed["simulate_fix"] is True and "self_fix_success_rate" in fixed["metrics"]
+    for row in fixed["rows"]:
+        assert row["fix_tried"] == (row["first_lane"] == "self_fix")

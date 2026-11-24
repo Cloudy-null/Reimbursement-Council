@@ -38,6 +38,9 @@ class RunRow(Model):
     cross_check_failed: bool = False
     cross_check_expected: bool = False
     expected_lane: Lane | None = None
+    # Self-fix simulation (run-set --simulate-fix): the lane before the fixed file was sent.
+    first_lane: Lane | None = None
+    fix_tried: bool = False
 
 
 def paid_right(row: RunRow, tolerance: int) -> bool:
@@ -133,3 +136,16 @@ def metrics(rows: Sequence[RunRow], reviewer_time_value: int, tolerance: int) ->
         "ece": expected_calibration_error([r.p_good for r in judged], labels),
         "total_cost_sar": round((wrong_money + reviews * reviewer_time_value) / 100, 2),
     } | heavy_damage_metrics(rows, tolerance)
+
+
+def self_fix_metrics(rows: Sequence[RunRow], tolerance: int) -> dict[str, float]:
+    """For runs with --simulate-fix: of the claims where the member sent the fixed file, the
+    share that were then paid right with no person (success), and the share that went to a
+    person. Without the simulation the counts are 0."""
+    tried = [r for r in rows if r.fix_tried]
+    success = sum(r.lane == "auto_approve" and paid_right(r, tolerance) for r in tried)
+    return {
+        "self_fix_tried": len(tried),
+        "self_fix_success_rate": _share(success, len(tried)),
+        "self_fix_to_human_rate": _share(sum(r.lane == "human_review" for r in tried), len(tried)),
+    }

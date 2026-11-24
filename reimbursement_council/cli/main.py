@@ -20,7 +20,7 @@ from reimbursement_council.adapters.ocr_engine import (
 )
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
-from reimbursement_council.cli import claims_set, export, real, receipts
+from reimbursement_council.cli import claims_set, export, real, receipts, run_set
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.money import format_sar
@@ -46,6 +46,7 @@ def _parser() -> argparse.ArgumentParser:
     run_claim.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
     receipts.add_commands(commands)
     claims_set.add_commands(commands)
+    run_set.add_commands(commands)
     export.add_commands(commands)
     real.add_commands(commands)
     serve = commands.add_parser("serve", help="Start the website on this computer.")
@@ -117,10 +118,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "make-receipts": receipts.make_receipts,
         "read-accuracy": receipts.read_accuracy,
         "make-claims": claims_set.make_claims,
-        "run-set": claims_set.run_set,
-        "fit-calibration": claims_set.fit_calibration,
         "serve": _serve,
         **export.COMMANDS,
+        **run_set.COMMANDS,
         **real.COMMANDS,
     }
     if args.command in commands:
