@@ -55,7 +55,7 @@ MONEY_ROWS = ("subtotal", "vat_total", "total")
 # tax alone ("Total GST"). Found on real receipts (E1 failure review). Words like "excluding"
 # are kept: a receipt with no tax prints its only total that way.
 NOT_THE_TOTAL = frozenset(
-    {"qty", "oty", "quantity", "items", "saving", "savings", "discount", "rounding", "change",
+    {"qty", "oty", "quantity", "items", "saving", "savings", "discount", "change",
      "cash", "tendered"}
 )  # fmt: skip
 TAX_ONLY_WORDS = frozenset({"total", "gst", "vat", "tax", "amount", "rm", "sar"})

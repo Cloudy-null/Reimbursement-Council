@@ -196,6 +196,7 @@ def test_a_total_that_includes_tax_is_still_the_total() -> None:
         ("Item 2 Total with GST 6% 77.20", "7720"),
         ("Total Salas (inclusiva of GST) 4.25", "425"),
         ("Total (Excluding GST): 9.60", "960"),
+        ("Total After Rounding 5.00", "500"),
     ],
 )
 def test_real_total_rows_are_kept(row: str, expected: str) -> None:
