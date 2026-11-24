@@ -181,7 +181,13 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
     for index in range(count):
         rng = random.Random(seed * 1_000_003 + index)
         defect = rng.choices(names, weights=weights)[0]
-        payable = [c for c in cases if c.truth.should_pay and not c.duplicate_of]
+        # A duplicate copies a payable receipt that can be read. An unreadable original leaves
+        # nothing to match, so a copy of it is really an honest retake, not a duplicate.
+        payable = [
+            c
+            for c in cases
+            if c.truth.should_pay and not c.duplicate_of and c.damage != "unreadable"
+        ]
         if defect == "duplicate" and not payable:
             defect = "clean"
         name = f"claim_{seed}_{index:04d}"
@@ -190,6 +196,7 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
         damage = "light" if rng.random() < 0.3 else "none"
         delay_days = rng.randint(95, 130) if defect == "late" else rng.randint(1, 4)
         duplicate_of: str | None = None
+        inherited: list[str] = []
         options = ReceiptOptions(with_qr=rng.random() < QR_SHARE)
         if defect == "inactive":
             claimant = patient = ENDED
@@ -232,10 +239,16 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
                 else ("light" if original.damage == "none" else "none")
             )
             duplicate_of = original.name
+            inherited = list(original.truth.defects)
         else:
             receipt = make_receipt_content(rng, settings.prices, options, settings.policy.vat_rate)
 
         submitted = (receipt.issued_at + timedelta(days=delay_days)).replace(tzinfo=SAUDI)
+        if duplicate_of is not None:
+            # Always sent after the original, a few hours to three days later.
+            submitted = original.claim.submitted_at.astimezone(SAUDI) + timedelta(
+                hours=rng.randint(2, 72)
+            )
         claim_id = f"syn-{seed}-{index:04d}"
         claim = Claim(
             claim_id=claim_id,
@@ -256,7 +269,7 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
             ],
             retries_used=0,
         )
-        defects = [] if defect == "clean" else [defect]
+        defects = inherited + ([] if defect == "clean" else [defect])
         should_pay = not (HARD_RULE_DEFECTS & set(defects))
         payout = 0
         if should_pay:

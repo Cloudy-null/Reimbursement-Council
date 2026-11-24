@@ -56,3 +56,19 @@ def test_claims_point_at_their_receipt_and_known_people() -> None:
         assert case.claim.documents[0].file_path == f"{case.name}.png"
         assert case.claim.member_id in members and case.claim.patient_member_id in members
         assert case.claim.submitted_at.tzinfo is not None
+
+
+def test_duplicates_can_be_caught_and_keep_the_original_defects() -> None:
+    # A duplicate must be sent after its original, copy a receipt that can be read (an
+    # unreadable original leaves nothing to match, so the copy is really an honest retake),
+    # and keep the original's defects.
+    for seed in (11, 12):
+        cases = make_claim_set(seed, 120, repo_settings()).cases
+        by_name = {c.name: c for c in cases}
+        duplicates = [c for c in cases if c.duplicate_of]
+        assert duplicates
+        for case in duplicates:
+            original = by_name[case.duplicate_of or ""]
+            assert case.claim.submitted_at > original.claim.submitted_at, case.name
+            assert original.damage != "unreadable", case.name
+            assert set(original.truth.defects) | {"duplicate"} == set(case.truth.defects)
