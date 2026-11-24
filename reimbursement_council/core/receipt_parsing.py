@@ -51,14 +51,14 @@ LABELS = {
     for field, labels in RAW_LABELS.items()
 }
 MONEY_ROWS = ("subtotal", "vat_total", "total")
-# A row with "total" that is not the amount paid: a count, a saving, or the tax alone (real
-# receipts, E1 failure review). A total that says it includes tax is still the total.
+# A row with "total" that is not the amount paid: a count, a saving, the cash given, or the
+# tax alone ("Total GST"). Found on real receipts (E1 failure review). Words like "excluding"
+# are kept: a receipt with no tax prints its only total that way.
 NOT_THE_TOTAL = frozenset(
-    {"qty", "quantity", "item", "items", "saving", "savings", "excluding", "exclusive",
-     "discount", "rounding", "change", "cash", "tendered"}
+    {"qty", "oty", "quantity", "items", "saving", "savings", "discount", "rounding", "change",
+     "cash", "tendered"}
 )  # fmt: skip
-TAX_WORDS = frozenset({"gst", "vat", "tax"})
-INCLUDES_WORDS = frozenset({"incl", "inclusive", "including"})
+TAX_ONLY_WORDS = frozenset({"total", "gst", "vat", "tax", "amount", "rm", "sar"})
 # Words of the patient labels. OCR can split a label ("اسم" apart from "المريض"); a piece left
 # at the edge of the name is dropped (found in the E12 run).
 PATIENT_LABEL_WORDS = frozenset(word for label in LABELS["patient"] for word in label)
@@ -129,10 +129,12 @@ def _without_label_words(name: str) -> str:
 
 
 def _is_the_total(row: list[OcrLine]) -> bool:
-    words = {w.strip(".:()") for w in normalize_text(join_row(row)).split()}
-    if words & NOT_THE_TOTAL:
+    text = normalize_text(join_row(row))
+    words = {w.strip(".:()%") for w in text.split()}
+    named = {w for w in words if w and not any(ch.isdigit() for ch in w)}
+    if named & NOT_THE_TOTAL:
         return False
-    return not (words & TAX_WORDS) or bool(words & INCLUDES_WORDS)
+    return not (named <= TAX_ONLY_WORDS and named & {"gst", "vat", "tax"})
 
 
 def _money_in(line: OcrLine) -> list[int]:

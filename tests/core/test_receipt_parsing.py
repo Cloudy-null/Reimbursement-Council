@@ -188,3 +188,15 @@ def test_quantity_and_tax_total_rows_are_not_the_total() -> None:
 
 def test_a_total_that_includes_tax_is_still_the_total() -> None:
     assert value(parse([line("Total incl. GST 6.36", 100, width=400)]), "total") == "636"
+
+
+@pytest.mark.parametrize(
+    "row, expected",
+    [  # real SROIE rows that the first version of the rule got wrong
+        ("Item 2 Total with GST 6% 77.20", "7720"),
+        ("Total Salas (inclusiva of GST) 4.25", "425"),
+        ("Total (Excluding GST): 9.60", "960"),
+    ],
+)
+def test_real_total_rows_are_kept(row: str, expected: str) -> None:
+    assert value(parse([line(row, 100, width=500)]), "total") == expected
