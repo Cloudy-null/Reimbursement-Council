@@ -42,9 +42,15 @@ def _render(
     if choice.lane == "self_fix":
         if choice.request is None:
             raise ValueError("a self-fix claim needs a request")
-        label = language.fields.get(choice.request.field, choice.request.field)
-        request_template: str = getattr(language.requests, choice.request.kind)
-        return lanes.self_fix.format(request=request_template.format(field=label))
+        field = choice.request.field
+        if choice.request.kind == "add_document" and field in language.documents:
+            documents = language.documents[field]
+            request = language.requests.missing_document.format(documents=documents)
+        else:
+            label = language.fields.get(field, field)
+            request_template: str = getattr(language.requests, choice.request.kind)
+            request = request_template.format(field=label)
+        return lanes.self_fix.format(request=request)
     return lanes.human_review
 
 

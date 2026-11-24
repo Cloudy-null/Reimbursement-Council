@@ -66,8 +66,8 @@ def test_self_fix_confirm_date() -> None:
 def test_self_fix_add_receipt() -> None:
     request = SelfFixRequest(kind="add_document", field="receipt", text="t")
     m = build_member_message(choice("self_fix", request), [], None, repo_settings())
-    assert m.en.endswith("Please add the receipt.")
-    assert m.ar.endswith("أضف الفاتورة من فضلك.")
+    assert m.en.endswith("Please add a receipt.")
+    assert m.ar.endswith("أضف إيصال من فضلك.")
 
 
 def test_human_review() -> None:
@@ -92,3 +92,9 @@ def test_approved_without_payout_is_an_error() -> None:
         assert "payout" in str(error)
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_missing_document_is_named_in_both_languages() -> None:
+    request = SelfFixRequest(kind="add_document", field="prescription", text="t")
+    m = build_member_message(choice("self_fix", request), [], None, repo_settings())
+    assert "prescription" in m.en and "وصفة طبية" in m.ar

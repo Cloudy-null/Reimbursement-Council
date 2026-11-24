@@ -85,7 +85,8 @@ def test_unlisted_service_names_the_item(tmp_path: Path) -> None:  # Review Focu
 def test_prescription_only_asks_for_receipt(tmp_path: Path) -> None:
     decision = run(load("prescription_only"), ClaimStore(tmp_path / "claims.sqlite"))
     request = decision.self_fix_request
-    assert request is not None and (request.kind, request.field) == ("add_document", "receipt")
+    # Task 8: the missing group is invoice or receipt; the request names its first kind
+    assert request is not None and (request.kind, request.field) == ("add_document", "invoice")
     assert decision.payout_calculated is None and decision.expected_loss is None
 
 
@@ -163,7 +164,9 @@ def test_real_self_fix_resubmission_is_decided(tmp_path: Path) -> None:  # Revie
     reading = json.loads((CLAIMS / "blurry_date.reading.json").read_text(encoding="utf-8"))
     for field in reading["fields"]:
         if field["name"] == "treatment_date":
-            field["confidence"] = 0.99  # the member confirmed the date
+            # the member confirmed the date, which matches the medical report sent with it
+            field["value"] = field["original_text"] = "2026-11-15"
+            field["confidence"] = 0.99
     fixed = claim_with_reading(tmp_path, "resend", reading)
     resent = fixed.model_copy(update={"claim_id": load("blurry_date").claim_id, "retries_used": 1})
     decision = run(resent, store)

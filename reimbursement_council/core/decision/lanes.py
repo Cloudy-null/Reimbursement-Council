@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from decimal import ROUND_HALF_UP, Decimal
 
 from reimbursement_council.config.models import DecisionConfig, Settings
+from reimbursement_council.core.decision.document_requests import human_reasons
 from reimbursement_council.core.models.common import Lane, Model, Outcome
 from reimbursement_council.core.models.decision import (
     PayoutResult,
@@ -21,6 +22,9 @@ from reimbursement_council.core.models.decision import (
     Vote,
 )
 from reimbursement_council.core.money import format_sar
+
+HUMAN_RULES = frozenset({"duplicate", "member_edit"})
+"""Unclear rules only a person can settle; the member cannot fix them."""
 
 
 class LaneChoice(Model):
@@ -105,8 +109,16 @@ def choose_lane(
     retries_used: int,
     settings: Settings,
     extra_blockers: Sequence[str] = (),
+    member_fixable: Sequence[SelfFixRequest] = (),
+    human_only: Sequence[str] = (),
 ) -> LaneChoice:
-    """extra_blockers: data problems from approval_blockers that stop auto approve."""
+    """extra_blockers: data problems from approval_blockers that stop auto approve.
+
+    Lane groups (spec 6.4): a failed hard rule rejects. Then what the member can fix
+    (member_fixable, then an unclear hard rule) is asked while retries are left, even when a
+    human is also needed, so one try can settle it. What is still left goes to a human
+    (human_only, a possible duplicate, a contradicting edit). Then the score paths.
+    """
     decision = settings.decision
     failed = [result for result in rule_results if result.outcome == "fail"]
     if failed:
@@ -118,36 +130,34 @@ def choose_lane(
             request=None,
         )
 
-    unsure = [result for result in rule_results if result.outcome == "not_sure"]
-    if any(result.rule == "duplicate" for result in unsure):
-        return LaneChoice(
-            lane="human_review",
-            outcome="queued",
-            reason="Possible duplicate of a receipt in another claim. A person must check.",
-            request=None,
-        )
+    human = list(human_only)
+    for reason in human_reasons(rule_results, (), ()):
+        if reason not in human:
+            human.append(reason)
+    fixable = list(member_fixable)
+    unsure = [r for r in rule_results if r.outcome == "not_sure" and r.rule not in HUMAN_RULES]
     if unsure:
         first = unsure[0]
-        if not _retries_left(retries_used, decision):
-            return LaneChoice(
-                lane="human_review",
-                outcome="queued",
-                reason=f"Hard rule {first.rule} could not run on unclear data, no retries left.",
-                request=None,
-            )
         field = first.fields[0] if first.fields else first.rule
-        request = (
+        fixable.append(
             _first_vote_request(votes, wanted_fields=first.fields)
             or _first_vote_request(votes)
             or SelfFixRequest(
                 kind="confirm_field", field=field, text=f"Please confirm the {field}."
             )
         )
+    if fixable and _retries_left(retries_used, decision):
+        reason = "Asking the member: " + "; ".join(r.text for r in fixable)
+        if human:
+            reason += " Then a person checks what is left: " + "; ".join(human)
+        return LaneChoice(lane="self_fix", outcome="queued", reason=reason, request=fixable[0])
+    if human or fixable:
+        left = human + [f"no retries left for: {r.text}" for r in fixable]
         return LaneChoice(
-            lane="self_fix",
+            lane="human_review",
             outcome="queued",
-            reason=f"Hard rule {first.rule} could not run on unclear data. Asking the member.",
-            request=request,
+            reason="A person must check: " + "; ".join(left),
+            request=None,
         )
 
     blockers, approve_reason = _approval(p_good, disagreement, payout, decision)
