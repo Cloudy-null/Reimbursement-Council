@@ -36,9 +36,11 @@ def test_make_claims_writes_a_runnable_folder(tmp_path: Path) -> None:
     )
     assert (out / "reference.json").is_file()
     assert len(list(out.glob("*.claim.json"))) == 6
-    assert len(list(out.glob("*.png"))) == 6
+    assert len(list(out.glob("claim_4_????.png"))) == 6  # one receipt each
     truth = json.loads(next(out.glob("*.truth.json")).read_text(encoding="utf-8"))
-    assert {"should_pay", "correct_payout", "defects"} <= set(truth)
+    assert {"should_pay", "correct_payout", "defects", "document_kinds", "expected_lane"} <= set(
+        truth
+    )
 
 
 def test_run_set_scores_every_claim(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -229,3 +231,22 @@ def test_fit_calibration_leaves_out_claims_a_hard_rule_rejected(tmp_path: Path) 
     alone = fit(tmp_path / "a", calibration_rows())
     mixed = fit(tmp_path / "b", calibration_rows() + rejected)
     assert (mixed["a"], mixed["b"]) == (alone["a"], alone["b"])
+
+
+def test_make_claims_writes_one_png_per_document(tmp_path: Path) -> None:
+    out = tmp_path / "set"
+    run(
+        "make-claims",
+        "--count",
+        "12",
+        "--seed",
+        "4",
+        "--out",
+        str(out),
+        "--config-dir",
+        str(REPO_CONFIG),
+    )
+    claims = [json.loads(p.read_text(encoding="utf-8")) for p in out.glob("*.claim.json")]
+    documents = [d for c in claims for d in c["documents"]]
+    assert len(list(out.glob("*.png"))) == len(documents) > len(claims)
+    assert all((out / d["file_path"]).is_file() for d in documents)

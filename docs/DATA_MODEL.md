@@ -134,7 +134,10 @@ GroundTruth
 - claim_id
 - correct_fields (the true values)
 - should_pay (bool), correct_payout
-- defects (list: late, inactive, excluded, duplicate, over_limit, overpriced, unreadable, qr_mismatch, arithmetic_error, multiple_patients, missing_prescription)
-- fixable (bool), fixed_version_document_ids
+- defects (list, as made by synthetic/claims.py and synthetic/document_sets.py: late, inactive, not_covered, excluded, duplicate, over_limit, overpriced, unlisted, unreadable, tampered_total, missing_prescription, missing_medical_report, patient_name_mismatch, date_mismatch, member_edit_supported, member_edit_contradicts. A duplicate also carries the defects of the claim it copies.)
+- document_kinds (document_id to its true kind; the receipt is always "invoice")
+- needs_missing (the required document groups the claim does not have)
+- expected_lane (the lane a document defect should lead to: self_fix for the missing and mismatch defects, human_review for a contradicting edit, empty otherwise)
+- Planned, not built yet: qr_mismatch, arithmetic_error, multiple_patients, and a fixed version of each fixable defect (fixable, fixed_version_document_ids). CHECK in HANDOVER.
 
 Review and GroundTruth are built in later layers.

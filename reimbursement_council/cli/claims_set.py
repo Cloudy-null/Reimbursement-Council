@@ -11,6 +11,7 @@ from pathlib import Path
 
 import yaml
 
+from reimbursement_council.adapters.document_drawing import draw_clinical_document
 from reimbursement_council.adapters.files import load_claim_file, load_reference_file
 from reimbursement_council.adapters.ocr_engine import CachedOcrEngine, EasyOcrEngine
 from reimbursement_council.adapters.readers import make_reader_for
@@ -77,6 +78,16 @@ def make_claims(args: argparse.Namespace) -> int:
         index = int(case.name.rsplit("_", 1)[1])
         damage = None if preset is None else preset.model_copy(update={"seed": index})
         (args.out / f"{case.name}.png").write_bytes(draw_receipt(case.receipt, damage).png)
+        for n, extra in enumerate(case.extra_documents, start=1):
+            extra_preset = DAMAGE_PRESETS[extra.damage]
+            extra_damage = (
+                None
+                if extra_preset is None
+                else extra_preset.model_copy(update={"seed": index * 10 + n})
+            )
+            (args.out / extra.file_name).write_bytes(
+                draw_clinical_document(extra.content, extra_damage).png
+            )
         (args.out / f"{case.name}.claim.json").write_text(
             case.claim.model_dump_json(indent=1), encoding="utf-8"
         )
