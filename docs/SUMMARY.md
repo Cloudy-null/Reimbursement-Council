@@ -44,8 +44,9 @@ not sure" honestly: a wrong automatic payment costs more than a short question t
   and no payable claim was rejected. On 50 real receipt scans the system made no wrong approval
   and no wrong rejection.
 - **Fewer claims for the claims team.** When members fix what they are asked, 10 of 60 synthetic
-  claims reach a person, against 37 of 60 when every problem goes to a person. 5 of the 8 claims
-  the members fixed were then paid right with no person at all.
+  claims reach a person, against 37 of 60 when every problem goes to a person; 24 more are still
+  waiting for the member to confirm a date. 5 of the 8 claims the members fixed were then paid
+  right with no person at all.
 - **Mismatches caught before payment.** The cross-document checks caught every patient or date
   mismatch we put in (3 of 3 and 7 of 7), and in each set stopped one wrong automatic approval.
 - **Data the claims system can use.** All 180 synthetic claims exported as valid JSON against the

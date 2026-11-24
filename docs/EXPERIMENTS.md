@@ -308,3 +308,25 @@ What it means: on real documents it reads badly, it asks the member instead of g
           never approved or rejected a claim it could not read. That is safe but gives no
           automation on these receipts.
 ```
+
+```
+Run: final check of the headline numbers after the code and data reviews
+Date: 2026-11-25
+Commit: 98c360a
+Command: run-set data/sets/abl/check --reader easyocr (base), plus --simulate-fix, plus
+         --set self_fix_enabled=false --simulate-fix; read-sroie data/real/sroie --reader easyocr;
+         run-set data/sets/real_e2e --reader easyocr; export-set data/sets/docs/check and tune
+Result: synthetic base, base+fix and self-fix off+fix: the same lanes and metrics as at 95745da
+          (precision 1.0, false rejects 0; reviews 133.3, 166.7 and 616.7 per 1000; cost 200, 250
+          and 925 SAR; 5 of 8 fixes then paid right). Real SROIE: provider 0.35, date 0.5333,
+          total 0.3333 (the same as 79f9aac). Real end to end: 50 of 50 self_fix. Export: 60 of
+          60 and 120 of 120 valid.
+In between (78608a0) the date reader was made stricter after the data review (Hijri years,
+          codes like "Ref 10-10-10"): real date fell to 0.45 because 5 real dates like
+          "17-03-18 14:49" were dropped. The rule now takes a short dashed date when the row also
+          has a time or the word date; those 5 rows are tests.
+Data review note on E8: in base+fix, 24 of 60 claims are still in self_fix at the end (21 had
+          no fix file in the set; all 24 ask to confirm the treatment date) and count as no
+          review and no cost. So "10 reviews against 37" leaves those 24 waiting for the member.
+```
+

@@ -9,7 +9,7 @@ Full results: docs/EXPERIMENTS.md.
 
 | Number | Test set | Commit | Command |
 |---|---|---|---|
-| 1.0 auto approve precision, 0 false rejects, in all 9 ablation runs | synthetic check, 60 claims with documents (seed 12) | 95745da | `run-set data/sets/abl/check --reader easyocr` (plus one `--set` per ablation) |
+| 1.0 auto approve precision, 0 false rejects, in all 9 ablation runs | synthetic check, 60 claims with documents (seed 12) | 95745da; base rerun the same at 98c360a | `run-set data/sets/abl/check --reader easyocr` (plus one `--set` per ablation) |
 | 0 wrong auto approves and 0 false rejects on 50 real receipts | real_e2e: 50 SROIE scans in a synthetic claim context | 79f9aac | `run-set data/sets/real_e2e --reader easyocr` |
 | 0 wrong auto approves on badly damaged photos (5 of 5 sent to self-fix) | synthetic check, 60 | 95745da | `run-set data/sets/abl/check --reader easyocr` |
 
@@ -21,12 +21,13 @@ the member instead of guessing.
 
 | Number | Test set | Commit | Command |
 |---|---|---|---|
-| With the member's fix: 10 of 60 claims reach a person; with self-fix off: 37 of 60 | synthetic check, 60 | 95745da | `run-set ... --simulate-fix` and `--set self_fix_enabled=false --simulate-fix` |
+| With the member's fix: 10 of 60 claims reach a person and 24 still wait for the member (all asked to confirm the date); with self-fix off: 37 of 60 reach a person | synthetic check, 60 | 95745da, same at 98c360a | `run-set ... --simulate-fix` and `--set self_fix_enabled=false --simulate-fix` |
 | 5 of 8 claims fixed by the member are then paid right with no person | synthetic check, 60 | 95745da | `run-set ... --simulate-fix` |
-| Review cost 250 SAR with self-fix, 925 SAR without (60 claims, 25 SAR per review) | synthetic check, 60 | 95745da | same two runs |
+| Review cost 250 SAR with self-fix, 925 SAR without (60 claims, 25 SAR per review; the 24 still waiting cost nothing yet) | synthetic check, 60 | 95745da, same at 98c360a | same two runs |
 
-What it means: telling the member exactly what to add or fix keeps most claims away from a
-person, and many of them then finish on their own.
+What it means: telling the member exactly what to add or fix keeps many claims away from a
+person, and many of them then finish on their own. Most of the claims still waiting ask the
+member to confirm a date the reader was not sure of (HANDOVER CHECK on date confidence).
 
 ## Documents that do not agree (cross checks, E12)
 
@@ -43,8 +44,8 @@ moves. The two false alarms came from OCR misreading an Arabic name.
 
 | Number | Test set | Commit | Command |
 |---|---|---|---|
-| 60 of 60 claim exports valid against the published JSON Schema | synthetic check, 60 | 55431ba | `export-set data/sets/docs/check --reader easyocr --out outputs/export` |
-| 120 of 120 valid | synthetic tune, 120 | 55431ba | same on `data/sets/docs/tune` |
+| 60 of 60 claim exports valid against the published JSON Schema | synthetic check, 60 | 55431ba, same at 98c360a | `export-set data/sets/docs/check --reader easyocr --out outputs/export` |
+| 120 of 120 valid | synthetic tune, 120 | 55431ba, same at 98c360a | same on `data/sets/docs/tune` |
 
 What it means: every decided claim comes out as the same machine-readable structure, with money
 in whole halalas and a confidence on every value (docs/INTEGRATION.md).
@@ -53,7 +54,7 @@ in whole halalas and a confidence on every value (docs/INTEGRATION.md).
 
 | Number | Test set | Commit | Command |
 |---|---|---|---|
-| Total right on 0.333, date on 0.533, shop name on 0.35 | real_extraction: 60 SROIE scans, EasyOCR | 79f9aac | `read-sroie data/real/sroie --reader easyocr` |
+| Total right on 0.333, date on 0.533, shop name on 0.35 | real_extraction: 60 SROIE scans, EasyOCR | 79f9aac, same at 98c360a | `read-sroie data/real/sroie --reader easyocr` |
 | Before two parser fixes: total 0.317, date 0.367, name 0.35 | same | 6943ee7 | same |
 | On our own synthetic receipts: total 0.967 | synthetic, 60 receipts (seed 1) | f087ab9 | `read-accuracy data/receipts/eval_s1 --reader easyocr` |
 

@@ -8,7 +8,7 @@ read without opening the photos.
   drift apart. To write it again: `uv run reimbursement-council write-schema`.
 - One claim: `GET /api/claims/{claim_id}/export` on the website. Add `?download=1` to save it
   as a file. The result page and the reviewer card have a "Download claim data (JSON)" button.
-  A claim that has not been sent yet gives 409.
+  A claim that has not been sent yet, or was sent back to the check step by a fix, gives 409.
 - A whole set: `uv run reimbursement-council export-set FOLDER --out outputs/export`. It
   decides every claim, writes one JSON file per claim, checks each file against the schema,
   and writes `summary.json`.
@@ -43,7 +43,7 @@ read without opening the photos.
 | `policy_id` | The policy the claim is filed under. |
 | `categories` | Benefit categories (`outpatient`, `pharmacy`, `lab`, `radiology`, `dental`): found from the services, or picked by the member. |
 | `consented_at` | When the member agreed that their documents may be read. Empty only for synthetic claims. |
-| `ready_for_processing` | `true` when the claim was auto approved, or a person approved it. This is the one flag a claims system needs for straight-through processing. |
+| `ready_for_processing` | `true` when the claim was auto approved and the payout worked out again from the stored reading agrees with the decided payout, or when a person approved it. A person's review always decides: a rejected review makes it `false`. This is the one flag a claims system needs for straight-through processing. |
 | `provider` | See below. |
 | `invoice` | See below. Empty when no billing document could be read. |
 | `documents` | Every document in the claim. See below. |
@@ -94,7 +94,8 @@ services not on the price list. `is_partial` is `true` when less than the claim 
 ### decision
 
 `lane` (`auto_approve`, `auto_reject`, `self_fix`, `human_review`), `outcome`, `reason` (plain
-words), `p_good` (how likely the claim is right, 0 to 1), `decided_at`, `config_version` (a hash
+words), `p_good` (how likely the claim is right, 0 to 1), `payout_calculated_halalas` (the
+payout decided; the `payout` section is its breakdown, worked out again), `decided_at`, `config_version` (a hash
 of the settings that made the decision, so it can be reproduced), `self_fix_request` (what we
 asked the member), `member_message` (Arabic and English), and `rule_results` (each hard rule
 with `pass`, `fail` or `not_sure` and its reason).
@@ -102,7 +103,7 @@ with `pass`, `fail` or `not_sure` and its reason).
 ## How a claims system would use it
 
 1. Read `ready_for_processing`. When it is `true`, post the payment of
-   `payout.calculated_halalas` (or `review.amount_halalas` when a reviewer set an amount) to
+   `decision.payout_calculated_halalas` (or `review.amount_halalas` when a reviewer set an amount) to
    `member_id` under `policy_id`. Nothing needs re-keying.
 2. When it is `false`, the `decision.lane` says why: waiting for the member (`self_fix`), with a
    person (`human_review`), or rejected by a hard rule (`auto_reject`, the failed rule is in
