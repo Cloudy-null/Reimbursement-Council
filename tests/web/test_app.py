@@ -151,7 +151,7 @@ def test_self_fix_resend_counts_a_retry(web: tuple[TestClient, WebContext]) -> N
 def test_numbers_page_reads_harness_results(web: tuple[TestClient, WebContext]) -> None:
     client, ctx = web
     assert "No runs found" in client.get("/metrics").text
-    folder = ctx.results_root / "check"
+    folder = ctx.results_root / "sets" / "check"
     folder.mkdir(parents=True)
     metrics = {
         "claims": 60,
@@ -163,9 +163,17 @@ def test_numbers_page_reads_harness_results(web: tuple[TestClient, WebContext]) 
         "ece": 0.08,
         "total_cost_sar": 512.0,
     }
-    (folder / "results.json").write_text(
-        json.dumps({"reader": "easyocr", "calibration": False, "metrics": metrics, "rows": []}),
+    run = {"reader": "easyocr", "calibration": False, "metrics": metrics, "rows": [], "lanes": {}}
+    (folder / "e2_off.json").write_text(
+        json.dumps(run | {"overrides": ["arithmetic_checks_enabled=false"]}), encoding="utf-8"
+    )
+    (folder / "set.json").write_text(json.dumps({"seed": 1, "count": 60}), encoding="utf-8")
+    real = ctx.results_root / "real" / "sroie"
+    real.mkdir(parents=True)
+    (real / "accuracy_abc.json").write_text(
+        json.dumps({"reader": "easyocr", "summary": {"receipts": 60, "total": 0.61}}),
         encoding="utf-8",
     )
     page = client.get("/metrics").text
-    assert "0.97" in page and "easyocr" in page
+    assert "0.97" in page and "easyocr" in page and "arithmetic_checks_enabled=false" in page
+    assert "sroie / accuracy_abc" in page and "0.61" in page
