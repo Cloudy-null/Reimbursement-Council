@@ -25,6 +25,7 @@ from reimbursement_council.web.context import (
     claim_view,
     make_page,
 )
+from reimbursement_council.web.errors import add_error_pages
 from reimbursement_council.web.export_routes import add_export_routes
 
 __all__ = ["WebContext", "create_app"]
@@ -41,6 +42,7 @@ def create_app(ctx: WebContext) -> FastAPI:
     add_check_routes(app, ctx, page)
     add_export_routes(app, ctx)
     add_confirm_routes(app, ctx)
+    add_error_pages(app, page)
 
     @app.get("/review", response_class=HTMLResponse)
     def queue(request: Request, lang: str = "en") -> HTMLResponse:

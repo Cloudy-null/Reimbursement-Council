@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" role="alert">
+  <h2>{{ title }}</h2>
+  {% if detail %}<p class="message" dir="auto">{{ detail }}</p>{% endif %}
+  <p class="note">{{ t.error_help }}</p>
+  <div class="btns"><a class="btn primary" href="/?lang={{ lang }}">{{ t.error_home }}</a></div>
+</section>
+{% endblock %}
