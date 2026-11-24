@@ -12,10 +12,10 @@ from statistics import mean
 
 from reimbursement_council.config.models import OcrConfig, Settings
 from reimbursement_council.core.models.claim import ExtractedField, LineItem, ReaderOutput
-from reimbursement_council.core.models.common import FieldName, FieldSource, Model, Score
+from reimbursement_council.core.models.common import FieldName, FieldSource
+from reimbursement_council.core.receipt_rows import LATIN_LETTERS, OcrLine, group_rows, join_row
 from reimbursement_council.core.text import digits_to_ascii, normalize_text
 
-Box = tuple[int, int, int, int]
 SOURCE: FieldSource = "ocr"
 
 RAW_LABELS: dict[str, tuple[str, ...]] = {
@@ -57,50 +57,6 @@ _DATE_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}):(\d{2}))?")
 _DATE_DMY = re.compile(r"(\d{2})/(\d{2})/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?")
 _DIGITISH = re.compile(r"[0-9OoIl]{2,}")
 _LONE_INT = re.compile(r"^\d{1,2}$")
-_ARABIC = re.compile("[؀-ۿ]")
-_LATIN = re.compile("[A-Za-z]")
-
-
-class OcrLine(Model):
-    """One text box from the OCR engine. box is x0, y0, x1, y1 in pixels."""
-
-    text: str
-    confidence: Score
-    box: Box
-
-
-def _center(line: OcrLine) -> float:
-    return (line.box[1] + line.box[3]) / 2
-
-
-def _height(line: OcrLine) -> int:
-    return max(1, line.box[3] - line.box[1])
-
-
-def group_rows(lines: list[OcrLine], overlap: float = 0.5) -> list[list[OcrLine]]:
-    """Lines whose vertical centers are close form one row, sorted left to right."""
-    rows: list[list[OcrLine]] = []
-    for item in sorted(lines, key=_center):
-        if rows:
-            row = rows[-1]
-            row_center = mean(_center(x) for x in row)
-            limit = overlap * min(_height(item), min(_height(x) for x in row))
-            if abs(_center(item) - row_center) <= limit:
-                row.append(item)
-                continue
-        rows.append([item])
-    return [sorted(row, key=lambda x: x.box[0]) for row in rows]
-
-
-def _is_arabic(text: str) -> bool:
-    return bool(_ARABIC.search(text)) and not _LATIN.search(text)
-
-
-def _join(lines: list[OcrLine]) -> str:
-    """Join text boxes in reading order: right to left when they are Arabic."""
-    if lines and all(_is_arabic(x.text) for x in lines):
-        lines = sorted(lines, key=lambda x: -x.box[0])
-    return " ".join(x.text.strip() for x in lines)
 
 
 def _fix_digits(text: str) -> tuple[str, bool]:
@@ -140,7 +96,7 @@ def _label_size(words: list[str], field: str, ratio: float) -> int:
 
 def _classify(row: list[OcrLine], cfg: OcrConfig) -> str | None:
     """The field whose longest, then closest, label is in the row."""
-    words = normalize_text(_fix_digits(_join(row))[0]).split()
+    words = normalize_text(_fix_digits(join_row(row))[0]).split()
     scores = {field: _label_match(words, field, cfg.label_match_ratio) for field in LABELS}
     field, (size, _) = max(scores.items(), key=lambda pair: pair[1])
     return field if size else None
@@ -165,7 +121,7 @@ def _field(
 
 
 def _is_header(row: list[OcrLine], cfg: OcrConfig) -> bool:
-    words = normalize_text(_join(row)).split()
+    words = normalize_text(join_row(row)).split()
     hits = {
         h
         for h in HEADER_WORDS
@@ -201,7 +157,7 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
         words = [line for line in row if not _money_in(line) and line not in ints]
         if not money:
             if items and words:
-                texts[-1].append(_join(words))
+                texts[-1].append(join_row(words))
             continue
         money.sort(key=lambda pair: pair[1].box[0])
         amount = money[-1][0]
@@ -216,7 +172,7 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
         if quantity < 1 or quantity * unit != amount:
             confidence *= cfg.pattern_miss_factor
             quantity = max(quantity, 1)
-        description = _join(words) if words else "item"
+        description = join_row(words) if words else "item"
         items.append(
             LineItem(
                 description=description,
@@ -230,7 +186,7 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
         texts.append([description])
     matched = []
     for item, item_texts in zip(items, texts, strict=True):
-        english = next((t for t in item_texts if _LATIN.search(t)), item.description)
+        english = next((t for t in item_texts if LATIN_LETTERS.search(t)), item.description)
         matched.append(
             item.model_copy(
                 update={
@@ -292,7 +248,7 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
                 fields.append(_field(document_id, kind, str(value), line.text, line.confidence))  # type: ignore[arg-type]
                 found.add(kind)
         if "treatment_date" not in found:
-            dated = _date_fields(document_id, _join(row), min(x.confidence for x in row))
+            dated = _date_fields(document_id, join_row(row), min(x.confidence for x in row))
             if dated:
                 fields.extend(dated)
                 found.add("treatment_date")
@@ -303,7 +259,7 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
                 if not _label_size(normalize_text(x.text).split(), "patient", cfg.label_match_ratio)
             ]
             if label_free:
-                name = _join(label_free)
+                name = join_row(label_free)
                 fields.append(
                     _field(
                         document_id,
@@ -318,8 +274,8 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
     anchor = next((i for i, kind in enumerate(kinds) if kind), len(rows))
     top = rows[: min(anchor, 3)]
     if top:
-        named = next((row for row in top if any(_LATIN.search(x.text) for x in row)), top[0])
-        name = _join(named)
+        named = next((row for row in top if any(LATIN_LETTERS.search(x.text) for x in row)), top[0])
+        name = join_row(named)
         confidence = mean(x.confidence for x in named) * cfg.heuristic_factor
         fields.append(_field(document_id, "provider_name", name, name, confidence))
 

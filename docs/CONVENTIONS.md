@@ -36,7 +36,7 @@ docs/            everything in CLAUDE.md
 - config/policy.yaml: made-up policy. Claim window days (90), benefit limits per category, co-pay percents, exclusion list, network price rule.
 - config/prices.yaml: reference price list per service and medicine.
 - config/decision.yaml: council member weights, which members are on, calibration method, hard rule confidence floor, disagreement limit, reviewer_time_value in SAR, always_review_amount_enabled (off by default), self-fix max retries.
-- config/experiments.yaml: named switch sets for each ablation (see EXPERIMENTS.md).
+- config/experiments.yaml: named switch sets for each ablation (see EXPERIMENTS.md). Planned, not built yet; the switches live in config/decision.yaml today.
 - Every config file is validated by a Pydantic model on load. A bad value fails loudly at startup.
 
 ## Names

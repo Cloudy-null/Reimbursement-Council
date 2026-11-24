@@ -1,6 +1,9 @@
 """Score a pipeline run on a synthetic set against the known right answers.
 
-The metric names are the ones in docs/EXPERIMENTS.md.
+The metric names are the ones in docs/EXPERIMENTS.md. Total cost is wrong payouts plus review
+cost: paying too much, paying too little, and not paying a payable claim (a false reject) all
+count. ECE and the calibration fit use only claims no hard rule rejected (decision 007): the
+council does not see the hard rules, so a late claim can score high and still be right to reject.
 """
 
 from collections.abc import Sequence
@@ -8,6 +11,8 @@ from collections.abc import Sequence
 from reimbursement_council.core.models.common import Halalas, Lane, Model, Outcome, Score
 
 AUTOMATED: frozenset[str] = frozenset({"auto_approve", "auto_reject"})
+HEAVY_DAMAGE: frozenset[str] = frozenset({"heavy", "unreadable"})
+HEAVY_DAMAGE_LANES = ("self_fix", "auto_approve", "auto_reject", "human_review")
 ECE_BINS = 10
 
 
@@ -21,6 +26,8 @@ class RunRow(Model):
     should_pay: bool
     correct_payout: Halalas
     defects: list[str]
+    hard_rule_failed: bool
+    damage: str
 
 
 def paid_right(row: RunRow, tolerance: int) -> bool:
@@ -34,6 +41,10 @@ def paid_right(row: RunRow, tolerance: int) -> bool:
 
 def expected_calibration_error(probabilities: Sequence[float], labels: Sequence[int]) -> float:
     """Average gap between predicted and actual rate, over 10 equal-width bins, weighted by size."""
+    if len(probabilities) != len(labels):
+        raise ValueError(
+            f"probabilities and labels must be the same length: {len(probabilities)}, {len(labels)}"
+        )
     if not probabilities:
         return 0.0
     total = 0.0
@@ -55,7 +66,29 @@ def _share(part: int, whole: int) -> float:
     return round(part / whole, 4) if whole else 0.0
 
 
+def calibration_rows(rows: Sequence[RunRow]) -> list[RunRow]:
+    """The rows the council score is judged on: no hard rule rejected the claim."""
+    return [r for r in rows if not r.hard_rule_failed]
+
+
+def heavy_damage_metrics(rows: Sequence[RunRow], tolerance: int) -> dict[str, float]:
+    """Where badly damaged photos end up. The safe lane is self_fix (ask for a new photo); an
+    auto approve on a photo we could not read is the mistake that matters most."""
+    damaged = [r for r in rows if r.damage in HEAVY_DAMAGE]
+    result: dict[str, float] = {"heavy_damage_claims": len(damaged)}
+    for lane in HEAVY_DAMAGE_LANES:
+        result[f"heavy_damage_{lane}_share"] = _share(
+            sum(r.lane == lane for r in damaged), len(damaged)
+        )
+    result["heavy_damage_wrong_auto_approves"] = sum(
+        r.lane == "auto_approve" and not paid_right(r, tolerance) for r in damaged
+    )
+    return result
+
+
 def metrics(rows: Sequence[RunRow], reviewer_time_value: int, tolerance: int) -> dict[str, float]:
+    if not rows:
+        raise ValueError("no claims in the run: nothing to score")
     approved = [r for r in rows if r.lane == "auto_approve"]
     payable = [r for r in rows if r.should_pay]
     unpayable = [r for r in rows if not r.should_pay]
@@ -67,7 +100,11 @@ def metrics(rows: Sequence[RunRow], reviewer_time_value: int, tolerance: int) ->
                 wrong_money += abs((r.payout_calculated or 0) - r.correct_payout)
         else:
             wrong_money += r.payout_calculated or 0
-    labels = [1 if paid_right(r, tolerance) else 0 for r in rows]
+    for r in rows:
+        if r.lane == "auto_reject" and r.should_pay:
+            wrong_money += r.correct_payout
+    judged = calibration_rows(rows)
+    labels = [1 if paid_right(r, tolerance) else 0 for r in judged]
     return {
         "claims": len(rows),
         "automation_rate": _share(sum(r.lane in AUTOMATED for r in rows), len(rows)),
@@ -83,6 +120,6 @@ def metrics(rows: Sequence[RunRow], reviewer_time_value: int, tolerance: int) ->
         "self_fix_per_1000": round(1000 * sum(r.lane == "self_fix" for r in rows) / len(rows), 1)
         if rows
         else 0.0,
-        "ece": expected_calibration_error([r.p_good for r in rows], labels),
+        "ece": expected_calibration_error([r.p_good for r in judged], labels),
         "total_cost_sar": round((wrong_money + reviews * reviewer_time_value) / 100, 2),
-    }
+    } | heavy_damage_metrics(rows, tolerance)

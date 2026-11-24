@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 from reimbursement_council.core.models.claim import ReaderOutput
-from reimbursement_council.core.receipt_parsing import OcrLine, group_rows, parse_receipt_lines
+from reimbursement_council.core.receipt_parsing import parse_receipt_lines
+from reimbursement_council.core.receipt_rows import OcrLine
 from tests.factories import DOC_ID, repo_settings
 
 OCR = Path(__file__).resolve().parent.parent / "fixtures" / "ocr"
@@ -72,11 +73,6 @@ def test_arabic_first_receipt() -> None:
     assert value(out, "patient_name") == "عمر أحمد"  # Arabic words put back right to left
     codes = [i.service_code for i in out.line_items]
     assert codes[:2] == ["LAB-VITD", "CONS-SPEC"]
-
-
-def test_rows_group_by_height() -> None:
-    rows = group_rows([line("Total", 100), line("172.50", 104, x=400), line("Date", 160)])
-    assert [[ln.text for ln in row] for row in rows] == [["Total", "172.50"], ["Date"]]
 
 
 def test_vat_number_letter_o_is_fixed_but_less_sure() -> None:

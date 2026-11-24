@@ -28,3 +28,9 @@
 - Process notes: tests came first for most tasks; for the receipt content module and the website, code and tests were written together (said here so the owner knows).
 - Decisions: 006 (EasyOCR as an optional extra, Pillow receipts). New config values: reader, passed_check_confidence, ocr factors, paid_right_tolerance_halalas.
 - Next: E6 numbers from the tune and check runs, tag layer-2, owner review.
+
+## 2026-11-24: day 3 on the laptop
+- Done: cloned to D:\dev\Reimbursement-Council, installed uv and the OCR extra. On fix/day3: fixed the OCR cache (first image of every run was saved under the wrong name and read again), made cache writes safe, added run-set --resume and per-claim timing lines, split row grouping out of the parser, added the heavy damage metric. The data-quality reviewer checked the generator and harness; fixed the false reject cost, calibration on hard rule rejects (decision 007), duplicate timing and originals, set folders and manifests, empty runs. Finished the layer 2 run and recorded E6. Tagged layer-2.
+- Broke: uv could not install Python under AppData from inside the Claude desktop app (packaged app writes go to a hidden copy), so UV_PYTHON_INSTALL_DIR points to D:\dev\.uv-python. The exit code 4 crash from the desktop did not happen on the laptop; cause not found.
+- Decisions: 007 (what the harness counts as cost and calibration error). calibration_enabled left off for the owner.
+- Next: website changes (brainstorming started), owner decides calibration_enabled, then real receipts for E1 and E11.

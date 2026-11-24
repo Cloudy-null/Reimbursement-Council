@@ -1,4 +1,6 @@
+import hashlib
 import importlib.util
+import json
 import random
 import sys
 from datetime import UTC, datetime
@@ -6,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from reimbursement_council.adapters import ocr_engine
 from reimbursement_council.adapters.ocr_engine import (
     CachedOcrEngine,
     EasyOcrEngine,
@@ -19,7 +22,7 @@ from reimbursement_council.adapters.readers import (
 )
 from reimbursement_council.adapters.receipt_drawing import draw_receipt
 from reimbursement_council.core.models.claim import Document
-from reimbursement_council.core.receipt_parsing import OcrLine
+from reimbursement_council.core.receipt_rows import OcrLine
 from reimbursement_council.synthetic.receipt_content import ReceiptOptions, make_receipt_content
 from tests.core.test_receipt_parsing import load
 from tests.factories import repo_settings, settings_with
@@ -76,6 +79,35 @@ def test_cache_reads_each_image_once(tmp_path: Path) -> None:
     assert len(list((tmp_path / "cache").glob("*.json"))) == 1
     cached.read(b"other image")
     assert engine.calls == 2
+
+
+def test_fresh_easyocr_uses_the_cache_without_loading_the_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A new run starts with the model not loaded. The cache name must already be right then,
+    # or the first image of every run is read again.
+    monkeypatch.setattr(ocr_engine, "package_version", lambda name: "9.9.9", raising=False)
+    monkeypatch.setitem(sys.modules, "easyocr", None)  # loading the model would fail
+    image = b"image bytes"
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    digest = hashlib.sha256(image).hexdigest()
+    line = {"text": "Total", "confidence": 0.9, "box": [0, 0, 10, 10]}
+    (cache / f"{digest}-easyocr-9.9.9-ar-en.json").write_text(json.dumps([line]), "utf-8")
+    lines = CachedOcrEngine(EasyOcrEngine(), cache).read(image)
+    assert [x.text for x in lines] == ["Total"]
+
+
+def test_half_written_cache_file_is_read_again(tmp_path: Path) -> None:
+    # A run killed while writing leaves a cut off file. The next run must not crash on it.
+    engine = FakeEngine(load("pharmacy_bilingual"))
+    cache = tmp_path / "cache"
+    CachedOcrEngine(engine, cache).read(b"image bytes")
+    path = next(cache.glob("*.json"))
+    path.write_text('[{"text": "To', encoding="utf-8")
+    lines = CachedOcrEngine(engine, cache).read(b"image bytes")
+    assert engine.calls == 2 and lines == engine.lines
+    assert len(json.loads(path.read_text(encoding="utf-8"))) == len(engine.lines)
 
 
 def test_missing_easyocr_says_how_to_install(monkeypatch: pytest.MonkeyPatch) -> None:

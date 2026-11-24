@@ -1,0 +1,6 @@
+# Platt calibration, fitted by: reimbursement-council fit-calibration
+method: platt
+a: 17.174435
+b: -12.546718
+fitted_on: data\sets\day3\tune\results.json (102 claims; 18 rejected by a hard rule
+  left out)
