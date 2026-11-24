@@ -56,6 +56,10 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
 - CHECK (Task 14): screenshots were checked in the built-in browser only. Saved Playwright screenshots and an Impeccable audit are still to do (neither is installed here).
 - CHECK (E12): the check set has only 3 mismatch claims and no missing-document claims. The tune set run (120 claims, recorded in EXPERIMENTS) agrees: 7 of 7 mismatches caught, 2 false alarms in 113 from OCR misreading the Arabic patient name on a medical report, and 1 missing prescription not found because no line items were read.
 - CHECK (E12): a cross check on a low-confidence OCR name still counts as a mismatch. After the fixes no false alarms were left, but a heavy-damage name could still trip it. Consider "cannot tell" below the confidence floor.
+- CHECK (day 4): NPHIES was not verified to use FHIR. docs/INTEGRATION.md maps the export to base HL7 FHIR R4 Claim and ClaimResponse only, and says so. Only a third-party page claims NPHIES is on FHIR R4.
+- CHECK (day 4): one-tap date confirm sends a "yes" to a person instead of letting the tap clear the late and policy_inactive rules. Safer, but it does not raise automation. Owner to decide if a confirmed date that another document also shows may count.
+- CHECK (day 4): TIFF scans are refused; PDFs read only up to max_pdf_pages (3) pages and through OCR, not their text layer.
+- CHECK (day 4): log masking hides Arabic text, long numbers and emails in our log lines; uvicorn's own access log is not filtered (it holds only paths with claim ids).
 - CHECK: demo date and pitch length.
 - CHECK: the second required document in the real flow (proof of payment plus what?).
 - CHECK: reviewer_time_value in SAR.
