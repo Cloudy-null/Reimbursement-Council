@@ -3,6 +3,7 @@
 Date: 2026-11-23
 Owner: Abdulrahman Aljahdali
 Status: Approved by the owner on 2026-11-23
+Later: the claim as a set of documents with a check step before submit is designed in 2026-11-24-document-set-design.md (from the official brief, docs/brief/project-brief.md; decision 008).
 
 ## 1. What this is and why
 
