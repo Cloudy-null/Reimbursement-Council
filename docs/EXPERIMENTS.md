@@ -30,14 +30,14 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 | ID | Idea | Switch | Hypothesis | Main metric | Result |
 |---|---|---|---|---|---|
 | E1 | Read the ZATCA QR first | qr_first_enabled | QR first improves accuracy on total, date and VAT number | Field accuracy | pending |
-| E2 | Arithmetic checks as confidence | arithmetic_checks_enabled | Catches misread totals and lowers wrong approvals | Auto approve precision | pending |
-| E3 | Council vs one judge | council_enabled | Council beats the case reviewer alone (needs Gemini key) and beats the document checker alone | Precision at the same automation rate | pending |
+| E2 | Arithmetic checks as confidence | arithmetic_checks_enabled | Catches misread totals and lowers wrong approvals | Auto approve precision | Off: correct rejects 0.70 to 0.40 (3 excluded-service claims ask the member instead), automation 0.383 to 0.333; precision 1.0 both (synthetic check, 60) |
+| E3 | Council vs one judge | council_enabled | Council beats the case reviewer alone (needs Gemini key) and beats the document checker alone | Precision at the same automation rate | Document checker alone vs full council: 1 more auto approve (an overpriced claim, paid right at the network price), reviews 133 to 117 per 1000; precision 1.0 both (synthetic check, 60). Not the hypothesis; one claim |
 | E4 | Tuned weights vs equal weights | weights_tuned | Tuned weights beat equal weights | Total cost | pending |
-| E5 | Disagreement sends to human | disagreement_routing_enabled | Catches wrong approvals that the average hides | Auto approve precision | pending |
-| E6 | Calibration | calibration_enabled | Calibrated scores make cost-based lanes safer | ECE and total cost | ECE 0.155 to 0.051, cost 175 to 125 SAR, precision 1.0 both (synthetic check, 60 claims) |
-| E7 | Cost-based lanes vs one fixed threshold | cost_lanes_enabled | Fewer reviews for the same precision | Reviews per 1000 | pending |
-| E8 | Self-fix choice | self_fix_enabled | Members fix many low scores themselves | Reviews per 1000, self-fix success | pending |
-| E9 | History member | history_member_enabled | Raises automation for trusted members and providers | Automation rate; false reject rate new vs tenured | pending |
+| E5 | Disagreement sends to human | disagreement_routing_enabled | Catches wrong approvals that the average hides | Auto approve precision | Off: the same one overpriced claim is auto approved instead of reviewed, reviews 133 to 117 per 1000; precision 1.0 both (synthetic check, 60) |
+| E6 | Calibration | calibration_enabled | Calibrated scores make cost-based lanes safer | ECE and total cost | ECE 0.155 to 0.051, cost 175 to 125 SAR, precision 1.0 both (synthetic check, 60 claims); day 4 rerun: ECE 0.202 to 0.065, reviews 133 to 100 per 1000, cost 200 to 150 SAR (synthetic check with documents, 60) |
+| E7 | Cost-based lanes vs one fixed threshold | cost_lanes_enabled | Fewer reviews for the same precision | Reviews per 1000 | Fixed threshold: 1 fewer auto approve, reviews 133 to 150 per 1000, cost 200 to 225 SAR; precision 1.0 both (synthetic check, 60) |
+| E8 | Self-fix choice | self_fix_enabled | Members fix many low scores themselves | Reviews per 1000, self-fix success | With the member's fix simulated: off sends 37 of 60 to a person (617 per 1000, 925 SAR), on 10 (167 per 1000, 250 SAR); 5 of 8 fixed claims then paid right with no person (synthetic check, 60) |
+| E9 | History member | history_member_enabled | Raises automation for trusted members and providers | Automation rate; false reject rate new vs tenured | Off: no lane changes, ECE 0.202 to 0.161. Fairness: payable recall new members 0.17 vs tenured 0.37 with it on AND off, false rejects 0 both, so the gap is not from this member (synthetic check, 60) |
 | E11 | Reader: EasyOCR vs PaddleOCR vs Gemini free tier | reader | A vision model reads messy and Arabic receipts better than OCR plus rules | Field accuracy | pending |
 | E10 | Member preview before submit | preview_enabled (simulated) | Fewer bad submissions reach the pipeline | Claims needing self-fix | pending |
 | E12 | Cross-document checks | cross_checks_enabled (run-set --cross-checks on or off) | Checking patient and date across the receipt, prescription and report catches mismatches with few false alarms, and sends them to self-fix instead of approving them | cross_check_catch_rate, cross_check_false_alarm_rate, auto approve precision | Catch 3 of 3, false alarms 0 of 57, one wrong auto approve avoided (synthetic check, 60 claims, after 3 fixes) |
@@ -189,4 +189,62 @@ What it means: same picture as the check set with more cases. Cross checks catch
   mismatch put in, stop a wrong auto approve, and send mismatches to the member before a
   person, which cuts reviews from 225 to 208 per 1000 and cost from 675 to 625 SAR. The price
   is 2 false alarms in 113 from OCR on Arabic names.
+```
+
+```
+Run: ablations E2, E3, E5, E6, E7, E8, E9 (one switch at a time) with the fairness check
+Date: 2026-11-25
+Commit: 95745da (code), config_version 2d82d0d23bfe (calibration.yaml from day 3)
+Command: uv run --extra ocr reimbursement-council make-claims --count 60 --seed 12 --out data/sets/abl/check
+         then, with S=data/sets/abl/check and --reader easyocr on every run:
+         run-set $S --results-name base.json
+         run-set $S --results-name base_fix.json --simulate-fix
+         run-set $S --results-name e2_off.json --set arithmetic_checks_enabled=false
+         run-set $S --results-name e3_single.json --set members.coverage_checker.enabled=false
+                 --set members.price_checker.enabled=false --set members.history_member.enabled=false
+         run-set $S --results-name e5_off.json --set disagreement_routing_enabled=false
+         run-set $S --results-name e6_on.json --calibration on
+         run-set $S --results-name e7_off.json --set cost_lanes_enabled=false
+         run-set $S --results-name e8_off_fix.json --set self_fix_enabled=false --simulate-fix
+         run-set $S --results-name e9_off.json --set members.history_member.enabled=false
+Test set: synthetic check set with documents, 60 claims (seed 12), the same claims as E12, plus the
+          fixed file of each fixable defect (8 files). Synthetic, not real. The base is the
+          config as it is (calibration off). Every run processed all 60 claims.
+
+                            base  e2_off e3_one  e5_off  e6_on  e7_off  e9_off  base+fix e8_off+fix
+automation_rate            0.383  0.333  0.400   0.400   0.383  0.367   0.383   0.433    0.383
+auto_approve_precision     1.0    1.0    1.0     1.0     1.0    1.0     1.0     1.0      1.0
+payable_recall             0.32   0.32   0.34    0.34    0.32   0.30    0.32    0.38     0.32
+false_reject_rate          0.0    0.0    0.0     0.0     0.0    0.0     0.0     0.0      0.0
+correct_reject_rate        0.70   0.40   0.70    0.70    0.70   0.70    0.70    0.70     0.70
+reviews_per_1000           133.3  133.3  116.7   116.7   100.0  150.0   133.3   166.7    616.7
+self_fix_per_1000          483.3  533.3  483.3   483.3   516.7  483.3   483.3   400.0    0.0
+ece                        0.2023 0.2044 0.1609  0.2023  0.0654 0.2023  0.1608  0.1762   0.2023
+total_cost_sar             200    200    175     175     150    225     200     250      925
+heavy_damage_wrong_approves 0     0      0       0       0      0       0       0        0
+self-fix tried / paid right                                                     8 / 5    0
+fairness, payable claims: new members (fewer than 3 past claims) 12, tenured 38 in every run.
+  false_reject_rate new 0.0 and tenured 0.0 in every run.
+  payable_recall new 0.1667 in every run; tenured 0.3684 (base, e2, e6, e9, e8),
+  0.3947 (e3, e5), 0.3421 (e7), 0.4474 (base+fix).
+
+Lane changes against base, claim by claim (checked by hand before writing this):
+- E2 off: claim_12_0000, 0010, 0053 (excluded service) go from auto_reject to self_fix. Passed
+  checks raise the confidence of the line items; without them the exclusion rule is not sure,
+  so it asks the member instead of rejecting.
+- E3 one member and E5 off: claim_12_0055 (overpriced) goes from human_review to auto_approve,
+  paid right at the network price. The price checker's low vote made the council disagree.
+- E6 on: claim_12_0005 (over limit) and claim_12_0039 (clean) go from human_review to self_fix.
+- E7 off: claim_12_0036 (overpriced) goes from auto_approve to human_review.
+- E9 off: no lane changes.
+- base+fix: 5 of the 8 fixed claims (4 unreadable photos, 1 patient mismatch) are then auto
+  approved and paid right. Two clean claims (claim_12_0038, 0051) that were auto approved go to
+  a person as "possible duplicate": once the unreadable receipts are read clearly, their weak key
+  (VAT number, date, total) matches these claims. This is the weak-key CHECK from data review 4.
+What it means: on this small synthetic set no switch changed precision (1.0 everywhere) or caused
+  a false reject. Calibration (E6) and self-fix (E8) change the most: self-fix with the member's
+  fix keeps 27 of 60 claims away from a person. Arithmetic checks matter for confident rejects
+  (E2). The council's extra members and disagreement routing (E3, E5) cost one review on one
+  overpriced claim and did not catch a wrong approval here. Each change is one to three claims of
+  60, so none of these is a final number.
 ```
