@@ -96,6 +96,31 @@ READINGS: dict[str, dict[str, Any]] = {
     },
 }
 
+
+def report(treatment_date: str) -> dict[str, Any]:
+    """A medical report from the same clinic, for the same patient and day."""
+    return {
+        "fields": [
+            field("patient_name", "Sara Ahmed"),
+            field("treatment_date", treatment_date),
+            field("provider_name", "Al Noor Clinic"),
+        ],
+        "line_items": [],
+        "qr_payloads": [],
+        "text_lines": ["Al Noor Clinic", "Medical Report", "Patient: Sara Ahmed"],
+    }
+
+
+# Outpatient claims need a medical report (config/documents.yaml), so each receipt fixture
+# with a consultation gets one from the same day.
+for _name, _date in (
+    ("clean", "2026-11-15"),
+    ("late", "2026-07-01"),
+    ("blurry_date", "2026-11-14"),
+    ("overpriced", "2026-11-16"),
+):
+    READINGS[f"report_{_name}"] = report(_date)
+
 # claim file name: (claim number, reading file, document kind, retries used)
 CLAIM_FILES: dict[str, tuple[int, str, str, int]] = {
     "clean": (1, "clean", "receipt", 0),
@@ -111,6 +136,27 @@ CLAIM_FILES: dict[str, tuple[int, str, str, int]] = {
 
 def claim(number: int, reading: str, kind: str, retries: int) -> dict[str, Any]:
     claim_id = f"00000000-0000-4000-8000-0000000000c{number}"
+    documents = [
+        {
+            "document_id": f"00000000-0000-4000-8000-0000000000d{number}",
+            "claim_id": claim_id,
+            "kind": kind,
+            "file_path": f"{reading}.reading.json",
+            "image_hash": None,
+            "uploaded_at": SUBMITTED_AT,
+        }
+    ]
+    if f"report_{reading}" in READINGS:
+        documents.append(
+            {
+                "document_id": f"00000000-0000-4000-8000-0000000001d{number}",
+                "claim_id": claim_id,
+                "kind": "medical_report",
+                "file_path": f"report_{reading}.reading.json",
+                "image_hash": None,
+                "uploaded_at": SUBMITTED_AT,
+            }
+        )
     return {
         "claim_id": claim_id,
         "member_id": SARA,
@@ -119,16 +165,7 @@ def claim(number: int, reading: str, kind: str, retries: int) -> dict[str, Any]:
         "submitted_at": SUBMITTED_AT,
         "status": "submitted",
         "retries_used": retries,
-        "documents": [
-            {
-                "document_id": f"00000000-0000-4000-8000-0000000000d{number}",
-                "claim_id": claim_id,
-                "kind": kind,
-                "file_path": f"{reading}.reading.json",
-                "image_hash": None,
-                "uploaded_at": SUBMITTED_AT,
-            }
-        ],
+        "documents": documents,
     }
 
 

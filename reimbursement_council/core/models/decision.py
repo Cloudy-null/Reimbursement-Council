@@ -4,7 +4,7 @@ from typing import Self
 
 from pydantic import AwareDatetime, Field, model_validator
 
-from reimbursement_council.core.models.claim import CheckResult
+from reimbursement_council.core.models.claim import CheckResult, FieldEdit
 from reimbursement_council.core.models.common import (
     CrossCheckName,
     DocumentKind,
@@ -87,6 +87,7 @@ class Decision(Model):
     votes: list[Vote]
     rule_results: list[RuleResult]
     check_results: list[CheckResult]
+    edits: list[FieldEdit] = Field(default_factory=list)
 
 
 class DocumentNeed(Model):

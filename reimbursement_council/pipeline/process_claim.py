@@ -1,8 +1,9 @@
-"""Wire the stages together for one claim: read, rules, payout, council, decide, explain, store."""
+"""Wire the stages together for one claim: read every document, rules, payout, council,
+decide, explain, store."""
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime
 
 from reimbursement_council.adapters import readers
@@ -14,29 +15,24 @@ from reimbursement_council.core.decision.blockers import approval_blockers
 from reimbursement_council.core.decision.combine import combine_votes, p_good_from_score
 from reimbursement_council.core.decision.lanes import choose_lane, expected_loss
 from reimbursement_council.core.explain import build_member_message
-from reimbursement_council.core.extraction import extract_document
 from reimbursement_council.core.models.case import ClaimCase
-from reimbursement_council.core.models.claim import Claim, Document, ExtractionResult
-from reimbursement_council.core.models.common import PRIMARY_DOCUMENT_KINDS
+from reimbursement_council.core.models.claim import Claim, Document, ExtractionResult, ReaderOutput
 from reimbursement_council.core.models.decision import Decision
-from reimbursement_council.core.models.reference import ReferenceData
+from reimbursement_council.core.models.reference import Member, ReferenceData
 from reimbursement_council.core.payout import calculate_payout
 from reimbursement_council.core.rules import receipt_keys, run_hard_rules
+from reimbursement_council.pipeline.document_set import read_document_set
 
 logger = logging.getLogger(__name__)
 
 
-def _primary_document(claim: Claim) -> Document | None:
-    primary = next((doc for doc in claim.documents if doc.kind in PRIMARY_DOCUMENT_KINDS), None)
-    for document in claim.documents:
-        if document is not primary:
-            logger.info(
-                "claim %s: document %s (%s) not read yet in this version",
-                claim.claim_id,
-                document.document_id,
-                document.kind,
-            )
-    return primary
+def _patient(reference: ReferenceData, claim: Claim, member: Member) -> Member:
+    """The person treated, for the name check. An unknown patient is checked against the
+    member filing (the person_not_covered rule handles the coverage question)."""
+    try:
+        return reference.member(claim.patient_member_id)
+    except LookupError:
+        return member
 
 
 def _vat_number(extraction: ExtractionResult | None) -> str | None:
@@ -53,25 +49,27 @@ def process_claim(
     store: ClaimStore,
     now: datetime,
     reader_for: Callable[[Document], DocumentReader] = readers.reader_for,
+    readings: Mapping[str, ReaderOutput] | None = None,
 ) -> Decision:
+    """readings: what was read when the member saw the check screen, by document id. The
+    pipeline judges exactly that, and reads only documents that have none."""
     started = time.perf_counter()
     member = reference.member(claim.member_id)
     policy = reference.policy(claim.policy_id)
     history = reference.history(claim.patient_member_id)
 
-    primary = _primary_document(claim)
-    extraction = (
-        None
-        if primary is None
-        else extract_document(primary.document_id, reader_for(primary).read(primary), settings)
+    documents = read_document_set(
+        claim, _patient(reference, claim, member), settings, reader_for, readings
     )
+    primary = next((d for d in documents.documents if d.document_id == documents.primary_id), None)
+    extraction = None if primary is None else documents.readings[primary.document_id]
     read_seconds = time.perf_counter() - started
     provider = reference.provider_by_vat(_vat_number(extraction))
     image_hash = None if primary is None else primary.image_hash
 
     rule_results = run_hard_rules(
         claim, policy, extraction, image_hash, store.seen_receipts(claim.claim_id), settings
-    )
+    ) + list(documents.edit_rule_results)
     payout = None if extraction is None else calculate_payout(extraction, policy, history, settings)
     case = ClaimCase(
         claim=claim,
@@ -82,6 +80,9 @@ def process_claim(
         extraction=extraction,
         rule_results=rule_results,
         payout=payout,
+        documents_read=documents.readings,
+        needs=documents.needs,
+        cross_checks=documents.cross_checks,
     )
     votes = run_council(case, settings)
     combined, disagreement = combine_votes(votes)
@@ -94,7 +95,14 @@ def process_claim(
         payout,
         claim.retries_used,
         settings,
-        approval_blockers(claim, extraction, payout, settings),
+        approval_blockers(
+            claim,
+            extraction,
+            payout,
+            settings,
+            missing=documents.missing,
+            billing_totals_differ=documents.billing_totals_differ,
+        ),
     )
 
     decision = Decision(
@@ -116,6 +124,7 @@ def process_claim(
         votes=votes,
         rule_results=rule_results,
         check_results=[] if extraction is None else extraction.checks,
+        edits=documents.edits,
     )
     store.save_decision(decision)
     keys = (

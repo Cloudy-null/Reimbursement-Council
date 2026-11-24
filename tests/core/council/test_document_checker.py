@@ -2,7 +2,7 @@ import pytest
 
 from reimbursement_council.core.council import document_checker
 from reimbursement_council.core.models.claim import CheckResult, ExtractedField
-from reimbursement_council.core.models.decision import Vote
+from reimbursement_council.core.models.decision import CrossCheckResult, Vote
 from tests.factories import make_case, make_extraction, make_field, repo_settings
 
 FAILED_CHECK = CheckResult(
@@ -56,3 +56,20 @@ def test_document_no_extraction() -> None:
 
 def test_document_vote_is_named() -> None:
     assert vote(qr_fields()).member == "document_checker"
+
+
+def test_a_failed_cross_check_lowers_the_score() -> None:
+    mismatch = CrossCheckResult(
+        name="dates_agree",
+        passed=False,
+        field="treatment_date",
+        document_ids=["r", "p"],
+        details="treatment dates differ between documents",
+    )
+    unknown = mismatch.model_copy(update={"name": "providers_agree", "passed": None})
+    case = make_case(extraction=make_extraction(qr_fields())).model_copy(
+        update={"cross_checks": [mismatch, unknown]}
+    )
+    v = document_checker.vote(case, repo_settings())
+    assert v.score == pytest.approx(repo_settings().documents.cross_check_score_factor)
+    assert "dates" in v.reason
