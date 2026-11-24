@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any, Protocol
 
-from reimbursement_council.core.receipt_parsing import OcrLine
+from reimbursement_council.core.receipt_rows import OcrLine
 
 logger = logging.getLogger(__name__)
 

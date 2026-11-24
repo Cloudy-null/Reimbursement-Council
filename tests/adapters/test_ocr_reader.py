@@ -19,7 +19,7 @@ from reimbursement_council.adapters.readers import (
 )
 from reimbursement_council.adapters.receipt_drawing import draw_receipt
 from reimbursement_council.core.models.claim import Document
-from reimbursement_council.core.receipt_parsing import OcrLine
+from reimbursement_council.core.receipt_rows import OcrLine
 from reimbursement_council.synthetic.receipt_content import ReceiptOptions, make_receipt_content
 from tests.core.test_receipt_parsing import load
 from tests.factories import repo_settings, settings_with
