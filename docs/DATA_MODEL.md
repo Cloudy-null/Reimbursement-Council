@@ -8,6 +8,7 @@ The code for these shapes lives in reimbursement_council/core/models/. Every mod
 
 Member
 - member_id, display_name, date_joined
+- name_ar (optional): the member's name in Arabic, used to match the patient name on Arabic documents
 - policy_id
 - No nationality, gender or age fields. On purpose (see spec, anti-goals).
 
@@ -36,14 +37,23 @@ Claim (like FHIR Claim)
 - status: draft, submitted, decided
 - documents: list of Document
 - retries_used (for self-fix)
+- claim_categories: benefit categories of the claim (worked out from the invoice, or set by the member); detected_categories: what the system worked out, kept so a member change can be compared
+- edits: list of FieldEdit (fields the member changed on the check screen)
+- retake_fields: fields the member was already asked to retake a photo for (a retake is asked only once)
 
 Document
 - document_id, claim_id, kind (receipt, invoice, prescription, medical_report, other), file_path, image_hash, uploaded_at
+- kind_source: detected or member; detected_kind: what the system found, kept when the member changes the kind
+- Receipts and invoices are billing documents. The billing document with a ZATCA QR, else the first invoice, else the first receipt, is the primary one used for the payout.
+
+FieldEdit
+- document_id, field, read_value (or none), typed_value
+- evidence: supports, contradicts or none, from the QR on the same document, the same field on another document, or the arithmetic checks; evidence_note says which
 
 ExtractedField
 - document_id, name (provider_name, vat_number, invoice_timestamp, treatment_date, subtotal, vat_total, total, patient_name)
 - value, original_text
-- source: qr, ocr, vision, member_confirmed, reviewer. ocr is the default offline reader. vision is the optional Gemini reader.
+- source: qr, ocr, vision, member_confirmed, member_typed, reviewer. member_typed is a value the member typed on the check screen. ocr is the default offline reader. vision is the optional Gemini reader.
 - confidence (0 to 1)
 - location: page and box, optional
 - Value format: money fields are halalas as digits ("17250"), checked when the field is built, so a reader that hands over "22.50" is refused. treatment_date is YYYY-MM-DD in local time, invoice_timestamp is the raw ISO text from the receipt, the rest is text.
@@ -58,13 +68,14 @@ CheckResult (arithmetic and QR match)
 - Any failed check blocks auto approve.
 
 ReaderOutput (what a reader returns for one document)
-- fields: list of ExtractedField, line_items: list of LineItem, qr_payloads: list of raw QR strings
+- fields: list of ExtractedField, line_items: list of LineItem, qr_payloads: list of raw QR strings, text_lines: the read text row by row (used to find the document type)
 
 ExtractionResult (one document after QR merge and checks)
 - document_id, fields, line_items, checks
 
 RuleResult (hard rules)
-- rule (late, policy_inactive, person_not_covered, excluded_service, duplicate, multiple_patients)
+- rule (late, policy_inactive, person_not_covered, excluded_service, duplicate, multiple_patients, member_edit)
+- member_edit is not_sure when a member edit contradicts the evidence, or a type or category change removes a required document
 - outcome: pass, fail, not_sure (data below the confidence floor)
 - reason (plain text), fields (the fields the rule looked at)
 
@@ -75,7 +86,14 @@ ReceiptKeys and SeenReceipts (duplicate check)
 
 ClaimCase (what every council member reads)
 - claim, member, policy, provider, history
-- extraction (the primary receipt, or none), rule_results, payout (or none)
+- extraction (the primary billing document, or none), rule_results, payout (or none)
+- documents_read: one ExtractionResult per document; needs: list of DocumentNeed; cross_checks: list of CrossCheckResult
+
+DocumentNeed (computed, not stored)
+- group: the kinds where any one is enough (for example invoice or receipt), satisfied (bool), request (Arabic and English text asking for it)
+
+CrossCheckResult
+- name (patient_matches_account, dates_agree, providers_agree), passed (true, false, or none when there is not enough data), field, document_ids, details
 
 Vote (one per council member)
 - member (document_checker, coverage_checker, price_checker, case_reviewer, history_member)

@@ -6,6 +6,9 @@ from pydantic import AwareDatetime, Field, model_validator
 
 from reimbursement_council.core.models.claim import CheckResult
 from reimbursement_council.core.models.common import (
+    CrossCheckName,
+    DocumentKind,
+    FieldName,
     Halalas,
     Lane,
     MemberName,
@@ -84,3 +87,21 @@ class Decision(Model):
     votes: list[Vote]
     rule_results: list[RuleResult]
     check_results: list[CheckResult]
+
+
+class DocumentNeed(Model):
+    """One group of documents the claim needs: any one kind in the group is enough."""
+
+    group: list[DocumentKind]
+    satisfied: bool
+    request: MemberMessage
+
+
+class CrossCheckResult(Model):
+    """Whether documents agree. passed is None when there is not enough data to compare."""
+
+    name: CrossCheckName
+    passed: bool | None
+    field: FieldName
+    document_ids: list[str]
+    details: str

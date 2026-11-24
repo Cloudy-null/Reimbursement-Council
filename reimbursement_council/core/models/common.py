@@ -12,7 +12,7 @@ Halalas = Annotated[StrictInt, Field(ge=0)]
 
 Lane = Literal["auto_approve", "auto_reject", "self_fix", "human_review"]
 Outcome = Literal["complete", "partial", "error", "queued"]
-FieldSource = Literal["qr", "ocr", "vision", "member_confirmed", "reviewer"]
+FieldSource = Literal["qr", "ocr", "vision", "member_confirmed", "member_typed", "reviewer"]
 FieldName = Literal[
     "provider_name",
     "vat_number",
@@ -26,7 +26,15 @@ FieldName = Literal[
 MONEY_FIELDS: frozenset[str] = frozenset({"subtotal", "vat_total", "total"})
 DocumentKind = Literal["receipt", "invoice", "prescription", "medical_report", "other"]
 PRIMARY_DOCUMENT_KINDS: tuple[DocumentKind, ...] = ("receipt", "invoice")
-"""Documents that carry the amounts. The first one is read; more than one blocks auto approve."""
+"""Documents that carry the amounts (billing documents)."""
+BILLING_KINDS = PRIMARY_DOCUMENT_KINDS
+RULE_FIELDS: frozenset[str] = MONEY_FIELDS | frozenset(
+    {"treatment_date", "invoice_timestamp", "patient_name", "vat_number"}
+)
+"""Fields that change the payout or feed a hard rule. A member edit to one needs evidence."""
+KindSource = Literal["detected", "member"]
+EditEvidence = Literal["supports", "contradicts", "none"]
+CrossCheckName = Literal["patient_matches_account", "dates_agree", "providers_agree"]
 MemberName = Literal[
     "document_checker", "coverage_checker", "price_checker", "case_reviewer", "history_member"
 ]
@@ -37,6 +45,7 @@ RuleName = Literal[
     "excluded_service",
     "duplicate",
     "multiple_patients",
+    "member_edit",
 ]
 RuleOutcome = Literal["pass", "fail", "not_sure"]
 CheckName = Literal[
