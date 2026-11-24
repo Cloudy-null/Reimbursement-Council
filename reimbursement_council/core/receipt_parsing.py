@@ -50,6 +50,9 @@ LABELS = {
     for field, labels in RAW_LABELS.items()
 }
 MONEY_ROWS = ("subtotal", "vat_total", "total")
+# Words of the patient labels. OCR can split a label ("اسم" apart from "المريض"); a piece left
+# at the edge of the name is dropped (found in the E12 run).
+PATIENT_LABEL_WORDS = frozenset(word for label in LABELS["patient"] for word in label)
 
 _MONEY = re.compile(r"(?<![\d.])(\d{1,3}(?:,\d{3})+|\d+)\.\s?(\d{2})(?![\d])")
 _VAT_NUMBER = re.compile(r"(?<!\d)3\d{13}3(?!\d)")
@@ -100,6 +103,16 @@ def _classify(row: list[OcrLine], cfg: OcrConfig) -> str | None:
     scores = {field: _label_match(words, field, cfg.label_match_ratio) for field in LABELS}
     field, (size, _) = max(scores.items(), key=lambda pair: pair[1])
     return field if size else None
+
+
+def _without_label_words(name: str) -> str:
+    """The name with patient label words taken off its two ends."""
+    words = name.split()
+    while words and normalize_text(words[0]) in PATIENT_LABEL_WORDS:
+        words.pop(0)
+    while words and normalize_text(words[-1]) in PATIENT_LABEL_WORDS:
+        words.pop()
+    return " ".join(words)
 
 
 def _money_in(line: OcrLine) -> list[int]:
@@ -258,8 +271,8 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
                 for x in row
                 if not _label_size(normalize_text(x.text).split(), "patient", cfg.label_match_ratio)
             ]
-            if label_free:
-                name = join_row(label_free)
+            name = _without_label_words(join_row(label_free)) if label_free else ""
+            if name:
                 fields.append(
                     _field(
                         document_id,

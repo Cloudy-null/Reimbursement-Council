@@ -137,3 +137,16 @@ def test_quantity_inferred_and_mismatch_lowers_confidence() -> None:
 def test_empty_lines_give_empty_output() -> None:
     out = parse([])
     assert out.fields == [] and out.line_items == [] and out.qr_payloads == []
+
+
+def test_a_label_word_split_from_its_label_is_not_part_of_the_patient_name() -> None:
+    # Seen in E12: OCR read "اسم" apart from "المريض", and the name became "اسم ليلى حسن".
+    out = parse(
+        [
+            line("Patient", 300, x=40, width=90),
+            line("ليلى حسن", 300, x=360, width=150),
+            line("اسم", 300, x=600, width=40),
+            line("المريض", 300, x=650, width=70),
+        ]
+    )
+    assert value(out, "patient_name") == "ليلى حسن"
