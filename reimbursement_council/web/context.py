@@ -1,6 +1,7 @@
 """What every website route shares: the context, page rendering, the document set preview,
 deciding a claim, and the claim view used by the member result page and the reviewer card."""
 
+import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -40,13 +41,20 @@ class WebContext:
     results_root: Path
 
 
-def make_page(templates: Jinja2Templates) -> Page:
+def asset_version(path: Path) -> str:
+    """A short hash of a static file. It goes in the file's URL, so a browser that kept an old
+    copy fetches the new one after a change."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:10]
+
+
+def make_page(templates: Jinja2Templates, css_version: str = "") -> Page:
     def page(request: Request, name: str, lang: str, **values: Any) -> HTMLResponse:
         status = values.pop("status_code", 200)
         context = {
             "t": text_for(lang),
             "lang": "ar" if lang == "ar" else "en",
             "sar_text": form_value,
+            "css_version": css_version,
             **values,
         }
         return templates.TemplateResponse(request, name, context, status_code=status)

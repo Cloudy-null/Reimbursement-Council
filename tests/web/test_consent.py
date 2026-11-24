@@ -32,3 +32,11 @@ def test_the_form_asks_for_consent_in_both_languages(web: tuple[TestClient, WebC
     client, _ = web
     assert 'name="consent"' in client.get("/").text and "required" in client.get("/").text
     assert "أوافق" in client.get("/?lang=ar").text
+
+
+def test_the_stylesheet_link_carries_the_file_version(web: tuple[TestClient, WebContext]) -> None:
+    # A changed app.css gets a new URL, so a browser never keeps the old look (HANDOVER CHECK).
+    from reimbursement_council.web.context import HERE, asset_version
+
+    version = asset_version(HERE / "static" / "app.css")
+    assert f"/static/app.css?v={version}" in web[0].get("/").text and len(version) == 10
