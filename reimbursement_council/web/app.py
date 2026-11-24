@@ -45,7 +45,7 @@ def create_app(ctx: WebContext) -> FastAPI:
             "review.html",
             lang,
             opened=datetime.now(UTC).isoformat(),
-            **claim_view(ctx, claim_id),
+            **claim_view(ctx, claim_id, lang),
         )
 
     @app.post("/review/{claim_id}")

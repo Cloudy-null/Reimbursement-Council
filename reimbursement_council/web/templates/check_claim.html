@@ -3,9 +3,7 @@
 <section class="card">
   <h2>{{ t.check_title }}</h2>
   <p class="note">{{ t.check_sub }}</p>
-  {% if refused %}
-  <div class="row low"><span class="label">{{ t.refused }}</span><span dir="auto">{{ refused | join('; ') }}</span><span></span></div>
-  {% endif %}
+  {% include "_refused.html" %}
   {% if missing %}
   <div class="notice selffix">
     <h3>{{ t.missing_title }}</h3>
@@ -36,7 +34,7 @@
       <img class="doc-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="">
       <label for="kind-{{ doc.document_id }}">{{ t.doc_type }}
         <select id="kind-{{ doc.document_id }}" name="kind_{{ doc.document_id }}">
-          {% for kind in kinds %}<option value="{{ kind }}"{{ ' selected' if kind == doc.kind }}>{{ kind_names[kind] }}</option>{% endfor %}
+          {% for kind in kinds %}<option value="{{ kind }}"{{ ' selected' if kind == selected_kinds[doc.document_id] }}>{{ kind_names[kind] }}</option>{% endfor %}
         </select>
       </label>
       {% if doc.document_id in unread %}<p class="note low">{{ t.unread_note }}</p>{% endif %}
@@ -60,7 +58,7 @@
     <label for="category">{{ t.category }}
       <select id="category" name="category">
         <option value="">{{ t.category_auto }}</option>
-        {% for c in categories %}<option value="{{ c }}">{{ t['cat_' ~ c] }}</option>{% endfor %}
+        {% for c in categories %}<option value="{{ c }}"{{ ' selected' if c == selected_category }}>{{ t['cat_' ~ c] }}</option>{% endfor %}
       </select>
     </label>
   </details>

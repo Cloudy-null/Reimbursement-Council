@@ -1,8 +1,9 @@
 """Uploaded files: refuse the bad ones one by one, save the good ones, read them once.
 
-One bad file (wrong type, empty or too large) is refused with a message; the others are kept
-(Review Focus 5). Each kept file is read right away and the reading is stored, so the check
-screen and the decision see the same reading.
+One bad file (wrong type, empty or too large) is refused with a reason the page shows in its
+language; the others are kept (Review Focus 5). Each file is named by its document id, so a
+replaced or added file never overwrites another. Each kept file is read right away and the
+reading is stored, so the check screen and the decision see the same reading.
 """
 
 import hashlib
@@ -20,7 +21,12 @@ from reimbursement_council.web.context import WebContext
 logger = logging.getLogger(__name__)
 
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg"})
-MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # a phone photo is a few MB; this only stops abuse
+
+
+@dataclass(frozen=True)
+class Refusal:
+    name: str
+    reason: str  # an i18n key: refused_type or refused_size
 
 
 @dataclass(frozen=True)
@@ -38,33 +44,36 @@ async def collect(files: list[UploadFile] | None) -> list[tuple[str, bytes]]:
     return collected
 
 
-def accept(files: list[tuple[str, bytes]]) -> tuple[list[Upload], list[str]]:
-    """(kept uploads, refused file names with the reason)."""
+def accept(
+    files: list[tuple[str, bytes]], max_megabytes: int
+) -> tuple[list[Upload], list[Refusal]]:
+    """(kept uploads, refused files with the reason)."""
     kept: list[Upload] = []
-    refused: list[str] = []
+    refused: list[Refusal] = []
     for name, data in files:
         suffix = Path(name).suffix.lower()
         if suffix not in IMAGE_SUFFIXES:
-            refused.append(f"{name}: not a PNG or JPG photo")
-        elif not data or len(data) > MAX_UPLOAD_BYTES:
-            refused.append(f"{name}: empty or larger than 15 MB")
+            refused.append(Refusal(name, "refused_type"))
+        elif not data or len(data) > max_megabytes * 1024 * 1024:
+            refused.append(Refusal(name, "refused_size"))
         else:
             kept.append(Upload(name=name, data=data, suffix=suffix))
     return kept, refused
 
 
 def store_documents(
-    ctx: WebContext, claim_id: str, uploads: list[Upload], first: int, now: datetime
+    ctx: WebContext, claim_id: str, uploads: list[Upload], now: datetime
 ) -> list[Document]:
     """Write each upload to disk and make its Document. The type is found when it is read."""
     ctx.uploads.mkdir(parents=True, exist_ok=True)
     documents = []
-    for offset, upload in enumerate(uploads):
-        path = ctx.uploads / f"{claim_id}-{first + offset}{upload.suffix}"
+    for upload in uploads:
+        document_id = str(uuid4())
+        path = ctx.uploads / f"{claim_id}-{document_id}{upload.suffix}"
         path.write_bytes(upload.data)
         documents.append(
             Document(
-                document_id=str(uuid4()),
+                document_id=document_id,
                 claim_id=claim_id,
                 kind="other",
                 file_path=str(path),

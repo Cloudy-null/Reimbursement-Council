@@ -87,7 +87,7 @@ def decide(ctx: WebContext, claim: Claim) -> None:
     ctx.store.save_claim(claim)
 
 
-def claim_view(ctx: WebContext, claim_id: str) -> dict[str, Any]:
+def claim_view(ctx: WebContext, claim_id: str, lang: str = "en") -> dict[str, Any]:
     claim = load_claim(ctx, claim_id)
     decision = ctx.store.load_decision(claim_id)
     if decision is None:
@@ -112,4 +112,10 @@ def claim_view(ctx: WebContext, claim_id: str) -> dict[str, Any]:
         "items": items,
         "money": payout_lines(payout, items),
         "review": ctx.store.load_review(claim_id),
+        "kind_names": {
+            str(kind): label
+            for kind, label in (
+                ctx.settings.messages.ar if lang == "ar" else ctx.settings.messages.en
+            ).documents.items()
+        },
     }

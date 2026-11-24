@@ -1,15 +1,17 @@
 """The check form: show read values as the member would type them, and turn what the member
 sent back into FieldEdits, or into field errors that keep the rest of the input (Review Focus 4).
 
-A field left empty or unchanged makes no edit. The pipeline judges each edit against the
-evidence; this module only checks that the typed text is a value at all.
+A field left empty or unchanged makes no edit, and an unchanged value is never refused (the
+reader may have read a date that does not exist). The pipeline judges each edit against the
+evidence; this module only checks that the typed text is a value at all. It also holds the
+rules for the type and category the member picks.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import date
 
-from reimbursement_council.core.models.claim import FieldEdit
-from reimbursement_council.core.models.common import MONEY_FIELDS, FieldName
+from reimbursement_council.core.models.claim import Document, FieldEdit
+from reimbursement_council.core.models.common import MONEY_FIELDS, DocumentKind, FieldName
 from reimbursement_council.core.money import format_sar, parse_sar_to_halalas
 
 EDITABLE: tuple[FieldName, ...] = (
@@ -22,6 +24,13 @@ EDITABLE: tuple[FieldName, ...] = (
     "total",
 )
 VAT_NUMBER_LENGTH = 15  # a Saudi VAT number is 15 digits (ZATCA)
+DOCUMENT_KINDS: tuple[DocumentKind, ...] = (
+    "invoice",
+    "receipt",
+    "prescription",
+    "medical_report",
+    "other",
+)
 
 
 def form_value(field: str, stored: str | None) -> str:
@@ -58,15 +67,36 @@ def parse_edits(
     errors: dict[str, str] = {}
     for field in EDITABLE:
         text = form.get(f"field_{field}", "").strip()
-        if not text:
+        read = read_values.get(field)
+        if not text or text == form_value(field, read):
             continue
         value, error = _normalized(field, text)
         if error is not None:
             errors[field] = error
             continue
-        read = read_values.get(field)
         if value is not None and value != read:
             edits.append(
                 FieldEdit(document_id=primary_id, field=field, read_value=read, typed_value=value)
             )
     return edits, errors
+
+
+def chosen_kinds(documents: Sequence[Document], form: Mapping[str, str]) -> list[Document]:
+    """Each document with the type the member picked. Picking the detected type hands the
+    document back to the reader; no pick leaves it as it is."""
+    kinded = []
+    for document in documents:
+        chosen = form.get(f"kind_{document.document_id}", "")
+        detected = document.detected_kind or document.kind
+        if chosen == detected:
+            document = document.model_copy(update={"kind": detected, "kind_source": "detected"})
+        elif chosen in DOCUMENT_KINDS:
+            document = document.model_copy(update={"kind": chosen, "kind_source": "member"})
+        kinded.append(document)
+    return kinded
+
+
+def chosen_categories(category: str, valid: Sequence[str], detected: Sequence[str]) -> list[str]:
+    """The member's category only when it is a real one and not what was found anyway; auto
+    (empty) or the detected category clears an earlier choice."""
+    return [category] if category in valid and category not in detected else []

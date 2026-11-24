@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.receipt_drawing import draw_receipt
 from reimbursement_council.adapters.storage import ClaimStore
+from reimbursement_council.core.models.decision import SelfFixRequest
 from reimbursement_council.synthetic.claims import make_claim_set, member_id
 from reimbursement_council.synthetic.receipt_content import ReceiptOptions, make_receipt_content
 from reimbursement_council.web.app import WebContext, create_app
@@ -123,6 +124,12 @@ def test_reviewer_flow(web: tuple[TestClient, WebContext]) -> None:
 def test_self_fix_resend_counts_a_retry(web: tuple[TestClient, WebContext]) -> None:
     client, ctx = web
     claim_id = send_sample(client)
+    decision = ctx.store.load_decision(claim_id)
+    assert decision is not None
+    asked = SelfFixRequest(kind="retake_photo", field="total", text="t")
+    ctx.store.save_decision(
+        decision.model_copy(update={"lane": "self_fix", "self_fix_request": asked})
+    )
     response = client.post(
         f"/claims/{claim_id}/fix",
         data={"lang": "en"},

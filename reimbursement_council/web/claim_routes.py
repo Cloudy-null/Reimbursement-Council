@@ -21,6 +21,7 @@ from reimbursement_council.synthetic.receipt_content import (
 )
 from reimbursement_council.web.check_routes import check_values
 from reimbursement_council.web.context import Page, WebContext, claim_view
+from reimbursement_council.web.i18n import text_for
 from reimbursement_council.web.uploads import accept, collect, read_and_store, store_documents
 
 DEMO_PATIENT = PATIENTS[0]  # the first person in the list, so samples match the default pick
@@ -88,13 +89,15 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             files = [(f"{sample}.png", (ctx.samples / f"{sample}.png").read_bytes())]
         else:
             files = await collect(photos)
-        kept, refused = accept(files)
+        kept, refused = accept(files, ctx.settings.documents.max_upload_megabytes)
         if not kept:
-            detail = "; ".join(refused) or "Add a photo or pick a sample receipt."
+            text = text_for(lang)
+            detail = "; ".join(f"{r.name}: {text[r.reason]}" for r in refused)
+            detail = detail or "Add a photo or pick a sample receipt."
             raise HTTPException(status_code=400, detail=detail)
         claim_id = str(uuid4())
         now = datetime.now(UTC)
-        documents = store_documents(ctx, claim_id, kept, 0, now)
+        documents = store_documents(ctx, claim_id, kept, now)
         read_and_store(ctx, claim_id, documents)
         policy = ctx.reference.policy(person.policy_id)
         claimant = patient if patient in policy.covered_people else policy.covered_people[0]
@@ -120,7 +123,7 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
 
     @app.get("/claims/{claim_id}", response_class=HTMLResponse)
     def show_claim(request: Request, claim_id: str, lang: str = "en") -> HTMLResponse:
-        return page(request, "claim.html", lang, **claim_view(ctx, claim_id))
+        return page(request, "claim.html", lang, **claim_view(ctx, claim_id, lang))
 
     @app.post("/claims/{claim_id}/to-reviewer")
     def to_reviewer(claim_id: str, lang: Annotated[str, Form()] = "en") -> RedirectResponse:

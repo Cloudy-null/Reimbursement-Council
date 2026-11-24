@@ -9,6 +9,7 @@
       <span class="pill"><span class="dot"></span>{{ t['lane_' ~ decision.lane] }}</span>
       <p class="message" dir="auto">{{ decision.member_message[lang] }}</p>
       {% if decision.lane == 'self_fix' %}
+      {% include "_refused.html" %}
       <form class="stack" method="post" action="/claims/{{ claim.claim_id }}/fix" enctype="multipart/form-data">
         <input type="hidden" name="lang" value="{{ lang }}">
         <label for="fix-photos">{{ t.add_or_replace }}
@@ -17,7 +18,7 @@
         <label for="replace">{{ t.replace_which }}
           <select id="replace" name="replace">
             <option value="">{{ t.replace_none }}</option>
-            {% for doc in documents %}<option value="{{ doc.document_id }}">{{ loop.index }}. {{ doc.kind }}</option>{% endfor %}
+            {% for doc in documents %}<option value="{{ doc.document_id }}">{{ loop.index }}. {{ kind_names[doc.kind] }}</option>{% endfor %}
           </select>
         </label>
         <div class="btns"><button class="btn primary" type="submit">{{ t.fix_send }}</button></div>

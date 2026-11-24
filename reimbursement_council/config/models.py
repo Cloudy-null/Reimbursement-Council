@@ -219,6 +219,7 @@ class DocumentsConfig(ConfigModel):
     cross_check_score_factor: Score
     provider_check_categories: list[str]
     unbacked_edit_confidence: Score
+    max_upload_megabytes: int = Field(gt=0)
 
 
 class Settings(ConfigModel):

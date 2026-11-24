@@ -15,19 +15,26 @@ from reimbursement_council.core.decision.document_requests import (
     mismatch_documents,
 )
 from reimbursement_council.core.models.claim import Claim, ExtractionResult
-from reimbursement_council.core.models.common import DocumentKind, FieldName
+from reimbursement_council.core.models.common import FieldName
 from reimbursement_council.pipeline.document_set import DocumentSet
-from reimbursement_council.web.check_form import EDITABLE, form_value, parse_edits
-from reimbursement_council.web.context import Page, WebContext, decide, load_claim, preview
+from reimbursement_council.web.check_form import (
+    DOCUMENT_KINDS,
+    EDITABLE,
+    chosen_categories,
+    chosen_kinds,
+    form_value,
+    parse_edits,
+)
+from reimbursement_council.web.context import (
+    Page,
+    WebContext,
+    claim_view,
+    decide,
+    load_claim,
+    preview,
+)
 from reimbursement_council.web.uploads import accept, collect, read_and_store, store_documents
 
-DOCUMENT_KINDS: tuple[DocumentKind, ...] = (
-    "invoice",
-    "receipt",
-    "prescription",
-    "medical_report",
-    "other",
-)
 ASKED_KINDS = frozenset({"retake_photo", "check_photo", "fix_mismatch"})
 """Requests about one field: asked once, then a human (claim.retake_fields)."""
 
@@ -41,8 +48,16 @@ def check_values(
     reading = None if primary is None else documents.readings[primary]
     read = _read_values(reading)
     values = {f: form_value(f, read[f]) for f in EDITABLE}
-    if form is not None:
+    selected_kinds: dict[str, str] = {d.document_id: d.kind for d in documents.documents}
+    selected_category = claim.claim_categories[0] if claim.claim_categories else ""
+    if form is not None:  # a re-render after an error keeps everything the member chose
         values |= {f: form.get(f"field_{f}", "") for f in EDITABLE}
+        selected_kinds |= {
+            d: form[f"kind_{d}"]
+            for d in selected_kinds
+            if form.get(f"kind_{d}", "") in DOCUMENT_KINDS
+        }
+        selected_category = form.get("category", "")
     mismatches = []
     for check in documents.cross_checks:
         if check.passed is False:
@@ -57,6 +72,8 @@ def check_values(
         "documents": documents.documents,
         "primary_id": primary,
         "kinds": DOCUMENT_KINDS,
+        "selected_kinds": selected_kinds,
+        "selected_category": selected_category,
         "kind_names": {k: document_label(language, k) for k in DOCUMENT_KINDS},
         "missing": [
             need.request.ar if lang == "ar" else need.request.en for need in documents.missing
@@ -103,11 +120,8 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         claim = load_claim(ctx, claim_id)
         if claim.status != "draft":
             raise HTTPException(status_code=409, detail="This claim was already sent.")
-        kept, refused = accept(await collect(photos))
-        now = datetime.now(UTC)
-        added = store_documents(
-            ctx, claim_id, kept, len(claim.documents) + 10 * claim.retries_used, now
-        )
+        kept, refused = accept(await collect(photos), ctx.settings.documents.max_upload_megabytes)
+        added = store_documents(ctx, claim_id, kept, datetime.now(UTC))
         read_and_store(ctx, claim_id, added)
         claim = claim.model_copy(update={"documents": [*claim.documents, *added]})
         ctx.store.save_claim(claim)
@@ -131,20 +145,12 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         if errors:
             values = check_values(ctx, claim, lang, form) | {"errors": errors, "status_code": 400}
             return page(request, "check_claim.html", lang, **values)
-        detected = {d.document_id: d.detected_kind or d.kind for d in documents.documents}
-        kinded = []
-        for document in claim.documents:
-            chosen = form.get(f"kind_{document.document_id}", "")
-            if chosen in DOCUMENT_KINDS and chosen != detected.get(document.document_id):
-                document = document.model_copy(update={"kind": chosen, "kind_source": "member"})
-            kinded.append(document)
-        category = form.get("category", "")
-        categories = list(claim.claim_categories)
-        if (
-            category in ctx.settings.documents.required_by_category
-            and category not in documents.detected_categories
-        ):
-            categories = [category]
+        kinded = chosen_kinds(documents.documents, form)
+        categories = chosen_categories(
+            form.get("category", ""),
+            list(ctx.settings.documents.required_by_category),
+            documents.detected_categories,
+        )
         sent = claim.model_copy(
             update={
                 "documents": kinded,
@@ -157,31 +163,41 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         decide(ctx, sent)
         return RedirectResponse(f"/claims/{claim_id}?lang={lang}", status_code=303)
 
-    @app.post("/claims/{claim_id}/fix")
+    @app.post("/claims/{claim_id}/fix", response_model=None)
     async def fix(
+        request: Request,
         claim_id: str,
         photos: Annotated[list[UploadFile] | None, File()] = None,
         replace: Annotated[str, Form()] = "",
         lang: Annotated[str, Form()] = "en",
-    ) -> RedirectResponse:
-        """Add or replace a document after a self-fix request, then check again."""
+    ) -> Response:
+        """Add or replace a document after a self-fix request, then check again. Only a sent
+        claim that waits for a self-fix, with retries left, can go back to the check step."""
         claim = load_claim(ctx, claim_id)
         decision = ctx.store.load_decision(claim_id)
+        if (
+            claim.status == "draft"
+            or decision is None
+            or decision.lane != "self_fix"
+            or decision.self_fix_request is None
+            or claim.retries_used >= ctx.settings.decision.self_fix_max_retries
+        ):
+            raise HTTPException(status_code=409, detail="This claim is not waiting for a fix.")
+        kept, refused = accept(await collect(photos), ctx.settings.documents.max_upload_megabytes)
+        if refused or not kept:  # change nothing, so a bad file never removes a good one
+            values = claim_view(ctx, claim_id, lang) | {"refused": refused, "status_code": 400}
+            return page(request, "claim.html", lang, **values)
         asked = list(claim.retake_fields)
-        request = None if decision is None else decision.self_fix_request
-        if request is not None and request.kind in ASKED_KINDS and request.field not in asked:
-            asked.append(request.field)
-        attempt = claim.retries_used + 1
-        kept, _ = accept(await collect(photos))
-        added = store_documents(
-            ctx, claim_id, kept, len(claim.documents) + 10 * attempt, datetime.now(UTC)
-        )
+        asked_request = decision.self_fix_request
+        if asked_request.kind in ASKED_KINDS and asked_request.field not in asked:
+            asked.append(asked_request.field)
+        added = store_documents(ctx, claim_id, kept, datetime.now(UTC))
         read_and_store(ctx, claim_id, added)
         documents = [d for d in claim.documents if d.document_id != replace]
         draft = claim.model_copy(
             update={
                 "documents": [*documents, *added],
-                "retries_used": attempt,
+                "retries_used": claim.retries_used + 1,
                 "retake_fields": asked,
                 "status": "draft",
                 "edits": [],
