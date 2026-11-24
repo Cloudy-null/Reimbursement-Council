@@ -20,6 +20,7 @@ from reimbursement_council.synthetic.receipt_content import (
     make_receipt_content,
 )
 from reimbursement_council.web.check_routes import check_values
+from reimbursement_council.web.confirm_routes import confirm_date_for
 from reimbursement_council.web.context import Page, WebContext, claim_view
 from reimbursement_council.web.i18n import text_for
 from reimbursement_council.web.uploads import accept, collect, read_and_store, store_documents
@@ -128,7 +129,9 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
 
     @app.get("/claims/{claim_id}", response_class=HTMLResponse)
     def show_claim(request: Request, claim_id: str, lang: str = "en") -> HTMLResponse:
-        return page(request, "claim.html", lang, **claim_view(ctx, claim_id, lang))
+        values = claim_view(ctx, claim_id, lang)
+        values["confirm_date"] = confirm_date_for(ctx, values["claim"], values["decision"])
+        return page(request, "claim.html", lang, **values)
 
     @app.post("/claims/{claim_id}/to-reviewer")
     def to_reviewer(claim_id: str, lang: Annotated[str, Form()] = "en") -> RedirectResponse:

@@ -97,6 +97,9 @@ TEXT: dict[str, dict[str, str]] = {
         "submit_note": "You can send with a document still missing. We will ask you for it.",
         "refused": "Not added",
         "export": "Download claim data (JSON)",
+        "confirm_date_q": "We read the treatment date as",
+        "confirm_yes": "Yes, this date is right",
+        "confirm_no": "No, change it",
         "consent": (
             "I agree that the documents I upload are read by this system to process this "
             "claim. They are kept for this claim only."
@@ -207,6 +210,9 @@ TEXT: dict[str, dict[str, str]] = {
         "submit_note": "يمكنك الإرسال مع نقص مستند. سنطلبه منك لاحقا.",
         "refused": "لم يضف",
         "export": "تنزيل بيانات المطالبة (JSON)",
+        "confirm_date_q": "قرأنا تاريخ العلاج هكذا:",
+        "confirm_yes": "نعم، التاريخ صحيح",
+        "confirm_no": "لا، أريد تغييره",
         "consent": (
             "أوافق على أن يقرأ هذا النظام المستندات التي أرفعها لمعالجة هذه المطالبة. "
             "تحفظ لهذه المطالبة فقط."
