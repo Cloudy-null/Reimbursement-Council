@@ -7,6 +7,7 @@ from amount and unit price when OCR misses it.
 """
 
 import re
+from datetime import date
 from difflib import SequenceMatcher
 from statistics import mean
 
@@ -50,6 +51,14 @@ LABELS = {
     for field, labels in RAW_LABELS.items()
 }
 MONEY_ROWS = ("subtotal", "vat_total", "total")
+# A row with "total" that is not the amount paid: a count, a saving, or the tax alone (real
+# receipts, E1 failure review). A total that says it includes tax is still the total.
+NOT_THE_TOTAL = frozenset(
+    {"qty", "quantity", "item", "items", "saving", "savings", "excluding", "exclusive",
+     "discount", "rounding", "change", "cash", "tendered"}
+)  # fmt: skip
+TAX_WORDS = frozenset({"gst", "vat", "tax"})
+INCLUDES_WORDS = frozenset({"incl", "inclusive", "including"})
 # Words of the patient labels. OCR can split a label ("اسم" apart from "المريض"); a piece left
 # at the edge of the name is dropped (found in the E12 run).
 PATIENT_LABEL_WORDS = frozenset(word for label in LABELS["patient"] for word in label)
@@ -57,7 +66,11 @@ PATIENT_LABEL_WORDS = frozenset(word for label in LABELS["patient"] for word in 
 _MONEY = re.compile(r"(?<![\d.])(\d{1,3}(?:,\d{3})+|\d+)\.\s?(\d{2})(?![\d])")
 _VAT_NUMBER = re.compile(r"(?<!\d)3\d{13}3(?!\d)")
 _DATE_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}):(\d{2}))?")
-_DATE_DMY = re.compile(r"(\d{2})/(\d{2})/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?")
+# Day first: 08/11/2026, 29-12-2017, 5.6.2018, and two digit years 12/03/18 (found on real
+# receipts, E1 failure review). A dot with a two digit year is left out: it looks like a time.
+_DATE_DMY = re.compile(
+    r"(?<!\d)(\d{1,2})([/.-])(\d{1,2})\2(\d{4}|\d{2})(?![\d.])(?:\s+(\d{1,2}):(\d{2}))?"
+)
 _DIGITISH = re.compile(r"[0-9OoIl]{2,}")
 _LONE_INT = re.compile(r"^\d{1,2}$")
 
@@ -113,6 +126,13 @@ def _without_label_words(name: str) -> str:
     while words and normalize_text(words[-1]) in PATIENT_LABEL_WORDS:
         words.pop()
     return " ".join(words)
+
+
+def _is_the_total(row: list[OcrLine]) -> bool:
+    words = {w.strip(".:()") for w in normalize_text(join_row(row)).split()}
+    if words & NOT_THE_TOTAL:
+        return False
+    return not (words & TAX_WORDS) or bool(words & INCLUDES_WORDS)
 
 
 def _money_in(line: OcrLine) -> list[int]:
@@ -211,17 +231,33 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
     return matched
 
 
+def _first_date(text: str) -> tuple[date, str | None, str | None] | None:
+    """The first real calendar date in the text, with the time after it if there is one."""
+    candidates: list[tuple[int, str, str, str, str | None, str | None]] = []
+    for match in _DATE_ISO.finditer(text):
+        year, month, day, hour, minute = match.groups()
+        candidates.append((match.start(), year, month, day, hour, minute))
+    for match in _DATE_DMY.finditer(text):
+        day, sep, month, year, hour, minute = match.groups()
+        if sep == "." and len(year) == 2:
+            continue
+        full_year = f"20{year}" if len(year) == 2 else year
+        candidates.append((match.start(), full_year, month, day, hour, minute))
+    for _, year, month, day, hour, minute in sorted(candidates):
+        try:
+            return date(int(year), int(month), int(day)), hour, minute
+        except ValueError:
+            continue
+    return None
+
+
 def _date_fields(document_id: str, row_text: str, confidence: float) -> list[ExtractedField]:
     text, _ = _fix_digits(row_text)
-    iso = _DATE_ISO.search(text)
-    dmy = _DATE_DMY.search(text)
-    if iso:
-        year, month, day, hour, minute = iso.groups()
-    elif dmy:
-        day, month, year, hour, minute = dmy.groups()
-    else:
+    found = _first_date(text)
+    if found is None:
         return []
-    date_text = f"{year}-{month}-{day}"
+    day_value, hour, minute = found
+    date_text = day_value.isoformat()
     fields = [_field(document_id, "treatment_date", date_text, row_text, confidence)]
     if hour and minute:
         stamp = f"{date_text}T{int(hour):02d}:{minute}:00"
@@ -254,6 +290,8 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
                 found.add("vat_number")
 
     for row, kind in zip(rows, kinds, strict=True):
+        if kind == "total" and not _is_the_total(row):
+            continue
         if kind in MONEY_ROWS and kind not in found:
             money = [(m, line) for line in row for m in _money_in(line)]
             if money:

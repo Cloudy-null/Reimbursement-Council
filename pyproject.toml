@@ -54,8 +54,11 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["slow: runs the real OCR model; needs the ocr extra"]
-addopts = "-m 'not slow'"
+markers = [
+    "slow: runs the real OCR model; needs the ocr extra",
+    "e2e: drives the real website in a browser (Playwright); run with -m e2e",
+]
+addopts = "-m 'not slow and not e2e'"
 pythonpath = ["."]
 
 [dependency-groups]
