@@ -34,3 +34,11 @@
 - Broke: uv could not install Python under AppData from inside the Claude desktop app (packaged app writes go to a hidden copy), so UV_PYTHON_INSTALL_DIR points to D:\dev\.uv-python. The exit code 4 crash from the desktop did not happen on the laptop; cause not found.
 - Decisions: 007 (what the harness counts as cost and calibration error). calibration_enabled left off for the owner.
 - Next: website changes (brainstorming started), owner decides calibration_enabled, then real receipts for E1 and E11.
+
+## 2026-11-24: document set tasks 8 to 15 on the desktop
+- Done: synced the laptop's work (PR 4 and 5). Task 8 (lane groups: member first, then a human; document_requests.py), Task 13 (upload several files, check step, submit, fix), Task 9 (prescriptions and medical reports drawn on a shared canvas), Task 10 (synthetic claims with document sets and six document defects), Task 11 (document metrics in run-set, --cross-checks switch), Task 14 (screens checked, decision 008, README), Task 15 (E12). A fresh reviewer checked Tasks 8 and 13; their Critical and Important findings were fixed with tests (the fix step had no guard, files could overwrite each other, a refused file could remove a document, choices were lost after an error).
+- Broke: the first E12 run had 19 false alarms in 57 claims. Causes: provider names compared across Arabic and English, a split label word left in the patient name, and an unclear date that asked about the provider. All fixed with tests and rerun; E12 is recorded with both runs.
+- Decisions: 008 (a claim is a set of documents, checked before it is sent). Upload size limit moved to config (max_upload_megabytes). Decision now records document_kinds, needs_missing and cross_checks so runs can be scored.
+- Not done: saved Playwright screenshots and the Impeccable audit (neither installed in this session); defect weights are still in code; no fixed version of fixable defects.
+- Next: owner review of the PR, then why self-fix is so common.
+
