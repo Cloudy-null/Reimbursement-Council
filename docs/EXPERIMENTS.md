@@ -29,7 +29,7 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 
 | ID | Idea | Switch | Hypothesis | Main metric | Result |
 |---|---|---|---|---|---|
-| E1 | Read the ZATCA QR first | qr_first_enabled | QR first improves accuracy on total, date and VAT number | Field accuracy | pending |
+| E1 | Read the ZATCA QR first | qr_first_enabled | QR first improves accuracy on total, date and VAT number | Field accuracy | Real SROIE (60, EasyOCR, no QR on them): total 0.333, date 0.533, provider 0.35 at 79f9aac. QR first not measured on real receipts yet |
 | E2 | Arithmetic checks as confidence | arithmetic_checks_enabled | Catches misread totals and lowers wrong approvals | Auto approve precision | Off: correct rejects 0.70 to 0.40 (3 excluded-service claims ask the member instead), automation 0.383 to 0.333; precision 1.0 both (synthetic check, 60) |
 | E3 | Council vs one judge | council_enabled | Council beats the case reviewer alone (needs Gemini key) and beats the document checker alone | Precision at the same automation rate | Document checker alone vs full council: 1 more auto approve (an overpriced claim, paid right at the network price), reviews 133 to 117 per 1000; precision 1.0 both (synthetic check, 60). Not the hypothesis; one claim |
 | E4 | Tuned weights vs equal weights | weights_tuned | Tuned weights beat equal weights | Total cost | pending |
@@ -38,7 +38,7 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 | E7 | Cost-based lanes vs one fixed threshold | cost_lanes_enabled | Fewer reviews for the same precision | Reviews per 1000 | Fixed threshold: 1 fewer auto approve, reviews 133 to 150 per 1000, cost 200 to 225 SAR; precision 1.0 both (synthetic check, 60) |
 | E8 | Self-fix choice | self_fix_enabled | Members fix many low scores themselves | Reviews per 1000, self-fix success | With the member's fix simulated: off sends 37 of 60 to a person (617 per 1000, 925 SAR), on 10 (167 per 1000, 250 SAR); 5 of 8 fixed claims then paid right with no person (synthetic check, 60) |
 | E9 | History member | history_member_enabled | Raises automation for trusted members and providers | Automation rate; false reject rate new vs tenured | Off: no lane changes, ECE 0.202 to 0.161. Fairness: payable recall new members 0.17 vs tenured 0.37 with it on AND off, false rejects 0 both, so the gap is not from this member (synthetic check, 60) |
-| E11 | Reader: EasyOCR vs PaddleOCR vs Gemini free tier | reader | A vision model reads messy and Arabic receipts better than OCR plus rules | Field accuracy | pending |
+| E11 | Reader: EasyOCR vs PaddleOCR vs Gemini free tier | reader | A vision model reads messy and Arabic receipts better than OCR plus rules | Field accuracy | EasyOCR only so far: synthetic total 0.967 (day 2); real SROIE total 0.333, date 0.533, provider 0.35 (79f9aac). PaddleOCR and Gemini not run |
 | E10 | Member preview before submit | preview_enabled (simulated) | Fewer bad submissions reach the pipeline | Claims needing self-fix | pending |
 | E12 | Cross-document checks | cross_checks_enabled (run-set --cross-checks on or off) | Checking patient and date across the receipt, prescription and report catches mismatches with few false alarms, and sends them to self-fix instead of approving them | cross_check_catch_rate, cross_check_false_alarm_rate, auto approve precision | Catch 3 of 3, false alarms 0 of 57, one wrong auto approve avoided (synthetic check, 60 claims, after 3 fixes) |
 
@@ -247,4 +247,64 @@ What it means: on this small synthetic set no switch changed precision (1.0 ever
   (E2). The council's extra members and disagreement routing (E3, E5) cost one review on one
   overpriced claim and did not catch a wrong approval here. Each change is one to three claims of
   60, so none of these is a final number.
+```
+
+```
+Run: E1 / E11 part 2, EasyOCR on real receipts (SROIE), before and after the failure review
+Date: 2026-11-25
+Commit: 6943ee7 (baseline), 79f9aac (after the fixes below)
+Command: uv run --no-sync reimbursement-council read-sroie data/real/sroie --reader easyocr
+         --results-name accuracy_<commit>.json
+Test set: real_extraction, 60 scanned receipts from SROIE (ICDAR 2019; every 10th of the 626 in
+          github.com/zzzDavid/ICDAR-2019-SROIE, MIT). Malaysian shops, English, ringgit, no QR
+          code, no Arabic. Truth: company, date and total from the dataset's key files. Not
+          used for tuning: the fixes come from reading the rows of the failures, not from
+          trying settings against the score.
+Baseline (6943ee7): provider 0.35, date 0.3667, total 0.3167 (60 of 60 have each truth). 1086
+          seconds on a desktop CPU (about 18 s per receipt; the scans are large).
+After (79f9aac): provider 0.35, date 0.5333, total 0.3333. The OCR results are cached, so only
+          the parser changed between the two runs.
+The 10 worst (every field wrong in the baseline): 010, 070, 130, 180, 190, 230, 250, 260, 300, 310.
+What went wrong, looked at by eye and in the OCR rows:
+- Arabic glyphs in Latin text (070, 190, 230, 250, 260, 300): EasyOCR is loaded with Arabic and
+  English, and on faint dot-matrix or thermal print it reads Latin letters and digits as Arabic
+  ones ("MR. D.I.Y." became Arabic digits). Names, totals and dates are lost together. Not fixed:
+  it needs a per-document language guess or a second English-only pass (CHECK).
+- Faint or coloured print (230 purple thermal, 070 dot matrix): low contrast; OCR drops or
+  merges characters ("Tota/", "Tola/").
+- Date forms we did not read (010 "29-12-2017", 060 "12/03/18", 070 "05 02-18"): fixed for
+  dashes, dots and two digit years.
+- The wrong "total" row (350 took "Total Qty 65.00"; 120 took a tax row): fixed, counts,
+  savings, cash, change and tax-only rows are skipped.
+- Provider is the first Latin row at the top (160 took "Your order number is", 230 has a logo
+  above the name, 000 took a person's name): not fixed.
+- Comma read for the decimal point ("77,20", "0,36"): not fixed, it would clash with thousands
+  separators.
+- First version of the total fix made total worse (0.3167 to 0.2667: it skipped "Total with
+  GST", "Total (Excluding GST)" and "Total After Rounding" rows). Narrowed before recording;
+  each of those real rows is now a test.
+What it means: on real scans the reader is weak. Dates are now read on about half; totals and
+  names on about a third. Our own synthetic receipts read far better, so synthetic numbers must
+  not be shown as real accuracy. Real Saudi receipts carry a ZATCA QR, which these do not.
+```
+
+```
+Run: real end to end, 50 SROIE receipts in a synthetic claim context
+Date: 2026-11-25
+Commit: 79f9aac
+Command: uv run --no-sync reimbursement-council make-real-claims data/real/sroie --out data/sets/real_e2e --seed 1 --count 50
+         uv run --no-sync reimbursement-council run-set data/sets/real_e2e --reader easyocr --results-name e2e_79f9aac.json
+Test set: real_e2e, the first 50 of the 60 receipts above, each in a generated claim: a member on
+          an active policy that covers the receipt date, sent 1 to 5 days after it. So every
+          claim should be paid; the right amount is not known (the shops' goods are not on our
+          price list) and is not scored.
+Result: lanes self_fix 50 of 50. automation_rate 0.0, wrong auto approves 0, false rejects 0
+          (auto_reject 0), self_fix 1000 per 1000.
+Why, from the stored decisions: 31 ask the member to confirm the treatment date (read below the
+          0.90 confidence floor), 17 ask for an invoice or receipt (the document type was not
+          found: 14 read as "other", 3 as a prescription because of an "Rx"-like word), 1 asks
+          to confirm the provider, 1 a patient name mismatch.
+What it means: on real documents it reads badly, it asks the member instead of guessing; it
+          never approved or rejected a claim it could not read. That is safe but gives no
+          automation on these receipts.
 ```
