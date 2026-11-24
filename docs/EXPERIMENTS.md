@@ -7,9 +7,10 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 - Auto approve precision: of auto approved claims, share that truly should be paid at that amount.
 - Payable recall: of claims that should be paid, share that were auto approved.
 - False reject rate: share of payable claims that got auto rejected. Must stay near zero.
-- Calibration error (ECE).
+- Calibration error (ECE), on claims no hard rule rejected (decision 007).
 - Human reviews per 1000 claims.
-- Total cost: wrong payouts plus review cost, in SAR.
+- Total cost: wrong payouts plus review cost, in SAR. A false reject counts as the payout that should have been made (decision 007).
+- Heavy damage lanes: for claims whose photo has heavy or unreadable damage, the share that went to self_fix, auto_approve, auto_reject and human_review, and the count of wrong auto approves among them. Wrong auto approves on unreadable photos is the number we care about most; it should be 0.
 - Extraction field accuracy (for extraction experiments).
 
 ## Test sets
