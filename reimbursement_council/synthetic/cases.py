@@ -44,6 +44,16 @@ class ExtraDocument(Model):
     damage: str
 
 
+class FixPlan(Model):
+    """What a member would send when asked to fix a fixable defect (spec 7: fixed versions, so
+    self-fix can be measured). The file replaces one document, or is added when it was missing."""
+
+    file_name: str
+    kind: DocumentKind
+    replace_document_id: str | None
+    clinical: ClinicalDocument | None  # None: a clear photo of the same receipt
+
+
 class SyntheticCase(Model):
     name: str
     claim: Claim
@@ -52,6 +62,7 @@ class SyntheticCase(Model):
     truth: GroundTruth
     duplicate_of: str | None = None
     extra_documents: list[ExtraDocument] = Field(default_factory=list)
+    fix: FixPlan | None = None
 
 
 class SyntheticSet(Model):

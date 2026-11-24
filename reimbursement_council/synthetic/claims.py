@@ -31,6 +31,7 @@ from reimbursement_council.synthetic.document_sets import (
     add_documents,
     receipt_options,
 )
+from reimbursement_council.synthetic.fixes import fix_plan
 from reimbursement_council.synthetic.receipt_content import (
     PATIENTS,
     PROVIDERS,
@@ -280,5 +281,7 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
             duplicate_of=duplicate_of,
             truth=GroundTruth(should_pay=should_pay, correct_payout=payout, defects=defects),
         )
-        cases.append(add_documents(case, defect, seed, index, settings, original))
+        case = add_documents(case, defect, seed, index, settings, original)
+        fix = fix_plan(case, defect, seed, index, settings)
+        cases.append(case.model_copy(update={"fix": fix}))
     return SyntheticSet(seed=seed, reference=reference, cases=cases)

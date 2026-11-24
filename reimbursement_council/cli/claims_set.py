@@ -90,6 +90,13 @@ def make_claims(args: argparse.Namespace) -> int:
             (args.out / extra.file_name).write_bytes(
                 draw_clinical_document(extra.content, extra_damage).png
             )
+        if case.fix is not None:  # the file the member sends when asked (self-fix)
+            fixed = (
+                draw_receipt(case.receipt).png
+                if case.fix.clinical is None
+                else draw_clinical_document(case.fix.clinical).png
+            )
+            (args.out / case.fix.file_name).write_bytes(fixed)
         (args.out / f"{case.name}.claim.json").write_text(
             case.claim.model_dump_json(indent=1), encoding="utf-8"
         )
@@ -97,6 +104,13 @@ def make_claims(args: argparse.Namespace) -> int:
             "claim_id": case.claim.claim_id,
             "damage": case.damage,
             "duplicate_of": case.duplicate_of,
+            "fix": None
+            if case.fix is None
+            else {
+                "file": case.fix.file_name,
+                "kind": case.fix.kind,
+                "replace": case.fix.replace_document_id,
+            },
         }
         (args.out / f"{case.name}.truth.json").write_text(
             json.dumps(truth, indent=1), encoding="utf-8"

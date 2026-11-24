@@ -282,7 +282,8 @@ def test_make_claims_writes_one_png_per_document(tmp_path: Path) -> None:
     )
     claims = [json.loads(p.read_text(encoding="utf-8")) for p in out.glob("*.claim.json")]
     documents = [d for c in claims for d in c["documents"]]
-    assert len(list(out.glob("*.png"))) == len(documents) > len(claims)
+    pngs = [p for p in out.glob("*.png") if not p.stem.endswith("-fix")]
+    assert len(pngs) == len(documents) > len(claims)
     assert all((out / d["file_path"]).is_file() for d in documents)
 
 
