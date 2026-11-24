@@ -7,6 +7,9 @@ image is read, so the app and the tests run without them.
 import hashlib
 import json
 import logging
+import os
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -28,12 +31,24 @@ class OcrEngine(Protocol):
     def read(self, image_bytes: bytes) -> list[OcrLine]: ...
 
 
+def _easyocr_name() -> str:
+    """The engine name with the installed EasyOCR version, known without loading the model."""
+    try:
+        return f"easyocr-{package_version('easyocr')}-ar-en"
+    except PackageNotFoundError:
+        return "easyocr-not-installed-ar-en"
+
+
 class EasyOcrEngine:
-    """EasyOCR on the CPU. The model loads once, on the first read (about 15 to 30 seconds)."""
+    """EasyOCR on the CPU. The model loads once, on the first read (about 15 to 30 seconds).
+
+    The name is fixed when the engine is made, so the cache key is the same before and after
+    the model loads.
+    """
 
     def __init__(self) -> None:
         self._reader: Any = None
-        self.name = "easyocr-ar-en"
+        self.name = _easyocr_name()
 
     def _load(self) -> Any:
         if self._reader is None:
@@ -45,7 +60,6 @@ class EasyOcrEngine:
                 ) from error
             logger.info("loading EasyOCR models for %s", LANGUAGES)
             self._reader = easyocr.Reader(LANGUAGES, gpu=False, verbose=False)
-            self.name = f"easyocr-{easyocr.__version__}-ar-en"
         return self._reader
 
     def read(self, image_bytes: bytes) -> list[OcrLine]:
@@ -82,11 +96,18 @@ class CachedOcrEngine:
         digest = hashlib.sha256(image_bytes).hexdigest()
         path = self._dir / f"{digest}-{self._engine.name}.json"
         if path.is_file():
-            raw = json.loads(path.read_text(encoding="utf-8"))
-            return [OcrLine.model_validate(item) for item in raw]
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                return [OcrLine.model_validate(item) for item in raw]
+            except ValueError as error:
+                logger.warning("cache file %s is broken, reading the image again: %s", path, error)
         lines = self._engine.read(image_bytes)
         self._dir.mkdir(parents=True, exist_ok=True)
-        path.write_text(
+        # Write to a temporary file first, then rename: a run killed mid-write leaves no cut off
+        # cache file behind.
+        partial = path.with_suffix(".json.partial")
+        partial.write_text(
             json.dumps([line.model_dump() for line in lines], ensure_ascii=False), encoding="utf-8"
         )
+        os.replace(partial, path)
         return lines
