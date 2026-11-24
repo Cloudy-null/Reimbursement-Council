@@ -1,7 +1,7 @@
 # Handover
 
 ## 1. Current status
-Overnight day 4 (branch overnight/day4) progress: (1) Claim export done: core/models/export.py (ClaimExport, schema_version 1.0, money in halalas), core/export.py builder, pipeline/export_claim.py rebuilds from stored readings (process_claim now saves the claim and raw readings), schemas/claim-export.schema.json (write-schema), GET /api/claims/{id}/export (?download=1), download button on the result page and review card, export-set command. New libraries jsonschema and pypdfium2 (decision 009 to write). (2) PDF and scanned input done: adapters/pdf_pages.py draws up to max_pdf_pages pages (config/documents.yaml, scale pdf_render_scale) into one PNG; readers, uploads and the image route take .pdf. TIFF scans are not taken (CHECK). (3) Consent step done: a required box on the new claim form, POST /claims refuses without it (400, nothing saved), Claim.consented_at is kept and exported.
+Overnight day 4 (branch overnight/day4) progress: (1) Claim export done: core/models/export.py (ClaimExport, schema_version 1.0, money in halalas), core/export.py builder, pipeline/export_claim.py rebuilds from stored readings (process_claim now saves the claim and raw readings), schemas/claim-export.schema.json (write-schema), GET /api/claims/{id}/export (?download=1), download button on the result page and review card, export-set command. New libraries jsonschema and pypdfium2 (decision 009 to write). (2) PDF and scanned input done: adapters/pdf_pages.py draws up to max_pdf_pages pages (config/documents.yaml, scale pdf_render_scale) into one PNG; readers, uploads and the image route take .pdf. TIFF scans are not taken (CHECK). (3) Consent step done: a required box on the new claim form, POST /claims refuses without it (400, nothing saved), Claim.consented_at is kept and exported. (4) Log masking done (core/privacy.py, adapters/log_privacy.py on every CLI and serve log: long numbers, emails, Arabic text). (5) CSS link carries a file hash (no stale CSS). (6) Defect weights and QR share in config/synthetic.yaml; a set made now is the same as before. (7) One-tap date confirm: yes sends to a person with the confirmed date, no goes back to the check step (CHECK: a tap never decides a hard rule).
 Working on the desktop PC, branch feat/document-set-2 cut from main at 5a6cd51 (PRs #1 to #5 are merged, so the document set work so far is on main). Layers 1, 2 and 3 are done and tagged layer-1 and layer-2; both tags are on GitHub (layer-1 pushed from the desktop on 2026-11-24, points to 18308e6).
 
 Day 3 list, item by item:
@@ -82,9 +82,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
-1. Part A: consent step, log masking, CSS cache version, defect weights in config, one-tap date confirm
-2. Part A: export-set over the synthetic check set, docs/INTEGRATION.md
-3. Part B: real receipts (SROIE sample), reader accuracy E1/E11
+1. Part A: export-set over the synthetic check set, docs/INTEGRATION.md, decision 009
+2. Part B: real receipts (SROIE sample), reader accuracy E1/E11, 50 real end to end
+3. Part C: fixed versions of fixable defects, ablations E2 to E9
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
