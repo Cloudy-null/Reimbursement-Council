@@ -105,10 +105,18 @@ def test_case_reviewer_not_built_yet(tmp_path: Path) -> None:
         load_settings(config, env={})
 
 
-def test_calibration_not_built_yet(tmp_path: Path) -> None:
+def test_calibration_needs_its_file(tmp_path: Path) -> None:
     config = changed_config(tmp_path, "decision.yaml", set_key("calibration_enabled", value=True))
-    with pytest.raises(ConfigError, match="calibration is not built yet"):
+    with pytest.raises(ConfigError, match=r"calibration\.yaml"):
         load_settings(config, env={})
+
+
+def test_calibration_file_loads_when_enabled(tmp_path: Path) -> None:
+    config = changed_config(tmp_path, "decision.yaml", set_key("calibration_enabled", value=True))
+    params = "method: platt\na: 8.0\nb: -5.0\nfitted_on: test\n"
+    (config / "calibration.yaml").write_text(params, encoding="utf-8")
+    s = load_settings(config, env={})
+    assert s.calibration is not None and s.calibration.a == 8.0
 
 
 def test_gemini_reader_not_built_yet(tmp_path: Path) -> None:
@@ -119,10 +127,10 @@ def test_gemini_reader_not_built_yet(tmp_path: Path) -> None:
 
 def test_price_category_missing_from_tier_rejected(tmp_path: Path) -> None:
     def new_category(data: Any) -> Any:
-        data[0]["category"] = "dental"
+        data[0]["category"] = "optical"
         return data
 
-    with pytest.raises(ConfigError, match=r"dental.*silver"):
+    with pytest.raises(ConfigError, match=r"optical.*silver"):
         load_settings(changed_config(tmp_path, "prices.yaml", new_category), env={})
 
 
@@ -183,3 +191,18 @@ def test_rule_fields_have_labels() -> None:  # final review: raw "line_items" in
     s = load_settings(REPO_CONFIG, env={})
     for language in (s.messages.en, s.messages.ar):
         assert {"line_items", "treatment_date", "receipt", "patient_name"} <= set(language.fields)
+
+
+def test_aliases_load_and_belong_to_one_code() -> None:
+    s = load_settings(REPO_CONFIG, env={})
+    assert "كشف عام" in s.prices["CONS-GP"].aliases
+    assert s.prices["XRAY-CHEST"].category == "radiology"
+
+
+def test_shared_alias_rejected(tmp_path: Path) -> None:
+    def share(data: Any) -> Any:
+        data[1]["aliases"] = data[1]["aliases"] + ["Consultation"]
+        return data
+
+    with pytest.raises(ConfigError, match=r"prices\.yaml.*consultation"):
+        load_settings(changed_config(tmp_path, "prices.yaml", share), env={})

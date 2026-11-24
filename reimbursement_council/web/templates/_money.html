@@ -1,0 +1,10 @@
+{% if money %}
+<dl class="money">
+  {% for line in money %}
+  <div><dt>{{ t[line.label_key] }}</dt><dd>{{ '- ' if line.minus }}<span class="amount">{{ line.amount }}</span> {{ t.sar }}</dd></div>
+  {% endfor %}
+  {% if decision.payout_calculated is not none %}
+  <div class="total"><dt>{{ t.we_pay }}</dt><dd><span class="amount">{{ '%.2f' % (decision.payout_calculated / 100) }}</span> {{ t.sar }}</dd></div>
+  {% endif %}
+</dl>
+{% endif %}

@@ -4,6 +4,7 @@ import math
 from collections.abc import Sequence
 
 from reimbursement_council.config.models import Settings
+from reimbursement_council.core.decision.calibration import apply_platt
 from reimbursement_council.core.models.decision import Vote
 
 
@@ -18,10 +19,10 @@ def combine_votes(votes: Sequence[Vote]) -> tuple[float, float]:
 
 
 def p_good_from_score(score: float, settings: Settings) -> float:
-    """Calibrated probability the claim should be paid as calculated.
-
-    Calibration is not built yet (config refuses to turn it on), so the score passes through.
-    """
-    if settings.decision.calibration_enabled:
-        raise NotImplementedError("calibration is not built yet")
-    return score
+    """Probability the claim should be paid as calculated: Platt scaling when calibration is on,
+    the raw combined score when it is off."""
+    if not settings.decision.calibration_enabled:
+        return score
+    if settings.calibration is None:
+        raise ValueError("calibration is on but no fitted parameters were loaded")
+    return apply_platt(score, settings.calibration)

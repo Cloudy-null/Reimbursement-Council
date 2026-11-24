@@ -48,3 +48,27 @@ Switch off: <metrics>
 Switch on: <metrics>
 What it means, in one or two plain sentences:
 ```
+
+```
+Run: E11 part 1, EasyOCR reader alone (no PaddleOCR or Gemini comparison yet)
+Date: 2026-11-24
+Commit: f087ab9
+Command: uv run --extra ocr reimbursement-council make-receipts --count 60 --seed 1 --out data/receipts/eval_s1
+         uv run --extra ocr reimbursement-council read-accuracy data/receipts/eval_s1 --reader easyocr
+Test set: 60 generated receipts (seed 1). Synthetic, not real. Layouts: clinic_arabic_first 29,
+          clinic_bilingual 23, pharmacy_bilingual 8. About 70 percent carry a ZATCA QR.
+          Photo damage: none 18, light 29, heavy 13.
+Result, share of receipts where the field was read exactly right (QR first, then checks):
+  total 0.967, subtotal 0.983, VAT amount 0.867, VAT number 0.983, treatment date 1.000,
+  invoice time 0.967, provider 0.900, patient 0.550, QR found when present 0.783,
+  line item service codes 0.622.
+By damage:
+  none (18):  every field 1.000, item codes 1.000
+  light (29): total 1.000, VAT amount 1.000, patient 0.517, QR 0.759, item codes 0.701
+  heavy (13): total 0.846, VAT amount 0.385, patient 0.000, QR 0.538, item codes 0.000
+Time: 604 seconds for 60 receipts on a laptop CPU (cached afterwards).
+What it means: on a clean photo the reader gets everything right. Amounts survive light damage
+because the arithmetic checks and the QR back them up. Names and line items are the weak spot
+on damaged photos, and heavy damage breaks item reading, so those claims must go to self-fix or
+a human, not auto approve.
+```

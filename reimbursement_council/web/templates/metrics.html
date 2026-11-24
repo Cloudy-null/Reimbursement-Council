@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>{{ t.metrics }}</h2>
+  <p class="note">{{ t.metrics_note }}</p>
+  {% if runs %}
+  <div class="table-wrap">
+    <table class="numbers">
+      <thead><tr><th>run</th><th>reader</th><th>calibration</th><th>claims</th><th>automation</th><th>approve precision</th><th>payable recall</th><th>false reject</th><th>reviews / 1000</th><th>ECE</th><th>cost SAR</th></tr></thead>
+      <tbody>
+      {% for run in runs %}{% set m = run.report.metrics %}
+      <tr><td dir="ltr">{{ run.name }}</td><td>{{ run.report.reader }}</td><td>{{ 'on' if run.report.calibration else 'off' }}</td>
+        <td class="num">{{ m.claims }}</td><td class="num">{{ m.automation_rate }}</td><td class="num">{{ m.auto_approve_precision }}</td>
+        <td class="num">{{ m.payable_recall }}</td><td class="num">{{ m.false_reject_rate }}</td><td class="num">{{ m.reviews_per_1000 }}</td>
+        <td class="num">{{ m.ece }}</td><td class="num">{{ m.total_cost_sar }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="note">{{ t.no_metrics }}</p>{% endif %}
+</section>
+{% if readers %}
+<section class="card">
+  <h2>{{ t.reader_accuracy }}</h2>
+  <div class="table-wrap">
+    <table class="numbers">
+      <thead><tr><th>set</th><th>reader</th><th>receipts</th><th>total</th><th>subtotal</th><th>VAT</th><th>VAT no.</th><th>date</th><th>time</th><th>patient</th><th>provider</th><th>item codes</th></tr></thead>
+      <tbody>
+      {% for r in readers %}{% set s = r.summary %}
+      <tr><td dir="ltr">{{ r.name }}</td><td>{{ r.reader }}</td><td class="num">{{ s.receipts }}</td><td class="num">{{ s.total }}</td><td class="num">{{ s.subtotal }}</td>
+        <td class="num">{{ s.vat_total }}</td><td class="num">{{ s.vat_number }}</td><td class="num">{{ s.treatment_date }}</td><td class="num">{{ s.invoice_time }}</td>
+        <td class="num">{{ s.patient_name }}</td><td class="num">{{ s.provider_name }}</td><td class="num">{{ s.item_codes }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

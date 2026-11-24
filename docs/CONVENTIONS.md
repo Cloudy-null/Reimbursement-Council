@@ -7,7 +7,7 @@ One place for how things are named, stored and configured. If you need to break 
 - FastAPI for the API and pages. Jinja2 templates plus htmx for the screens. No frontend build step.
 - Pydantic v2 for every data model in docs/DATA_MODEL.md.
 - SQLite for storage, one file under data/ (not committed).
-- Reader: EasyOCR (offline, Arabic and English) behind a reader adapter. PaddleOCR as an ablation. Optional Gemini API free tier vision reader behind the same adapter, off by default.
+- Reader: EasyOCR (offline, Arabic and English) behind a reader adapter, in the optional `ocr` extra (decision 006). PaddleOCR as an ablation. Optional Gemini API free tier vision reader behind the same adapter, off by default.
 - Case reviewer: Gemini API free tier through one adapter module, optional. Model name comes from config, never hardcoded.
 - No paid API anywhere. The app must run with no keys at all.
 - QR decoding: OpenCV QRCodeDetector (no system packages needed). Fallback library only with a decision record.
@@ -18,14 +18,17 @@ One place for how things are named, stored and configured. If you need to break 
 ```
 reimbursement_council/
   config/        load and validate config/*.yaml and .env
-  core/          pure logic: rules, council members, combine, calibrate, lanes, payout math
-  adapters/      vision model, QR decoder, storage, dataset loaders
-  pipeline/      wires the stages together
-  web/           FastAPI routes, templates, static (tokens.css lives here)
-  cli/           commands: generate data, run harness, run ablation, demo mode
-config/          decision.yaml, policy.yaml, prices.yaml, experiments.yaml
-data/            generated and downloaded data (gitignored)
-tests/           mirrors reimbursement_council/
+  core/          pure logic: money, ZATCA QR, dates, text, extraction, receipt parsing, rules,
+                 payout, council members, combine, calibration, lanes, member message
+  synthetic/     pure generators: receipt content, claim sets with right answers, accuracy and metrics
+  adapters/      OCR engine and cache, QR from images, receipt drawing, readers, storage, files
+  pipeline/      process_claim wires the stages together
+  web/           FastAPI app, templates, static/app.css (the DESIGN.md tokens)
+  cli/           run-claim, make-receipts, read-accuracy, make-claims, run-set, fit-calibration, serve
+config/          decision.yaml, policy.yaml, prices.yaml, messages.yaml, calibration.yaml (fitted)
+assets/fonts/    IBM Plex Sans Arabic (OFL) for drawing receipts
+data/            generated and downloaded data, OCR cache, website uploads (gitignored)
+tests/           mirrors reimbursement_council/; tests/fixtures has small synthetic files
 docs/            everything in CLAUDE.md
 ```
 

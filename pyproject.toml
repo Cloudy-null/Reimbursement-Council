@@ -5,14 +5,26 @@ description = "Health insurance reimbursement claims that decide themselves when
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "arabic-reshaper==3.1.0",
+    "fastapi==0.165.0",
+    "jinja2==3.1.6",
     "numpy==2.5.5",
     "opencv-python-headless==5.1.0.95",
+    "pillow==13.0.0",
     "pydantic==2.14.4",
+    "python-bidi==0.6.12",
+    "python-multipart==0.0.34",
     "pyyaml==6.0.4",
+    "uvicorn==0.54.0",
 ]
 
 [project.scripts]
 reimbursement-council = "reimbursement_council.cli.main:main"
+
+[project.optional-dependencies]
+ocr = [
+    "easyocr==1.7.2",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -34,12 +46,19 @@ strict = true
 files = ["reimbursement_council"]
 plugins = ["pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+module = ["easyocr", "arabic_reshaper", "bidi", "bidi.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: runs the real OCR model; needs the ocr extra"]
+addopts = "-m 'not slow'"
 pythonpath = ["."]
 
 [dependency-groups]
 dev = [
+    "httpx==0.28.1",
     "mypy==2.4.1",
     "pytest==9.2.0",
     "ruff==0.17.6",

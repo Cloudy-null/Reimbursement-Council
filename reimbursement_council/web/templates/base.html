@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ 'rtl' if lang == 'ar' else 'ltr' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t.app }}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>{{ t.app }}</h1>
+      <p>{{ t.tagline }}</p>
+    </div>
+    <nav>
+      <a href="/?lang={{ lang }}">{{ t.nav_claim }}</a>
+      <a href="/review?lang={{ lang }}">{{ t.nav_review }}</a>
+      <a href="/metrics?lang={{ lang }}">{{ t.nav_metrics }}</a>
+      <a class="lang" href="?lang={{ 'en' if lang == 'ar' else 'ar' }}" lang="{{ 'en' if lang == 'ar' else 'ar' }}">{{ 'English' if lang == 'ar' else 'العربية' }}</a>
+    </nav>
+  </header>
+  <p class="note">{{ t.sample_note }}</p>
+  {% block content %}{% endblock %}
+</div>
+</body>
+</html>

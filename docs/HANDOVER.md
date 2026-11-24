@@ -1,9 +1,7 @@
 # Handover
 
 ## 1. Current status
-Walking skeleton built on branch build/skeleton (plan: docs/superpowers/plans/2026-11-23-walking-skeleton.md, all 15 tasks done, native execution). Not merged to main; owner reviews first.
-Progress: Task 15 of 15 done (CLI, README and handover). Every task is one or more commits; git log is the record.
-What works: a claim file goes in and a stored decision comes out with fields, checks, hard rules, four council votes, a lane, a payout breakdown and a member message in Arabic and English. Text reading uses a fixture reader; images give QR codes only.
+Overnight build on branch build/overnight (owner said: make what we can, do it). Layer 1 done and tagged layer-1 (reading receipt photos with EasyOCR; accuracy in EXPERIMENTS.md). Layer 2 code done (synthetic claim sets, harness metrics, Platt calibration); the EasyOCR runs on data/sets/tune and data/sets/check are running. Layer 3 website built and tested: uv run reimbursement-council serve (http://127.0.0.1:8000): new claim with photo or sample receipt, result with what we read and payout math, self-fix resend, reviewer queue and card with decisions saved, numbers page from harness results. Checked in the browser on desktop and phone, English and Arabic. EasyOCR is an optional extra: uv sync --extra ocr.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -45,9 +43,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
-1. Owner reviews branch build/skeleton and the 10 plan decisions, then merges or asks for changes.
-2. Plan the next layer: EasyOCR text reader behind the reader adapter, Hijri dates, PDFs.
-3. Synthetic generator and test harness, so calibration and ablations have data.
+1. Record the tune and check run numbers (E6 calibration off vs on) in EXPERIMENTS.md; commit config/calibration.yaml; tag layer-2.
+2. README and HANDOVER: how to run the website and the commands.
+3. Owner review: designs for layer 1 and 2 were Claude's calls; parser file is 331 lines (proposal: split row grouping into its own module).
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.

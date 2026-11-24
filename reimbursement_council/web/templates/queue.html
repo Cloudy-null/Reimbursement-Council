@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>{{ t.queue }}</h2>
+  {% if decisions %}
+  <div class="table-wrap">
+    <table class="numbers">
+      <tbody>
+      {% for d in decisions %}
+      <tr>
+        <td class="num">{{ d.decided_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td dir="ltr">{{ d.lane_reason }}</td>
+        <td class="num">{{ '%.2f' % (d.payout_calculated / 100) if d.payout_calculated is not none else '-' }}</td>
+        <td><a href="/review/{{ d.claim_id }}?lang={{ lang }}">{{ t.open }}</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="note">{{ t.queue_empty }}</p>{% endif %}
+</section>
+{% endblock %}

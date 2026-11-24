@@ -1,16 +1,20 @@
 """Readers turn one document file into a ReaderOutput.
 
-FixtureReader reads a hand-written *.reading.json (tests and demo). QrImageReader reads QR codes
-from an image; text reading (EasyOCR) comes in the next plan.
+FixtureReader reads a hand-written *.reading.json (tests and demo). QrImageReader reads only the
+QR codes of an image. QrOcrReader reads the QR codes and the printed text (OCR plus parsing).
 """
 
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
+from reimbursement_council.adapters.ocr_engine import OcrEngine
 from reimbursement_council.adapters.qr_image import find_qr_payloads
+from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Document, ReaderOutput
+from reimbursement_council.core.receipt_parsing import parse_receipt_lines
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +52,41 @@ class QrImageReader:
         payloads = find_qr_payloads(Path(document.file_path).read_bytes())
         logger.info("document %s: %d QR codes found", document.document_id, len(payloads))
         return ReaderOutput(fields=[], line_items=[], qr_payloads=payloads)
+
+
+class QrOcrReader:
+    """QR codes plus the printed text, read with an OCR engine and parsed into fields."""
+
+    def __init__(self, engine: OcrEngine, settings: Settings) -> None:
+        self._engine = engine
+        self._settings = settings
+
+    def read(self, document: Document) -> ReaderOutput:
+        image = Path(document.file_path).read_bytes()
+        payloads = find_qr_payloads(image)
+        lines = self._engine.read(image)
+        parsed = parse_receipt_lines(document.document_id, lines, self._settings)
+        logger.info(
+            "document %s: %d QR codes, %d text boxes, %d fields, %d items",
+            document.document_id,
+            len(payloads),
+            len(lines),
+            len(parsed.fields),
+            len(parsed.line_items),
+        )
+        return parsed.model_copy(update={"qr_payloads": payloads})
+
+
+def make_reader_for(settings: Settings, engine: OcrEngine) -> Callable[[Document], DocumentReader]:
+    """Reader picker for the configured image reader (easyocr or qr_only)."""
+
+    def pick(document: Document) -> DocumentReader:
+        reader = reader_for(document)
+        if isinstance(reader, QrImageReader) and settings.decision.reader == "easyocr":
+            return QrOcrReader(engine, settings)
+        return reader
+
+    return pick
 
 
 def reader_for(document: Document) -> DocumentReader:

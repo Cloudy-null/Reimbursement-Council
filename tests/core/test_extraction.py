@@ -171,3 +171,28 @@ def test_items_checked_against_total_when_no_vat_either() -> None:
     assert check_map(arithmetic_checks(vat_unread, ITEMS, 0.15, 1)) == {
         "items_sum_to_subtotal": False
     }
+
+
+def test_passed_checks_corroborate_ocr_money() -> None:  # layer 1: OCR money read at 0.85
+    fields = [
+        make_field("subtotal", "15000", 0.85),
+        make_field("vat_total", "2250", 0.85),
+        make_field("total", "17250", 0.85),
+    ]
+    items = [make_item("CONS-GP", 15000, confidence=0.8)]
+    result = extract_document(DOC_ID, reading(fields, [], items), repo_settings())
+    for name in ("subtotal", "vat_total", "total"):
+        field = result.best(name)
+        assert field is not None and field.confidence == 0.95
+    assert result.line_items[0].confidence == 0.95
+
+
+def test_one_failed_check_corroborates_nothing() -> None:
+    fields = [
+        make_field("subtotal", "15000", 0.85),
+        make_field("vat_total", "3000", 0.85),
+        make_field("total", "18000", 0.85),
+    ]
+    result = extract_document(DOC_ID, reading(fields, [], ITEMS), repo_settings())
+    total = result.best("total")
+    assert total is not None and total.confidence == 0.85

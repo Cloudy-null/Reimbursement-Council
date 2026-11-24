@@ -28,7 +28,7 @@ Built for the Solve for Bupa hackathon, November 2026. Not affiliated with or us
 ```
 
 ## Status
-Walking skeleton: every pipeline stage runs in Python with tests, on hand-made synthetic claims. Text reading (OCR), screens and the test harness come next. See docs/HANDOVER.md.
+Layers 1 to 3 of the spec are built on synthetic data: receipt photos are read offline with EasyOCR (QR first), claims are decided by hard rules, a council and cost-based lanes, and a website shows the member flow, the reviewer card and the measured numbers. Nothing has been measured on real claims yet. See docs/HANDOVER.md.
 
 ## Code map
 ```
@@ -52,12 +52,19 @@ tests/                    mirrors the package; tests/fixtures holds synthetic cl
 - Decisions: docs/decisions/
 
 ## How to run
-Needs [uv](https://docs.astral.sh/uv/). It installs Python 3.12 by itself.
+Needs [uv](https://docs.astral.sh/uv/). It installs Python 3.12 by itself. The `ocr` extra adds EasyOCR and PyTorch (a large download); without it, images are read by their QR code only.
 
 ```
-uv sync
+uv sync --extra ocr
 uv run pytest
-uv run reimbursement-council run-claim tests/fixtures/claims/clean.claim.json --reference tests/fixtures/reference.json
+uv run reimbursement-council serve
 ```
 
-The last command prints the lane, the payout, the reason and the member message in English and Arabic. Try the other files in tests/fixtures/claims/ (late, blurry_date, overpriced, unlisted_service, prescription_only) to see each lane. Decisions are stored in data/claims.sqlite, which is not committed.
+Then open http://127.0.0.1:8000. Pick a person and a sample receipt, or upload a photo. The first read loads the OCR model (up to a minute). `--reader qr_only` starts the site without OCR.
+
+Other commands:
+- `run-claim CLAIM --reference REF`: decide one claim file and print the result.
+- `make-receipts --count 60 --seed 1 --out data/receipts/eval` and `read-accuracy data/receipts/eval`: measure how well receipts are read.
+- `make-claims --count 120 --seed 11 --out data/sets/tune`, `run-set data/sets/tune` and `fit-calibration data/sets/tune/results.json`: run a synthetic claim set through the pipeline, score it, and fit the calibration.
+
+Generated data and caches live in data/, which is not committed.

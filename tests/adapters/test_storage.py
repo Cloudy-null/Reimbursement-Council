@@ -88,3 +88,35 @@ def test_weak_keys_are_seen(tmp_path: Path) -> None:
     store = ClaimStore(tmp_path / "claims.sqlite")
     store.record_receipt("claim-a", None, None, "wk1", "human_review")
     assert store.seen_receipts("claim-b").weak_keys == frozenset({"wk1"})
+
+
+def test_claims_round_trip_and_queue(tmp_path: Path) -> None:
+    from tests.factories import make_claim
+
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    claim = make_claim()
+    store.save_claim(claim)
+    assert store.load_claim(claim.claim_id) == claim
+    assert store.load_claim("missing") is None
+    store.save_decision(decision(claim.claim_id, lane="human_review"))
+    store.save_decision(decision("other", lane="auto_approve"))
+    assert [d.claim_id for d in store.list_decisions(lane="human_review")] == [claim.claim_id]
+    assert len(store.list_decisions()) == 2
+
+
+def test_reviews_are_stored(tmp_path: Path) -> None:
+    from reimbursement_council.adapters.storage import ReviewRecord
+
+    store = ClaimStore(tmp_path / "claims.sqlite")
+    review = ReviewRecord(
+        claim_id="claim-a",
+        reviewer="demo",
+        started_at=SUBMITTED_AT,
+        finished_at=SUBMITTED_AT,
+        action="approve_amount",
+        amount=12000,
+        reason="network price",
+    )
+    store.save_review(review)
+    assert store.load_review("claim-a") == review
+    assert store.load_review("claim-b") is None
