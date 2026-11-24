@@ -1,6 +1,6 @@
 from reimbursement_council.core.decision.blockers import approval_blockers
 from reimbursement_council.core.models.claim import CheckResult, ExtractionResult
-from reimbursement_council.core.models.decision import PayoutResult
+from reimbursement_council.core.models.decision import DocumentNeed, MemberMessage, PayoutResult
 from tests.factories import make_claim, make_extraction, make_field, repo_settings
 
 PAYOUT = PayoutResult(
@@ -43,12 +43,29 @@ def test_payout_above_receipt_total_blocks() -> None:  # final review: overpayme
     assert any("above the receipt total" in b for b in blockers)
 
 
-def test_second_receipt_blocks() -> None:  # final review: second receipt ignored
+def test_second_billing_document_alone_does_not_block() -> None:
+    # Every document is read now; an invoice and a receipt for one purchase is normal.
     claim = make_claim()
     second = claim.documents[0].model_copy(update={"document_id": "doc-2", "kind": "invoice"})
     two = claim.model_copy(update={"documents": [claim.documents[0], second]})
-    blockers = approval_blockers(two, receipt(), PAYOUT, repo_settings())
-    assert any("2 receipts" in b for b in blockers)
+    assert approval_blockers(two, receipt(), PAYOUT, repo_settings()) == []
+
+
+def test_billing_documents_with_different_totals_block() -> None:
+    blockers = approval_blockers(
+        make_claim(), receipt(), PAYOUT, repo_settings(), billing_documents_differ=True
+    )
+    assert any("different totals or VAT numbers" in b for b in blockers)
+
+
+def test_a_missing_required_document_blocks() -> None:
+    need = DocumentNeed(
+        group=["prescription"],
+        satisfied=False,
+        request=MemberMessage(en="Please add a prescription.", ar="أضف وصفة طبية من فضلك."),
+    )
+    blockers = approval_blockers(make_claim(), receipt(), PAYOUT, repo_settings(), missing=[need])
+    assert any("prescription" in b for b in blockers)
 
 
 def test_no_extraction_adds_nothing_here() -> None:

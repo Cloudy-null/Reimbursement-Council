@@ -7,8 +7,9 @@ from pathlib import Path
 import pytest
 
 from reimbursement_council.adapters.files import load_claim_file, load_reference_file
+from reimbursement_council.adapters.readers import FixtureReader
 from reimbursement_council.adapters.storage import ClaimStore
-from reimbursement_council.core.models.claim import Claim
+from reimbursement_council.core.models.claim import Claim, FieldEdit
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.pipeline.process_claim import process_claim
 from tests.factories import repo_settings
@@ -137,6 +138,8 @@ def claim_with_reading(tmp_path: Path, claim_id: str, reading: dict, extra: str 
     folder = tmp_path / claim_id
     folder.mkdir()
     (folder / "r.reading.json").write_text(json.dumps(reading) + extra, encoding="utf-8")
+    report = (CLAIMS / "report_clean.reading.json").read_text(encoding="utf-8")
+    (folder / "report_clean.reading.json").write_text(report, encoding="utf-8")
     claim = json.loads((CLAIMS / "clean.claim.json").read_text(encoding="utf-8"))
     claim["claim_id"] = claim_id
     claim["documents"][0]["file_path"] = "r.reading.json"
@@ -172,3 +175,49 @@ def test_overpriced_and_unlisted_payout_details(tmp_path: Path) -> None:
     store = ClaimStore(tmp_path / "claims.sqlite")
     unlisted = run(load("unlisted_service"), store)
     assert (unlisted.payout_requested, unlisted.payout_calculated) == (23000, 0)
+
+
+def test_clean_claim_has_its_medical_report() -> None:
+    kinds = sorted(d.kind for d in load("clean").documents)
+    assert kinds == ["medical_report", "receipt"]
+
+
+def test_outpatient_claim_without_its_report_is_not_auto_approved(tmp_path: Path) -> None:
+    clean = load("clean")
+    receipt_only = clean.model_copy(
+        update={"documents": [d for d in clean.documents if d.kind == "receipt"]}
+    )
+    decision = run(receipt_only, ClaimStore(tmp_path / "db.sqlite"))
+    assert decision.lane != "auto_approve"
+    assert "medical_report" in decision.lane_reason or decision.self_fix_request is not None
+
+
+def test_judged_edits_are_kept_on_the_decision(tmp_path: Path) -> None:
+    clean = load("clean")
+    receipt_id = next(d.document_id for d in clean.documents if d.kind == "receipt")
+    edit = FieldEdit(document_id=receipt_id, field="total", read_value="17250", typed_value="27250")
+    decision = run(clean.model_copy(update={"edits": [edit]}), ClaimStore(tmp_path / "db.sqlite"))
+    assert [e.evidence for e in decision.edits] == ["contradicts"]
+    assert any(r.rule == "member_edit" for r in decision.rule_results)
+
+
+def test_stored_readings_are_used(tmp_path: Path) -> None:
+    clean = load("clean")
+    readings = {d.document_id: FixtureReader().read(d) for d in clean.documents}
+    moved = clean.model_copy(
+        update={
+            "documents": [
+                d.model_copy(update={"file_path": "gone.reading.json"}) for d in clean.documents
+            ]
+        }
+    )
+    reference = load_reference_file(FIXTURES / "reference.json")
+    decision = process_claim(
+        moved,
+        reference,
+        repo_settings(),
+        ClaimStore(tmp_path / "db.sqlite"),
+        NOW,
+        readings=readings,
+    )
+    assert decision.lane == "auto_approve"

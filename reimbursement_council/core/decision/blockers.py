@@ -4,10 +4,11 @@ A high score is not enough when the receipt itself does not add up: then a human
 or the member fixes it. Each blocker is a short plain reason for the reviewer.
 """
 
+from collections.abc import Sequence
+
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Claim, ExtractionResult
-from reimbursement_council.core.models.common import PRIMARY_DOCUMENT_KINDS
-from reimbursement_council.core.models.decision import PayoutResult
+from reimbursement_council.core.models.decision import DocumentNeed, PayoutResult
 from reimbursement_council.core.money import format_sar
 
 
@@ -16,11 +17,19 @@ def approval_blockers(
     extraction: ExtractionResult | None,
     payout: PayoutResult | None,
     settings: Settings,
+    missing: Sequence[DocumentNeed] = (),
+    billing_documents_differ: bool = False,
 ) -> list[str]:
+    """missing: required documents not in the claim. billing_documents_differ: two billing
+    documents name different totals or VAT numbers, so we do not know which purchase is
+    claimed."""
     blockers: list[str] = []
-    receipts = [doc for doc in claim.documents if doc.kind in PRIMARY_DOCUMENT_KINDS]
-    if len(receipts) > 1:
-        blockers.append(f"the claim has {len(receipts)} receipts or invoices and only one is read")
+    for need in missing:
+        blockers.append(f"missing document: {' or '.join(need.group)}")
+    if billing_documents_differ:
+        blockers.append(
+            "the receipts or invoices in the claim show different totals or VAT numbers"
+        )
     if extraction is None:
         return blockers
 

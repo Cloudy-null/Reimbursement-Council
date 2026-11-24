@@ -22,7 +22,7 @@ from reimbursement_council.adapters.readers import (
 )
 from reimbursement_council.adapters.receipt_drawing import draw_receipt
 from reimbursement_council.core.models.claim import Document
-from reimbursement_council.core.receipt_rows import OcrLine
+from reimbursement_council.core.receipt_rows import OcrLine, group_rows, join_row
 from reimbursement_council.synthetic.receipt_content import ReceiptOptions, make_receipt_content
 from tests.core.test_receipt_parsing import load
 from tests.factories import repo_settings, settings_with
@@ -135,3 +135,13 @@ def test_real_easyocr_reads_a_drawn_receipt(tmp_path: Path) -> None:
     output = QrOcrReader(EasyOcrEngine(), s).read(document(path))
     totals = [f.value for f in output.fields if f.name == "total"]
     assert totals == [str(content.total)]
+
+
+def test_ocr_reader_keeps_the_text_row_by_row(tmp_path: Path) -> None:
+    path, _ = drawn_png(tmp_path)
+    lines = load("clinic_bilingual")
+    settings = repo_settings()
+    output = QrOcrReader(FakeEngine(lines), settings).read(document(path))
+    rows = group_rows(lines, settings.decision.ocr.row_overlap)
+    assert output.text_lines == [join_row(row) for row in rows]
+    assert any("Al Noor" in line for line in output.text_lines)

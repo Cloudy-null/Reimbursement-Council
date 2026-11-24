@@ -1,6 +1,7 @@
 """Document checker: how sure we are the document is valid and was read correctly.
 
-Looks at the confidence of the required fields and at failed checks.
+Looks at the confidence of the required fields, at failed checks, and at cross-document
+checks (each failed one multiplies the score by cross_check_score_factor).
 Asks the member to retake the photo for a missing field, or to confirm an unclear one.
 """
 
@@ -47,10 +48,15 @@ def vote(case: ClaimCase, settings: Settings) -> Vote:
     failed = [check.name for check in extraction.checks if not check.passed]
     if failed:
         score = min(score, config.failed_check_score_cap)
+    mismatches = [check for check in case.cross_checks if check.passed is False]
+    for _ in mismatches:
+        score *= settings.documents.cross_check_score_factor
     reason = (
         f"Average confidence {score:.2f} on {', '.join(config.required_fields)}; "
         f"{len(failed)} check{'s' if len(failed) != 1 else ''} failed."
     )
+    if mismatches:
+        reason += " Documents disagree: " + "; ".join(c.details for c in mismatches) + "."
     if request is None:
         return Vote(
             member=MEMBER, score=score, reason=reason, evidence=list(config.required_fields)

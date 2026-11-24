@@ -14,6 +14,14 @@
       "file_path": "clean.reading.json",
       "image_hash": null,
       "uploaded_at": "2026-11-20T09:00:00Z"
+    },
+    {
+      "document_id": "00000000-0000-4000-8000-0000000001d1",
+      "claim_id": "00000000-0000-4000-8000-0000000000c1",
+      "kind": "medical_report",
+      "file_path": "report_clean.reading.json",
+      "image_hash": null,
+      "uploaded_at": "2026-11-20T09:00:00Z"
     }
   ]
 }

@@ -9,5 +9,9 @@
     }
   ],
   "line_items": [],
-  "qr_payloads": []
+  "qr_payloads": [],
+  "text_lines": [
+    "Prescription",
+    "Patient: Sara Ahmed"
+  ]
 }

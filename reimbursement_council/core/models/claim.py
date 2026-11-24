@@ -9,9 +9,11 @@ from reimbursement_council.core.models.common import (
     MONEY_FIELDS,
     CheckName,
     DocumentKind,
+    EditEvidence,
     FieldName,
     FieldSource,
     Halalas,
+    KindSource,
     Model,
     Score,
 )
@@ -24,6 +26,19 @@ class Document(Model):
     file_path: str
     image_hash: str | None
     uploaded_at: AwareDatetime
+    kind_source: KindSource = "detected"
+    detected_kind: DocumentKind | None = None
+
+
+class FieldEdit(Model):
+    """A field the member changed on the check screen, and what the evidence says about it."""
+
+    document_id: str
+    field: FieldName
+    read_value: str | None
+    typed_value: str
+    evidence: EditEvidence = "none"
+    evidence_note: str = ""
 
 
 class Claim(Model):
@@ -35,6 +50,10 @@ class Claim(Model):
     status: str
     documents: list[Document]
     retries_used: int = Field(ge=0)
+    claim_categories: list[str] = Field(default_factory=list)
+    detected_categories: list[str] = Field(default_factory=list)
+    edits: list[FieldEdit] = Field(default_factory=list)
+    retake_fields: list[str] = Field(default_factory=list)
 
 
 class FieldLocation(Model):
@@ -83,6 +102,7 @@ class ReaderOutput(Model):
     fields: list[ExtractedField]
     line_items: list[LineItem]
     qr_payloads: list[str]
+    text_lines: list[str] = Field(default_factory=list)
 
 
 class ExtractionResult(Model):

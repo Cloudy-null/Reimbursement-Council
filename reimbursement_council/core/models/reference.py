@@ -16,6 +16,7 @@ class Member(Model):
     display_name: str
     date_joined: date
     policy_id: str
+    name_ar: str | None = None
 
 
 class Policy(Model):

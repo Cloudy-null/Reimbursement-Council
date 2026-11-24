@@ -62,5 +62,10 @@
   ],
   "qr_payloads": [
     "AQ5BbCBOb29yIENsaW5pYwIPMzAwMDAwMDAwMDAwMDAzAxQyMDI2LTExLTE3VDA5OjAwOjAwWgQGMjMwLjAwBQUzMC4wMA=="
+  ],
+  "text_lines": [
+    "Al Noor Clinic",
+    "Receipt",
+    "Patient: Sara Ahmed"
   ]
 }

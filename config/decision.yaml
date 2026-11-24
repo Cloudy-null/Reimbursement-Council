@@ -23,6 +23,8 @@ paid_right_tolerance_halalas: 100
 gemini_reader_enabled: false
 # reader for images: easyocr (QR plus OCR text) or qr_only (QR codes only, no OCR install needed)
 reader: easyocr
+# E12: compare patient, date and provider across the documents of a claim.
+cross_checks_enabled: true
 # when every arithmetic check passes, the money fields and items involved are corroborated
 passed_check_confidence: 0.95
 ocr:
