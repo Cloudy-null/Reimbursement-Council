@@ -39,7 +39,7 @@ Claim (like FHIR Claim)
 - retries_used (for self-fix)
 - claim_categories: benefit categories of the claim (worked out from the invoice, or set by the member); detected_categories: what the system worked out, kept so a member change can be compared
 - edits: list of FieldEdit (fields the member changed on the check screen)
-- retake_fields: fields the member was already asked to retake a photo for (a retake is asked only once)
+- retake_fields: fields the member was already asked about, by a photo request (retake_photo or check_photo) or a mismatch (fix_mismatch). Each is asked only once; if it is still wrong on the next try it goes to a human
 
 Document
 - document_id, claim_id, kind (receipt, invoice, prescription, medical_report, other), file_path, image_hash, uploaded_at

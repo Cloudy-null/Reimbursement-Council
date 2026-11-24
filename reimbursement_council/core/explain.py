@@ -6,6 +6,7 @@ No model writes member text: only templates filled with values, so wording stays
 from collections.abc import Sequence
 
 from reimbursement_council.config.models import LanguageMessages, Settings
+from reimbursement_council.core.decision.document_requests import document_label
 from reimbursement_council.core.decision.lanes import LaneChoice
 from reimbursement_council.core.models.decision import (
     MemberMessage,
@@ -43,7 +44,11 @@ def _render(
         if choice.request is None:
             raise ValueError("a self-fix claim needs a request")
         field = choice.request.field
-        if choice.request.kind == "add_document" and field in language.documents:
+        if choice.request.kind == "fix_mismatch":
+            names = " / ".join(document_label(language, d) for d in choice.request.documents)
+            label = language.fields.get(field, field)
+            request = language.requests.mismatch.format(field=label, documents=names)
+        elif choice.request.kind == "add_document" and field in language.documents:
             documents = language.documents[field]
             request = language.requests.missing_document.format(documents=documents)
         else:

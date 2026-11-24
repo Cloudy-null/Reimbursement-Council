@@ -20,6 +20,7 @@ en:
     confirm_field: "Please check the {field} we read and fix it if needed."
     missing_document: "Please add {documents}."
     mismatch: "The {field} is not the same on {documents}. Please add the right document or correct it."
+    check_photo: "Please send a clearer photo so we can check the {field}."
   fields:
     provider_name: "provider name"
     treatment_date: "treatment date"
@@ -29,6 +30,7 @@ en:
     receipt: "receipt"
     itemized_invoice: "itemized invoice that lists each service"
     line_items: "list of services on the receipt"
+    account: "your account"
   documents:
     invoice: "an invoice"
     receipt: "a receipt"
@@ -57,6 +59,7 @@ ar:
     confirm_field: "راجع {field} كما قرأناه وصححه إن لزم."
     missing_document: "أضف {documents} من فضلك."
     mismatch: "{field} غير متطابق في {documents}. أضف المستند الصحيح أو صحح القيمة."
+    check_photo: "أرسل صورة أوضح من فضلك لنتحقق من {field}."
   fields:
     provider_name: "اسم مقدم الخدمة"
     treatment_date: "تاريخ العلاج"
@@ -66,6 +69,7 @@ ar:
     receipt: "الفاتورة"
     itemized_invoice: "فاتورة مفصلة تذكر كل خدمة"
     line_items: "قائمة الخدمات في الفاتورة"
+    account: "حسابك"
   documents:
     invoice: "فاتورة"
     receipt: "إيصال"

@@ -162,6 +162,7 @@ class RequestMessages(ConfigModel):
     confirm_field: str
     missing_document: str
     mismatch: str
+    check_photo: str
 
 
 class LanguageMessages(ConfigModel):

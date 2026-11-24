@@ -106,9 +106,16 @@ def process_claim(
             billing_documents_differ=documents.billing_documents_differ,
         ),
         member_fixable=member_requests(
-            documents.needs, documents.cross_checks, documents.edits, claim.retake_fields, settings
+            documents.needs,
+            documents.cross_checks,
+            documents.edits,
+            claim.retake_fields,
+            settings,
+            {d.document_id: d.kind for d in documents.documents},
         ),
-        human_only=human_reasons(rule_results, documents.edits, claim.retake_fields),
+        human_only=human_reasons(
+            rule_results, documents.edits, documents.cross_checks, claim.retake_fields, settings
+        ),
     )
 
     decision = Decision(

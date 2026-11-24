@@ -98,3 +98,29 @@ def test_missing_document_is_named_in_both_languages() -> None:
     request = SelfFixRequest(kind="add_document", field="prescription", text="t")
     m = build_member_message(choice("self_fix", request), [], None, repo_settings())
     assert "prescription" in m.en and "وصفة طبية" in m.ar
+
+
+def test_mismatch_message_names_the_documents() -> None:
+    request = SelfFixRequest(
+        kind="fix_mismatch",
+        field="treatment_date",
+        text="t",
+        documents=["receipt", "medical_report"],
+    )
+    m = build_member_message(choice("self_fix", request), [], None, repo_settings())
+    assert "treatment date" in m.en and "receipt" in m.en and "medical report" in m.en
+    assert "تاريخ العلاج" in m.ar
+
+
+def test_patient_mismatch_mentions_the_account() -> None:
+    request = SelfFixRequest(
+        kind="fix_mismatch", field="patient_name", text="t", documents=["receipt", "account"]
+    )
+    m = build_member_message(choice("self_fix", request), [], None, repo_settings())
+    assert "your account" in m.en and "حسابك" in m.ar
+
+
+def test_check_photo_does_not_say_we_could_not_read_it() -> None:
+    request = SelfFixRequest(kind="check_photo", field="total", text="t")
+    m = build_member_message(choice("self_fix", request), [], None, repo_settings())
+    assert "total amount" in m.en and "could not read" not in m.en

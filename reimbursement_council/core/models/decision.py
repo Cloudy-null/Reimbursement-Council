@@ -50,6 +50,7 @@ class SelfFixRequest(Model):
     kind: RequestKind
     field: str
     text: str
+    documents: list[str] = Field(default_factory=list)  # kinds that disagree, for fix_mismatch
 
 
 class PayoutResult(Model):

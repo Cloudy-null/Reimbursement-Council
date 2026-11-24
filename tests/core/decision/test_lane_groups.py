@@ -48,7 +48,7 @@ def decide(
         repo_settings(),
         [],
         member_fixable=fixable,
-        human_only=human_reasons(rule_results, edits, retake_fields),
+        human_only=human_reasons(rule_results, edits, [], retake_fields, repo_settings()),
     )
 
 
@@ -119,3 +119,27 @@ def test_duplicate_without_human_only_still_goes_to_a_human() -> None:
         rules(duplicate="not_sure"), PLAIN_VOTES, 0.99, 0.0, PAYOUT, 0, repo_settings()
     )
     assert choice.lane == "human_review"
+
+
+def test_kept_mismatch_on_the_second_try_goes_to_a_human() -> None:
+    check = mismatch("treatment_date")
+    asked = ["treatment_date"]
+    fixable = member_requests([], [check], [], asked, repo_settings())
+    choice = choose_lane(
+        rules(),
+        PLAIN_VOTES,
+        0.99,
+        0.0,
+        PAYOUT,
+        1,
+        repo_settings(),
+        [],
+        member_fixable=fixable,
+        human_only=human_reasons([], [], [check], asked, repo_settings()),
+    )
+    assert choice.lane == "human_review" and "treatment date" in choice.reason
+
+
+def test_no_retries_reason_names_the_unclear_rule() -> None:
+    choice = decide(rules(late="not_sure"), retries_used=2)
+    assert choice.lane == "human_review" and "late" in choice.reason

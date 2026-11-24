@@ -1,10 +1,13 @@
 """Pick the lane for a claim. First match wins:
 
 1. A hard rule failed on confident data: auto_reject.
-2. A hard rule could not run (unclear data): self_fix, or human_review with no retries left.
-3. Safe to approve: auto_approve (complete or partial).
-4. Low score and a member asked for something: self_fix.
-5. Everything else: human_review.
+2. Something the member can fix (missing document, mismatch, photo request, unclear hard
+   rule) and retries are left: self_fix, even if a human is also needed later.
+3. Something only a human can settle (contradicting edit, possible duplicate, a field still
+   wrong after the member was asked), or group 2 with no retries left: human_review.
+4. Safe to approve: auto_approve (complete or partial).
+5. Low score and a member asked for something: self_fix.
+6. Everything else: human_review.
 
 Only step 1 rejects, so no council member can reject a claim on its own.
 """
@@ -131,7 +134,7 @@ def choose_lane(
         )
 
     human = list(human_only)
-    for reason in human_reasons(rule_results, (), ()):
+    for reason in human_reasons(rule_results, (), (), (), settings):
         if reason not in human:
             human.append(reason)
     fixable = list(member_fixable)
@@ -139,13 +142,15 @@ def choose_lane(
     if unsure:
         first = unsure[0]
         field = first.fields[0] if first.fields else first.rule
-        fixable.append(
+        extra = (
             _first_vote_request(votes, wanted_fields=first.fields)
             or _first_vote_request(votes)
             or SelfFixRequest(
                 kind="confirm_field", field=field, text=f"Please confirm the {field}."
             )
         )
+        if all((r.kind, r.field) != (extra.kind, extra.field) for r in fixable):
+            fixable.append(extra)
     if fixable and _retries_left(retries_used, decision):
         reason = "Asking the member: " + "; ".join(r.text for r in fixable)
         if human:
@@ -153,6 +158,8 @@ def choose_lane(
         return LaneChoice(lane="self_fix", outcome="queued", reason=reason, request=fixable[0])
     if human or fixable:
         left = human + [f"no retries left for: {r.text}" for r in fixable]
+        if unsure:
+            left.append(f"hard rule {unsure[0].rule} could not run on unclear data")
         return LaneChoice(
             lane="human_review",
             outcome="queued",
