@@ -52,10 +52,23 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     fit.add_argument("--config-dir", type=Path, default=Path("config"))
 
 
+SET_MANIFEST = "set.json"
+
+
 def make_claims(args: argparse.Namespace) -> int:
     settings = load_settings(args.config_dir)
+    if args.out.is_dir() and any(args.out.iterdir()):
+        raise ValueError(
+            f"{args.out} is not empty. Use a new folder, so two sets are never mixed in one."
+        )
     claim_set = make_claim_set(args.seed, args.count, settings)
     args.out.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "seed": args.seed,
+        "count": len(claim_set.cases),
+        "config_version": settings.config_version,
+    }
+    (args.out / SET_MANIFEST).write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     (args.out / "reference.json").write_text(
         claim_set.reference.model_dump_json(indent=1), encoding="utf-8"
     )
@@ -67,7 +80,11 @@ def make_claims(args: argparse.Namespace) -> int:
         (args.out / f"{case.name}.claim.json").write_text(
             case.claim.model_dump_json(indent=1), encoding="utf-8"
         )
-        truth = case.truth.model_dump() | {"damage": case.damage, "duplicate_of": case.duplicate_of}
+        truth = case.truth.model_dump() | {
+            "claim_id": case.claim.claim_id,
+            "damage": case.damage,
+            "duplicate_of": case.duplicate_of,
+        }
         (args.out / f"{case.name}.truth.json").write_text(
             json.dumps(truth, indent=1), encoding="utf-8"
         )
@@ -75,7 +92,23 @@ def make_claims(args: argparse.Namespace) -> int:
     return 0
 
 
-def _open_store(args: argparse.Namespace, settings: Settings) -> ClaimStore:
+def _read_manifest(folder: Path, claim_count: int) -> dict[str, object]:
+    """The set's seed and size, checked against the claim files that are really there."""
+    path = folder / SET_MANIFEST
+    if not path.is_file():
+        raise ValueError(f"{folder} has no {SET_MANIFEST}. Make the set with make-claims.")
+    manifest: dict[str, object] = json.loads(path.read_text(encoding="utf-8"))
+    if manifest.get("count") != claim_count:
+        raise ValueError(
+            f"{folder} has {claim_count} claim files, "
+            f"but {SET_MANIFEST} says {manifest.get('count')}"
+        )
+    return manifest
+
+
+def _open_store(
+    args: argparse.Namespace, settings: Settings, manifest: dict[str, object]
+) -> ClaimStore:
     """The run's own database, named after the results file so two runs in one folder (for
     example calibration off and on) never share stored decisions.
 
@@ -86,6 +119,7 @@ def _open_store(args: argparse.Namespace, settings: Settings) -> ClaimStore:
     db = args.folder / f"{stem}.sqlite"
     meta_path = args.folder / f"{stem}.run.json"
     meta = {
+        "set_seed": manifest.get("seed"),
         "reader": settings.decision.reader,
         "calibration": settings.decision.calibration_enabled,
         "config_version": settings.config_version,
@@ -118,12 +152,15 @@ def run_set(args: argparse.Namespace) -> int:
     if args.calibration != "config":
         decision = decision.model_copy(update={"calibration_enabled": args.calibration == "on"})
     settings = settings.model_copy(update={"decision": decision})
+    claim_paths = sorted(args.folder.glob("*.claim.json"))
+    if not claim_paths:
+        raise ValueError(f"no claims in {args.folder}: nothing to run")
+    manifest = _read_manifest(args.folder, len(claim_paths))
     reference = load_reference_file(args.folder / "reference.json")
-    store = _open_store(args, settings)
+    store = _open_store(args, settings, manifest)
     pick = make_reader_for(settings, CachedOcrEngine(EasyOcrEngine(), args.ocr_cache))
     rows: list[RunRow] = []
     started = time.time()
-    claim_paths = sorted(args.folder.glob("*.claim.json"))
     resumed = 0
     for number, claim_path in enumerate(claim_paths, start=1):
         truth = json.loads(
@@ -132,6 +169,11 @@ def run_set(args: argparse.Namespace) -> int:
             )
         )
         claim = load_claim_file(claim_path)
+        if truth.get("claim_id") != claim.claim_id:
+            raise ValueError(
+                f"{claim_path.name}: truth is for {truth.get('claim_id')}, "
+                f"claim is {claim.claim_id}"
+            )
         result = _stored_result(store, claim.claim_id) if args.resume else None
         if result is None:
             logger.info("claim %d/%d %s: start", number, len(claim_paths), claim.claim_id)
@@ -163,6 +205,7 @@ def run_set(args: argparse.Namespace) -> int:
     for row in rows:
         lanes[row.lane] = lanes.get(row.lane, 0) + 1
     report = {
+        "set": manifest,
         "reader": decision.reader,
         "calibration": decision.calibration_enabled,
         "config_version": settings.config_version,

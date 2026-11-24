@@ -168,6 +168,42 @@ def fit(tmp_path: Path, rows: list[dict[str, object]]) -> dict[str, Any]:
     return params
 
 
+def test_make_claims_refuses_a_folder_that_is_not_empty(tmp_path: Path) -> None:
+    # Mixing two sets in one folder judges one seed's claims against another seed's members.
+    out = tmp_path / "set"
+    make_set(out, count=2)
+    args = ["make-claims", "--count", "2", "--seed", "5", "--out", str(out)]
+    assert run(*args, "--config-dir", str(REPO_CONFIG)) == 2
+    assert len(list(out.glob("*.claim.json"))) == 2
+
+
+def test_make_claims_writes_a_manifest_and_truth_names_its_claim(tmp_path: Path) -> None:
+    out = tmp_path / "set"
+    make_set(out, count=2)
+    manifest = json.loads((out / "set.json").read_text(encoding="utf-8"))
+    assert manifest["seed"] == 4 and manifest["count"] == 2 and manifest["config_version"]
+    for truth_path in out.glob("*.truth.json"):
+        truth = json.loads(truth_path.read_text(encoding="utf-8"))
+        claim_path = truth_path.with_name(truth_path.name.replace(".truth.json", ".claim.json"))
+        claim = json.loads(claim_path.read_text(encoding="utf-8"))
+        assert truth["claim_id"] == claim["claim_id"]
+
+
+def test_run_set_refuses_a_set_with_extra_claims(tmp_path: Path) -> None:
+    out, other = tmp_path / "set", tmp_path / "other"
+    make_set(out, count=2)
+    make_set(other, count=3)
+    for path in other.glob("claim_4_0002.*"):
+        (out / path.name).write_bytes(path.read_bytes())
+    assert run_set(out, tmp_path / "c") == 2
+
+
+def test_run_set_refuses_an_empty_folder(tmp_path: Path) -> None:
+    out = tmp_path / "empty"
+    out.mkdir()
+    assert run_set(out, tmp_path / "c") == 2
+
+
 def test_fit_calibration_writes_params(tmp_path: Path) -> None:
     params = fit(tmp_path, calibration_rows())
     assert params["method"] == "platt" and params["a"] > 0
