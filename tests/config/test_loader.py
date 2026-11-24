@@ -107,6 +107,7 @@ def test_case_reviewer_not_built_yet(tmp_path: Path) -> None:
 
 def test_calibration_needs_its_file(tmp_path: Path) -> None:
     config = changed_config(tmp_path, "decision.yaml", set_key("calibration_enabled", value=True))
+    (config / "calibration.yaml").unlink(missing_ok=True)  # the repo now has a fitted one
     with pytest.raises(ConfigError, match=r"calibration\.yaml"):
         load_settings(config, env={})
 
