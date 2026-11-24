@@ -7,7 +7,7 @@ Language = Literal["en", "ar"]
 TEXT: dict[str, dict[str, str]] = {
     "en": {
         "app": "Reimbursement Council",
-        "tagline": "One photo in. A decision, a reason, and a payout out.",
+        "tagline": "Your documents in. A decision, a reason, and a payout out.",
         "nav_claim": "New claim",
         "nav_review": "Reviewer queue",
         "nav_metrics": "Numbers",
@@ -138,7 +138,7 @@ TEXT: dict[str, dict[str, str]] = {
     },
     "ar": {
         "app": "مجلس التعويضات",
-        "tagline": "صورة واحدة. قرار وسبب ومبلغ.",
+        "tagline": "ترفع مستنداتك. تحصل على قرار وسبب ومبلغ.",
         "nav_claim": "مطالبة جديدة",
         "nav_review": "قائمة المراجعة",
         "nav_metrics": "الأرقام",
