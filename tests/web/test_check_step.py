@@ -63,7 +63,20 @@ PRESCRIPTION = ReaderOutput(
     text_lines=["Al Noor Clinic", "Prescription", "وصفة طبية", "Paracetamol 500 mg"],
 )
 UNREADABLE = ReaderOutput(fields=[], line_items=[], qr_payloads=[])
-READINGS = {b"pharmacy": PHARMACY, b"prescription": PRESCRIPTION, b"blank": UNREADABLE}
+OTHER_PATIENT = PHARMACY.model_copy(
+    update={
+        "fields": [
+            f if f.name != "patient_name" else field("patient_name", "Omar Ahmed")
+            for f in PHARMACY.fields
+        ]
+    }
+)
+READINGS = {
+    b"pharmacy": PHARMACY,
+    b"prescription": PRESCRIPTION,
+    b"blank": UNREADABLE,
+    b"other-patient": OTHER_PATIENT,
+}
 
 
 class FakeReader:
@@ -255,3 +268,10 @@ def test_review_card_shows_read_and_typed_side_by_side(web: tuple[TestClient, We
     assert decision is not None and decision.lane == "human_review"
     card = client.get(f"/review/{claim_id}").text
     assert "17.25" in card and "20.00" in card and "contradicts" in card
+
+
+def test_patient_mismatch_says_it_is_the_account(web: tuple[TestClient, WebContext]) -> None:
+    client, _ = web
+    claim_id, _ = upload(client, ("r.png", b"other-patient"))
+    page = client.get(f"/claims/{claim_id}/check").text
+    assert "your account" in page

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Resp
 from reimbursement_council.adapters.receipt_drawing import DAMAGE_PRESETS, draw_receipt
 from reimbursement_council.core.models.claim import Claim
 from reimbursement_council.synthetic.receipt_content import (
+    PATIENTS,
     PROVIDERS,
     ReceiptOptions,
     make_receipt_content,
@@ -22,12 +23,19 @@ from reimbursement_council.web.check_routes import check_values
 from reimbursement_council.web.context import Page, WebContext, claim_view
 from reimbursement_council.web.uploads import accept, collect, read_and_store, store_documents
 
+DEMO_PATIENT = PATIENTS[0]  # the first person in the list, so samples match the default pick
 SAMPLES: dict[str, ReceiptOptions] = {
-    "clinic": ReceiptOptions(provider=PROVIDERS[0], item_count=1),
-    "pharmacy": ReceiptOptions(provider=PROVIDERS[2], item_count=2),
-    "overpriced": ReceiptOptions(provider=PROVIDERS[1], item_count=1, price_factor=2.2),
-    "no_qr": ReceiptOptions(provider=PROVIDERS[0], with_qr=False, item_count=2),
-    "unlisted": ReceiptOptions(provider=PROVIDERS[1], item_count=1, unlisted_item=True),
+    "clinic": ReceiptOptions(provider=PROVIDERS[0], item_count=1, patient=DEMO_PATIENT),
+    "pharmacy": ReceiptOptions(provider=PROVIDERS[2], item_count=2, patient=DEMO_PATIENT),
+    "overpriced": ReceiptOptions(
+        provider=PROVIDERS[1], item_count=1, price_factor=2.2, patient=DEMO_PATIENT
+    ),
+    "no_qr": ReceiptOptions(
+        provider=PROVIDERS[0], with_qr=False, item_count=2, patient=DEMO_PATIENT
+    ),
+    "unlisted": ReceiptOptions(
+        provider=PROVIDERS[1], item_count=1, unlisted_item=True, patient=DEMO_PATIENT
+    ),
 }
 
 

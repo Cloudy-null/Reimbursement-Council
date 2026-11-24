@@ -48,7 +48,9 @@ def document_label(language: LanguageMessages, name: str) -> str:
     return documents.get(name) or language.fields.get(name, name)
 
 
-def _documents(check: CrossCheckResult, kinds: Mapping[str, str]) -> list[str]:
+def mismatch_documents(check: CrossCheckResult, kinds: Mapping[str, str]) -> list[str]:
+    """The kinds that disagree, plus "account" for the patient check (it compares a document
+    with the member's account)."""
     names = [kinds.get(document_id, "other") for document_id in check.document_ids]
     return [*names, ACCOUNT] if check.name == "patient_matches_account" else names
 
@@ -70,7 +72,7 @@ def member_requests(
     ]
     for check in cross_checks:
         if check.passed is False and check.field not in asked_fields:
-            documents = _documents(check, kinds or {})
+            documents = mismatch_documents(check, kinds or {})
             names = " / ".join(document_label(english, d) for d in documents)
             text = english.requests.mismatch.format(
                 field=_label(check.field, settings), documents=names

@@ -10,7 +10,10 @@ from typing import Annotated, Any
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from reimbursement_council.core.decision.document_requests import document_label
+from reimbursement_council.core.decision.document_requests import (
+    document_label,
+    mismatch_documents,
+)
 from reimbursement_council.core.models.claim import Claim, ExtractionResult
 from reimbursement_council.core.models.common import DocumentKind, FieldName
 from reimbursement_council.pipeline.document_set import DocumentSet
@@ -43,7 +46,8 @@ def check_values(
     mismatches = []
     for check in documents.cross_checks:
         if check.passed is False:
-            names = _kinds(documents, check.document_ids)
+            kinds = {d.document_id: d.kind for d in documents.documents}
+            names = mismatch_documents(check, kinds)
             label = language.fields.get(check.field, check.field)
             text = " / ".join(document_label(language, name) for name in names)
             mismatches.append(language.requests.mismatch.format(field=label, documents=text))
@@ -79,11 +83,6 @@ def _read_values(reading: ExtractionResult | None) -> dict[FieldName, str | None
         best = None if reading is None else reading.best(field)
         values[field] = None if best is None else best.value
     return values
-
-
-def _kinds(documents: DocumentSet, ids: list[str]) -> list[str]:
-    by_id = {d.document_id: d.kind for d in documents.documents}
-    return [by_id.get(i, "other") for i in ids]
 
 
 def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
