@@ -71,6 +71,8 @@ _DATE_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}):(\d{2}))?")
 _DATE_DMY = re.compile(
     r"(?<!\d)(\d{1,2})([/.-])(\d{1,2})\2(\d{4}|\d{2})(?!\d)(?!\.\d)(?:\s+(\d{1,2}):(\d{2}))?"
 )
+_TIME = re.compile(r"(?<!\d)\d{1,2}\s?:\s?\d{2}(?!\d)")
+_DATE_WORD = re.compile(r"date|تاريخ", re.IGNORECASE)
 _DIGITISH = re.compile(r"[0-9OoIl]{2,}")
 _LONE_INT = re.compile(r"^\d{1,2}$")
 
@@ -236,14 +238,17 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
 def _first_date(text: str, years: tuple[int, int]) -> tuple[date, str | None, str | None] | None:
     """The date in the text, with the time after it if there is one. A YYYY-MM-DD date wins over
     a day-first one (a receipt may print the Hijri date first). Only real calendar dates in the
-    year range count; a two digit year counts only with slashes (12/03/18), not in codes."""
+    year range count. A two digit year counts with slashes (12/03/18), or with dashes or dots
+    when the row also has a time or the word date (17-03-18 14:49): a code like "Ref 10-10-10"
+    has neither."""
+    stamped = bool(_TIME.search(text) or _DATE_WORD.search(text))
     candidates: list[tuple[int, int, str, str, str, str | None, str | None]] = []
     for match in _DATE_ISO.finditer(text):
         year, month, day, hour, minute = match.groups()
         candidates.append((0, match.start(), year, month, day, hour, minute))
     for match in _DATE_DMY.finditer(text):
         day, sep, month, year, hour, minute = match.groups()
-        if len(year) == 2 and sep != "/":
+        if len(year) == 2 and sep != "/" and not stamped:
             continue
         full_year = f"20{year}" if len(year) == 2 else year
         candidates.append((1, match.start(), full_year, month, day, hour, minute))

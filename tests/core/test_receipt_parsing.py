@@ -216,3 +216,18 @@ def test_hijri_dates_old_years_and_codes_are_not_read_as_the_date(
     row: str, expected: str | None
 ) -> None:
     assert value(parse([line(row, 100, width=400)]), "treatment_date") == expected
+
+
+@pytest.mark.parametrize(
+    "row, expected",
+    [  # real SROIE rows: a short dashed date next to a time or a date label is a date
+        ("17-03-18 14 :49 $H01 1J86 R000110133", "2018-03-17"),
+        ("Date : 29-01-18 20:38", "2018-01-29"),
+        ("07:49PM 503094 14-12-16", "2016-12-14"),
+        ("Ref 10-10-10", None),
+    ],
+)
+def test_a_short_dashed_date_counts_next_to_a_time_or_a_date_label(
+    row: str, expected: str | None
+) -> None:
+    assert value(parse([line(row, 100, width=500)]), "treatment_date") == expected
