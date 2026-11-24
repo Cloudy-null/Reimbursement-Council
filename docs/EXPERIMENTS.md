@@ -27,7 +27,7 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 | E3 | Council vs one judge | council_enabled | Council beats the case reviewer alone (needs Gemini key) and beats the document checker alone | Precision at the same automation rate | pending |
 | E4 | Tuned weights vs equal weights | weights_tuned | Tuned weights beat equal weights | Total cost | pending |
 | E5 | Disagreement sends to human | disagreement_routing_enabled | Catches wrong approvals that the average hides | Auto approve precision | pending |
-| E6 | Calibration | calibration_enabled | Calibrated scores make cost-based lanes safer | ECE and total cost | pending |
+| E6 | Calibration | calibration_enabled | Calibrated scores make cost-based lanes safer | ECE and total cost | ECE 0.155 to 0.051, cost 175 to 125 SAR, precision 1.0 both (synthetic check, 60 claims) |
 | E7 | Cost-based lanes vs one fixed threshold | cost_lanes_enabled | Fewer reviews for the same precision | Reviews per 1000 | pending |
 | E8 | Self-fix choice | self_fix_enabled | Members fix many low scores themselves | Reviews per 1000, self-fix success | pending |
 | E9 | History member | history_member_enabled | Raises automation for trusted members and providers | Automation rate; false reject rate new vs tenured | pending |
@@ -72,4 +72,38 @@ What it means: on a clean photo the reader gets everything right. Amounts surviv
 because the arithmetic checks and the QR back them up. Names and line items are the weak spot
 on damaged photos, and heavy damage breaks item reading, so those claims must go to self-fix or
 a human, not auto approve.
+```
+
+```
+Run: E6, Platt calibration
+Date: 2026-11-24
+Commit: 9732afa (code); calibration fitted by this run, committed as config/calibration.yaml
+Command: uv run reimbursement-council make-claims --count 120 --seed 11 --out data/sets/day3/tune
+         uv run reimbursement-council make-claims --count 60 --seed 12 --out data/sets/day3/check
+         uv run reimbursement-council run-set data/sets/day3/tune --reader easyocr --calibration off --resume
+         uv run reimbursement-council fit-calibration data/sets/day3/tune/results.json
+           -> a=17.1744 b=-12.5467, fitted on 102 claims (18 rejected by a hard rule left out)
+         uv run reimbursement-council run-set data/sets/day3/check --reader easyocr --calibration off --results-name results_raw.json --resume
+         uv run reimbursement-council run-set data/sets/day3/check --reader easyocr --calibration on --results-name results_calibrated.json --resume
+Test set: synthetic check set, 60 claims (seed 12), read with EasyOCR. Fitted on the synthetic
+          tune set (seed 11, 120 claims). Synthetic, not real_e2e, so not a number for slides.
+Switch off: automation 0.4500, auto approve precision 1.0, payable recall 0.3556,
+            false reject 0.0, correct reject 0.7333, reviews per 1000 116.7,
+            self-fix per 1000 433.3, ECE 0.1551, total cost 175.00 SAR,
+            heavy damage: 3 claims, all self_fix, 0 wrong auto approves.
+            Lanes: auto_approve 16, auto_reject 11, self_fix 26, human_review 7.
+Switch on:  automation 0.4667, auto approve precision 1.0, payable recall 0.3778,
+            false reject 0.0, correct reject 0.7333, reviews per 1000 83.3,
+            self-fix per 1000 450.0, ECE 0.0510, total cost 125.00 SAR,
+            heavy damage: 3 claims, all self_fix, 0 wrong auto approves.
+            Lanes: auto_approve 17, auto_reject 11, self_fix 27, human_review 5.
+Changed lanes (2 of 60, both payable): claim_12_0058 human_review -> auto_approve, paid right;
+            claim_12_0039 (light damage, payout not read) human_review -> self_fix.
+Tune set, switch off, for reference: automation 0.3667, precision 1.0, false reject 0.0,
+            ECE 0.1774, total cost 750.00 SAR, self-fix per 1000 383.3 (46 claims: 16 with no
+            damage, 20 light, 10 unreadable), heavy damage 10 claims all self_fix.
+What it means: calibration cuts the calibration error to a third (0.155 to 0.051) with no wrong
+approvals and no false rejects. The cost drop (175 to 125 SAR) is only two fewer reviews, and one
+of them became a self-fix, which has no cost yet (CHECK in HANDOVER), so the cost gain is small
+and partly an effect of how cost is counted. 60 claims is a small set.
 ```
