@@ -170,6 +170,7 @@ class LanguageMessages(ConfigModel):
     requests: RequestMessages
     fields: dict[str, str]
     documents: dict[DocumentKind, str]
+    or_word: str
 
 
 class MessageConfig(ConfigModel):

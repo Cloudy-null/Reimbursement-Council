@@ -35,6 +35,7 @@ en:
     prescription: "a prescription"
     medical_report: "a medical report"
     other: "another document"
+  or_word: "or"
 ar:
   lanes:
     approved: "تمت الموافقة على مطالبتك. سنحول لك {amount} ريال."
@@ -71,3 +72,4 @@ ar:
     prescription: "وصفة طبية"
     medical_report: "تقرير طبي"
     other: "مستند آخر"
+  or_word: "أو"
