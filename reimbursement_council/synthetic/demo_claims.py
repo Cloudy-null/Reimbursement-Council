@@ -80,3 +80,16 @@ def demo_claims(
         ],
         "pdf": [DemoFile(file_name="invoice.pdf", receipt=pdf_lab, as_pdf=True)],
     }
+
+
+def demo_fixes(issued: datetime, prices: dict[str, PriceListItem]) -> dict[str, list[DemoFile]]:
+    """Files the member sends when asked: the mismatch claim's report with the right patient."""
+    right = make_clinical_document(
+        random.Random(906),
+        "medical_report",
+        PROVIDERS[0],
+        DEMO_PATIENT,
+        issued,
+        [prices["CONS-GP"]],
+    ).model_copy(update={"language": "en_first"})
+    return {"mismatch": [DemoFile(file_name="report-right-patient.png", clinical=right)]}

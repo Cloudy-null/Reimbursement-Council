@@ -16,7 +16,7 @@ from PIL import Image
 from reimbursement_council.adapters.document_drawing import draw_clinical_document
 from reimbursement_council.adapters.receipt_drawing import draw_receipt
 from reimbursement_council.core.models.claim import Document
-from reimbursement_council.synthetic.demo_claims import DemoFile, demo_claims
+from reimbursement_council.synthetic.demo_claims import DemoFile, demo_claims, demo_fixes
 from reimbursement_council.web.context import WebContext
 
 logger = logging.getLogger(__name__)
@@ -43,16 +43,15 @@ def demo_folder(ctx: WebContext) -> Path:
     return ctx.samples / "demo" / day.isoformat()
 
 
-def ensure_demo_files(ctx: WebContext) -> dict[str, list[Path]]:
-    """Every demo claim's files, drawn if today's are not there yet."""
-    folder = demo_folder(ctx)
-    day = datetime.fromisoformat(folder.name)
-    issued = (day - timedelta(days=3)).replace(hour=10, minute=30)
-    claims = demo_claims(issued, ctx.settings.prices, ctx.settings.policy.vat_rate)
+def _issued(folder: Path) -> datetime:
+    return (datetime.fromisoformat(folder.name) - timedelta(days=3)).replace(hour=10, minute=30)
+
+
+def _write(folder: Path, files: dict[str, list[DemoFile]]) -> dict[str, list[Path]]:
     paths: dict[str, list[Path]] = {}
-    for name in DEMO_NAMES:
+    for name, demo_files in files.items():
         paths[name] = []
-        for file in claims[name]:
+        for file in demo_files:
             path = folder / name / file.file_name
             if not path.is_file():
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -62,13 +61,28 @@ def ensure_demo_files(ctx: WebContext) -> dict[str, list[Path]]:
     return paths
 
 
+def ensure_demo_files(ctx: WebContext) -> dict[str, list[Path]]:
+    """Every demo claim's files, drawn if today's are not there yet."""
+    folder = demo_folder(ctx)
+    claims = demo_claims(_issued(folder), ctx.settings.prices, ctx.settings.policy.vat_rate)
+    return _write(folder, {name: claims[name] for name in DEMO_NAMES})
+
+
+def ensure_demo_fix_files(ctx: WebContext) -> dict[str, list[Path]]:
+    """Files to send in the fix step of a demo (in <claim>/fix/)."""
+    folder = demo_folder(ctx)
+    fixes = demo_fixes(_issued(folder), ctx.settings.prices)
+    return _write(folder, {f"{name}/fix": files for name, files in fixes.items()})
+
+
 def warm_up(ctx: WebContext) -> None:
     """Read every demo file once (this also loads the OCR model). Errors are only logged: a
     failed warm-up makes the first demo slower, never broken."""
-    for name, paths in ensure_demo_files(ctx).items():
+    every = ensure_demo_files(ctx) | ensure_demo_fix_files(ctx)
+    for name, paths in every.items():
         for path in paths:
             document = Document(
-                document_id=f"warm-{name}-{path.stem}",
+                document_id=f"warm-{name.replace('/', '-')}-{path.stem}",
                 claim_id="warm-up",
                 kind="other",
                 file_path=str(path),

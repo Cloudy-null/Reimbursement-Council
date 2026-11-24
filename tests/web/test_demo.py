@@ -67,4 +67,13 @@ def test_warm_up_reads_every_demo_file_once(web: tuple[TestClient, WebContext]) 
     _, ctx = web
     seen: list[str] = []
     warm_up(dataclasses.replace(ctx, reader_for=lambda d: CountingReader(seen)))
-    assert len(seen) == sum(len(p) for p in ensure_demo_files(ctx).values()) == 7
+    assert len(seen) == sum(len(p) for p in ensure_demo_files(ctx).values()) + 1 == 8
+
+
+def test_the_mismatch_demo_has_a_right_report_to_send_in_the_fix_step(
+    web: tuple[TestClient, WebContext],
+) -> None:
+    from reimbursement_council.web.demo import ensure_demo_fix_files
+
+    (path,) = ensure_demo_fix_files(web[1])["mismatch/fix"]
+    assert path.name == "report-right-patient.png" and path.read_bytes()[:4] == b"\x89PNG"
