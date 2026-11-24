@@ -8,7 +8,7 @@ description: Use whenever you measure the effect of a switch, weight, threshold 
 Goal: a fair before and after number for one idea, that anyone can reproduce.
 
 1. Find the experiment row in docs/EXPERIMENTS.md. If it is not there, add a row first (ID, idea, switch, hypothesis, main metric) and write the hypothesis before running anything.
-2. Check the switch exists in config/experiments.yaml and is read from config, not hardcoded. If not, add it and a test that proves it changes behavior.
+2. Check the switch exists in config (today the switches are in config/decision.yaml; config/experiments.yaml for named switch sets is planned, not built yet) and is read from config, not hardcoded. If not, add it and a test that proves it changes behavior.
 3. Make sure the working tree is clean and commit any change first. Note the commit hash.
 4. Pick the test set:
    - Tuning a weight or threshold: synthetic_tune only.
