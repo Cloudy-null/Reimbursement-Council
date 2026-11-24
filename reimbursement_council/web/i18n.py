@@ -97,6 +97,11 @@ TEXT: dict[str, dict[str, str]] = {
         "submit_note": "You can send with a document still missing. We will ask you for it.",
         "refused": "Not added",
         "export": "Download claim data (JSON)",
+        "consent": (
+            "I agree that the documents I upload are read by this system to process this "
+            "claim. They are kept for this claim only."
+        ),
+        "consent_needed": "Please agree to the reading of your documents first.",
         "refused_type": "not a PNG or JPG photo or a PDF",
         "refused_size": "empty, or too large",
         "error_money": "Write the amount like 150.00",
@@ -202,6 +207,11 @@ TEXT: dict[str, dict[str, str]] = {
         "submit_note": "يمكنك الإرسال مع نقص مستند. سنطلبه منك لاحقا.",
         "refused": "لم يضف",
         "export": "تنزيل بيانات المطالبة (JSON)",
+        "consent": (
+            "أوافق على أن يقرأ هذا النظام المستندات التي أرفعها لمعالجة هذه المطالبة. "
+            "تحفظ لهذه المطالبة فقط."
+        ),
+        "consent_needed": "وافق أولا على قراءة مستنداتك من فضلك.",
         "refused_type": "ليس صورة PNG أو JPG أو ملف PDF",
         "refused_size": "فارغ أو كبير جدا",
         "error_money": "اكتب المبلغ مثل 150.00",

@@ -97,7 +97,7 @@ def test_refusal_reasons_are_in_the_page_language(web: tuple[TestClient, WebCont
     client, _ = web
     response = client.post(
         "/claims",
-        data={"patient": member_id(0), "lang": "ar"},
+        data={"consent": "yes", "patient": member_id(0), "lang": "ar"},
         files=[
             ("photos", ("r.png", b"pharmacy", "image/png")),
             ("photos", ("notes.gif", b"GIF89a", "image/gif")),

@@ -86,7 +86,7 @@ class FakeReader:
 def upload(client: TestClient, *files: tuple[str, bytes]) -> tuple[str, object]:
     response = client.post(
         "/claims",
-        data={"patient": member_id(0)},
+        data={"consent": "yes", "patient": member_id(0)},
         files=[("photos", (name, data, "image/png")) for name, data in files],
         follow_redirects=False,
     )

@@ -34,7 +34,7 @@ def web(tmp_path: Path) -> tuple[TestClient, WebContext]:
 def send_sample(client: TestClient, patient: int = 0, lang: str = "en") -> str:
     response = client.post(
         "/claims",
-        data={"patient": member_id(patient), "sample": "clinic", "lang": lang},
+        data={"consent": "yes", "patient": member_id(patient), "sample": "clinic", "lang": lang},
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -78,19 +78,26 @@ def test_uploaded_photo_and_bad_inputs(web: tuple[TestClient, WebContext]) -> No
     client, ctx = web
     ok = client.post(
         "/claims",
-        data={"patient": member_id(1)},
+        data={"consent": "yes", "patient": member_id(1)},
         files={"photos": ("r.png", png(), "image/png")},
         follow_redirects=False,
     )
     assert ok.status_code == 303
     gif = client.post(
         "/claims",
-        data={"patient": member_id(1)},
+        data={"consent": "yes", "patient": member_id(1)},
         files={"photos": ("r.gif", b"GIF89a", "image/gif")},
     )
     assert gif.status_code == 400
-    assert client.post("/claims", data={"patient": "nobody", "sample": "clinic"}).status_code == 400
-    assert client.post("/claims", data={"patient": member_id(1)}).status_code == 400
+    assert (
+        client.post(
+            "/claims", data={"consent": "yes", "patient": "nobody", "sample": "clinic"}
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post("/claims", data={"consent": "yes", "patient": member_id(1)}).status_code == 400
+    )
 
 
 def test_reviewer_flow(web: tuple[TestClient, WebContext]) -> None:

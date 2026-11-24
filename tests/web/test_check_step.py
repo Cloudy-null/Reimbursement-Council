@@ -86,7 +86,7 @@ def test_one_bad_file_is_refused_and_the_others_kept(web: tuple[TestClient, WebC
     client, ctx = web  # Review Focus 5
     response = client.post(
         "/claims",
-        data={"patient": member_id(0)},
+        data={"consent": "yes", "patient": member_id(0)},
         files=[
             ("photos", ("r.png", b"pharmacy", "image/png")),
             ("photos", ("notes.gif", b"GIF89a", "image/gif")),

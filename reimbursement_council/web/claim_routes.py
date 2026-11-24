@@ -76,8 +76,12 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         lang: Annotated[str, Form()] = "en",
         sample: Annotated[str, Form()] = "",
         photos: Annotated[list[UploadFile] | None, File()] = None,
+        consent: Annotated[str, Form()] = "",
     ) -> Response:
-        """Step 1 (spec 6.5): save the files as a draft claim. Nothing is decided yet."""
+        """Step 1 (spec 6.5): save the files as a draft claim. Nothing is decided yet. Nothing
+        is read before the member agrees (consent step); the time they agreed is kept."""
+        if consent != "yes":
+            raise HTTPException(status_code=400, detail=text_for(lang)["consent_needed"])
         try:
             person = ctx.reference.member(patient)
         except LookupError as error:
@@ -110,6 +114,7 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             status="draft",
             documents=documents,
             retries_used=0,
+            consented_at=now,
         )
         ctx.store.save_claim(claim)
         if refused:

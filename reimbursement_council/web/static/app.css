@@ -110,3 +110,5 @@ ul.plain { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
 p.note.low { background: var(--confidence-low); color: var(--confidence-low-ink); padding: 8px; border-radius: 6px; }
 details.card summary { cursor: pointer; font-weight: 600; }
 .row input { width: 100%; }
+.consent { display: flex; gap: 10px; align-items: flex-start; color: var(--ink); }
+.consent input { margin-top: 4px; width: 20px; height: 20px; flex: none; }
