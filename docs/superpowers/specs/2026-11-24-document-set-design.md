@@ -1,7 +1,7 @@
 # Document set, check before submit, and cross-document checks
 
 Date: 2026-11-24
-Status: draft, waiting for owner approval.
+Status: approved by the owner on 2026-11-24, with two changes recorded in section 9.
 Source: docs/brief/project-brief.md (official brief), owner requests on 2026-11-24.
 
 ## 1. Why
@@ -78,13 +78,19 @@ Picked by the owner on 2026-11-24 (first option in each):
 - An invoice and a receipt for the same purchase (my call): both are allowed. The one with a ZATCA QR, else the invoice, is the primary billing document used for the payout. The other is evidence: its total and VAT number are compared with the primary. The blocker "more than one receipt or invoice" stays only when two billing documents disagree on the total, because then we do not know which purchase is claimed.
 
 ### 6.4 What decides the lane
-choose_lane gets explicit paths, in this order (my call): (1) a hard rule failed: auto_reject; (2) a member edit contradicts evidence: human_review; (3) possible duplicate: human_review; (4) a required document is missing: self_fix with an add_document request, human_review with no retries left; (5) a cross-check mismatch: self_fix with a request to replace the document or correct the field, human_review with no retries left; (6) a hard rule could not run: as today; (7) approve or score paths as today. Paths 4 and 5 do not depend on the score, so the harness can expect self_fix for those defects. When a document is missing and there is also a mismatch, the missing document is asked for first, because adding it can settle both. The document checker makes the add_document and mismatch requests.
+choose_lane gets explicit paths in three groups (owner decision, 2026-11-24):
+1. Reject: a hard rule failed on confident data: auto_reject.
+2. What the member can fix, while retries are left: self_fix. This covers a missing required document (add_document), a cross-check mismatch (replace the document or correct the field), a hard rule that could not run on unclear data (retake_photo or confirm_field), and a no-evidence edit on a money or hard rule field that has not had its retake yet (retake_photo).
+3. What only a human can settle: human_review. This covers a member edit that contradicts evidence, a possible duplicate, a no-evidence edit on a money or hard rule field that is still unreadable after the retake, and anything in group 2 when no retries are left.
+Then, when none of these apply, the approve and score paths as today.
+
+A claim with problems from both group 2 and group 3 asks the member first (self_fix). On the next try, whatever is still wrong goes to a human. This means a contradicting edit on the first try still gets one chance to be fixed by the member (for example by adding the document that settles it). These paths do not depend on the score, so the harness can expect self_fix for those defects. When several member requests apply, the order is: missing document, mismatch, retake, confirm field; adding a document can settle the later ones. The document checker makes the add_document, mismatch and retake requests.
 
 - Missing required document: an approval blocker (never auto approve) and a council request of kind add_document naming the missing group. With retries left this is self_fix; without, human_review.
 - Cross-check mismatch: the document checker's score is multiplied by cross_check_score_factor and it adds a confirm_field request naming the field and the two documents. This lowers p_good and usually gives self_fix.
-- Member edit that contradicts evidence: rule `member_edit` is not_sure, and choose_lane sends it to human_review straight away (the same special path as a possible duplicate), never self_fix, because asking the same member again does not settle it. The reviewer card shows read and typed values side by side with the evidence note.
+- Member edit that contradicts evidence: rule `member_edit` is not_sure and belongs to group 3. If the claim also has a group 2 problem, the member is asked first; otherwise it goes to human_review. The reviewer card shows read and typed values side by side with the evidence note.
 - Member edit that matches evidence: the field is used with source member_typed and its evidence confidence. No human needed.
-- Member edit with no evidence either way (my call): a field that feeds the payout or a hard rule (subtotal, VAT, total, treatment date, invoice time, patient name, VAT number) counts as contradicting and goes to a human. Asking the member again would only loop. Any other field (provider name) is used as member_typed.
+- Member edit with no evidence either way (owner decision, 2026-11-24): for a field that feeds the payout or a hard rule (subtotal, VAT, total, treatment date, invoice time, patient name, VAT number), the member is first asked once for a clearer photo (retake_photo). If the new photo still cannot be read for that field and the member typed it again, it goes to human_review with read and typed values side by side. The claim records that the retake was asked (FieldEdit gets retake_asked), so it is asked only once. Any other field (provider name) is used as member_typed.
 - Changing a document's type or the claim category is also an edit (my call). If the change removes a required document that the detected type or category asked for, it goes to a human like a contradicting edit. A change that adds a requirement, or keeps the same requirements, needs no human.
 - What clears a mismatch on the second try (my call): replacing or adding a document, or correcting the field so it matches the other documents. If the member keeps the mismatched value and sends again, that is an edit that contradicts evidence, so it goes to a human, not round again.
 - Evidence for an edit, in order: the QR on the same document, the same field on another document, the arithmetic checks with the edited value put in. One source that agrees is "supports"; one that disagrees (and none that agrees) is "contradicts".
@@ -121,13 +127,19 @@ choose_lane gets explicit paths, in this order (my call): (1) a hard rule failed
 - Layout of the drawn prescription and report, within DESIGN.md for the website and plain document style for the drawings.
 - How the check page lays out several documents on a phone.
 
-## 9. Calls made in this design, for the owner to check
-- Lane order: hard rule fail, contradicting edit, duplicate, missing document, mismatch, unclear hard rule, then the score paths.
+## 9. Decisions and calls
+
+Owner decisions (2026-11-24):
+- Lane order: reject first, then everything the member can fix (missing document, mismatch, retake request), then human review (contradicting edit, duplicate, no-evidence money or hard rule edit after the retake). A claim with both kinds asks the member first; only what is still wrong after that goes to a human.
+- A no-evidence edit on a money or hard rule field first asks for a clearer photo once. Only if the field is still unreadable and the member typed it does it go to human review.
+- An edit that matches the evidence (QR, another document, the arithmetic) stays member_typed and needs no human.
+- Approach picks in section 5.
+
+Calls made by Claude, for the owner to check:
 - Reading once at upload; the pipeline judges the stored reading.
 - Provider is compared only between a medical report and an outpatient or dental invoice.
 - An invoice and a receipt for one purchase are both allowed; the QR one is primary, the other is evidence.
-- A no-evidence edit to any field that feeds the payout or a hard rule goes to a human.
-- Changing a type or category that removes a required document goes to a human.
+- Changing a type or category that removes a required document goes to a human (group 3).
 - Keeping a mismatched value on the second try goes to a human.
 - New sets replace the old seeds' claims; baselines are run again before E12.
 - A date mismatch between documents starts at 0 days of tolerance.
