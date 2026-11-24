@@ -6,7 +6,8 @@
 - Dates: every read treatment date must be within date_tolerance_days of the others.
 - Provider: only between a medical report and a billing document, and only for the categories
   in provider_check_categories. A prescription from a clinic and a bill from a pharmacy is
-  normal, so those are never compared.
+  normal, so those are never compared. Names are compared in the same script, like patients:
+  the QR gives the Arabic name, a report may be read in English (found in the E12 run).
 Missing data gives passed = None ("cannot tell"), never a failure.
 """
 
@@ -105,6 +106,19 @@ def _dates_check(documents: Sequence[DocumentReading], tolerance_days: int) -> C
     )
 
 
+def _same_provider(left: Sequence[str], right: Sequence[str], ratio: float) -> bool | None:
+    """Do any two names in the same script match? None when no two share a script."""
+    pairs = [
+        (a, b)
+        for a in left
+        for b in right
+        if bool(ARABIC_LETTERS.search(a)) == bool(ARABIC_LETTERS.search(b))
+    ]
+    if not pairs:
+        return None
+    return any(_same_name(a, b, ratio) for a, b in pairs)
+
+
 def _providers_check(
     documents: Sequence[DocumentReading], categories: Sequence[str], settings: Settings
 ) -> CrossCheckResult:
@@ -118,25 +132,25 @@ def _providers_check(
     if not set(categories) & set(settings.documents.provider_check_categories):
         return unknown
     named = [
-        (document, name)
+        (document, names)
         for document, extraction in documents
-        if (name := _value(extraction, "provider_name")) is not None
+        if (names := [f.value for f in extraction.all_named("provider_name")])
     ]
     reports = [(d, n) for d, n in named if d.kind == "medical_report"]
     bills = [(d, n) for d, n in named if d.kind in BILLING_KINDS]
-    if not reports or not bills:
-        return unknown
     ratio = settings.documents.name_match_ratio
+    verdicts = [
+        (report, bill, verdict)
+        for report, report_names in reports
+        for bill, bill_names in bills
+        if (verdict := _same_provider(report_names, bill_names, ratio)) is not None
+    ]
+    if not verdicts:
+        return unknown
     wrong = sorted(
-        {
-            doc.document_id
-            for report, report_name in reports
-            for bill, bill_name in bills
-            if not _same_name(report_name, bill_name, ratio)
-            for doc in (report, bill)
-        }
+        {doc.document_id for report, bill, same in verdicts if not same for doc in (report, bill)}
     )
-    every = sorted({d.document_id for d, _ in reports + bills})
+    every = sorted({d.document_id for report, bill, _ in verdicts for d in (report, bill)})
     return CrossCheckResult(
         name="providers_agree",
         passed=not wrong,

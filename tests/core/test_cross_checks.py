@@ -141,3 +141,33 @@ def test_no_arabic_name_on_the_account_skips_arabic_names() -> None:
         [doc("p", "prescription", patient_name="عمر أحمد")], member, ["pharmacy"], repo_settings()
     )
     assert result(checks, "patient_matches_account").passed is None
+
+
+def with_also(
+    reading: tuple[Document, ExtractionResult], name: str, value: str, source: str = "qr"
+) -> tuple[Document, ExtractionResult]:
+    document, extraction = reading
+    extra = extraction.fields[0].model_copy(
+        update={"name": field_name(name), "value": value, "original_text": value, "source": source}
+    )
+    return document, extraction.model_copy(update={"fields": [extra, *extraction.fields]})
+
+
+def test_providers_are_compared_in_the_same_script() -> None:
+    # Seen in E12: the QR gives the clinic's Arabic name, the report was read in English.
+    bill = with_also(
+        doc("i", "invoice", provider_name="Al Noor Clinic"), "provider_name", "عيادة النور"
+    )
+    checks = run(
+        bill, doc("m", "medical_report", provider_name="Al Noor Clinic"), categories=["outpatient"]
+    )
+    assert result(checks, "providers_agree").passed is True
+
+
+def test_providers_in_different_scripts_only_cannot_be_told() -> None:
+    checks = run(
+        doc("i", "invoice", provider_name="عيادة النور"),
+        doc("m", "medical_report", provider_name="Al Shifa Medical Center"),
+        categories=["outpatient"],
+    )
+    assert result(checks, "providers_agree").passed is None
