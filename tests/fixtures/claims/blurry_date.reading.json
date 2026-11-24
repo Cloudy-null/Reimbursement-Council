@@ -60,5 +60,10 @@
       "confidence": 0.95
     }
   ],
-  "qr_payloads": []
+  "qr_payloads": [],
+  "text_lines": [
+    "Al Noor Clinic",
+    "Receipt",
+    "Patient: Sara Ahmed"
+  ]
 }

@@ -53,9 +53,9 @@ def test_second_billing_document_alone_does_not_block() -> None:
 
 def test_billing_documents_with_different_totals_block() -> None:
     blockers = approval_blockers(
-        make_claim(), receipt(), PAYOUT, repo_settings(), billing_totals_differ=True
+        make_claim(), receipt(), PAYOUT, repo_settings(), billing_documents_differ=True
     )
-    assert any("different totals" in b for b in blockers)
+    assert any("different totals or VAT numbers" in b for b in blockers)
 
 
 def test_a_missing_required_document_blocks() -> None:

@@ -26,7 +26,12 @@ from reimbursement_council.core.models.claim import (
     FieldEdit,
     ReaderOutput,
 )
-from reimbursement_council.core.models.common import BILLING_KINDS, DocumentKind, Model
+from reimbursement_council.core.models.common import (
+    BILLING_KINDS,
+    MONEY_FIELDS,
+    DocumentKind,
+    Model,
+)
 from reimbursement_council.core.models.decision import CrossCheckResult, DocumentNeed, RuleResult
 from reimbursement_council.core.models.reference import Member
 
@@ -43,7 +48,7 @@ class DocumentSet(Model):
     cross_checks: list[CrossCheckResult]
     edits: list[FieldEdit]
     edit_rule_results: list[RuleResult]
-    billing_totals_differ: bool
+    billing_documents_differ: bool
     notes: list[str]
 
     @property
@@ -65,16 +70,38 @@ def _without_copies(claim: Claim) -> tuple[list[Document], list[str]]:
     return kept, notes
 
 
+def _read(
+    document: Document,
+    stored: Mapping[str, ReaderOutput],
+    reader_for: Callable[[Document], DocumentReader],
+) -> tuple[ReaderOutput, str | None]:
+    """The stored reading, or a fresh one. A document that cannot be read (unknown file type,
+    missing file) gives an empty reading and a note, so one bad file never stops the claim."""
+    if document.document_id in stored:
+        return stored[document.document_id], None
+    try:
+        return reader_for(document).read(document), None
+    except (ValueError, OSError) as error:
+        logger.warning("document %s could not be read: %s", document.document_id, error)
+        note = f"document {document.document_id} could not be read: {error}"
+        return ReaderOutput(fields=[], line_items=[], qr_payloads=[]), note
+
+
 def _with_kind(document: Document, reading: ReaderOutput, settings: Settings) -> Document:
-    """Detect the kind unless the member set it. A reading with no text and no QR (a fixture,
-    or the QR-only reader on a document without a QR) gives nothing to detect from, so the
-    kind given at upload stays."""
-    if not reading.text_lines and not reading.qr_payloads:
-        return document.model_copy(update={"detected_kind": document.kind})
+    """Detect the kind unless the member set it; the detected kind is always kept, so a member
+    change can be compared with it. A reading with no text and no QR is "other": nothing on it
+    says what it is."""
     detected = detect_kind(reading.text_lines, reading.qr_payloads, settings.documents)
     if document.kind_source == "member":
         return document.model_copy(update={"detected_kind": detected})
     return document.model_copy(update={"kind": detected, "detected_kind": detected})
+
+
+def _without_money(reading: ReaderOutput) -> ReaderOutput:
+    """Money and line items count only on billing documents (spec 6.3), so a note or a report
+    with a number on it can never back a member's edit to the total."""
+    fields = [f for f in reading.fields if f.name not in MONEY_FIELDS]
+    return reading.model_copy(update={"fields": fields, "line_items": []})
 
 
 def _primary(documents: list[Document], raw: Mapping[str, ReaderOutput]) -> str | None:
@@ -95,6 +122,8 @@ def _judged_edits(
         if own is None:
             notes.append(f"an edit names document {edit.document_id}, which is not in the claim")
             continue
+        read = own.best(edit.field)
+        edit = edit.model_copy(update={"read_value": None if read is None else read.value})
         others = [r for doc_id, r in readings.items() if doc_id != edit.document_id]
         judged.append(judge_edit(edit, own, others, settings))
     return judged, notes
@@ -136,13 +165,15 @@ def _edit_rules(
     return rules
 
 
-def _totals_differ(documents: list[Document], readings: Mapping[str, ExtractionResult]) -> bool:
-    totals = {
-        total
-        for d in documents
-        if d.kind in BILLING_KINDS and (total := readings[d.document_id].money("total")) is not None
-    }
-    return len(totals) > 1
+def _billing_documents_differ(
+    documents: list[Document], readings: Mapping[str, ExtractionResult]
+) -> bool:
+    """Two billing documents with different totals or VAT numbers are two purchases, so we do
+    not know which one is claimed."""
+    bills = [readings[d.document_id] for d in documents if d.kind in BILLING_KINDS]
+    totals = {total for r in bills if (total := r.money("total")) is not None}
+    vat_numbers = {field.value for r in bills if (field := r.best("vat_number")) is not None}
+    return len(totals) > 1 or len(vat_numbers) > 1
 
 
 def read_document_set(
@@ -154,8 +185,18 @@ def read_document_set(
 ) -> DocumentSet:
     stored = readings or {}
     documents, notes = _without_copies(claim)
-    raw = {d.document_id: stored.get(d.document_id) or reader_for(d).read(d) for d in documents}
+    raw: dict[str, ReaderOutput] = {}
+    for document in documents:
+        reading, note = _read(document, stored, reader_for)
+        raw[document.document_id] = reading
+        notes += [note] if note else []
     documents = [_with_kind(d, raw[d.document_id], settings) for d in documents]
+    raw = {
+        d.document_id: (
+            raw[d.document_id] if d.kind in BILLING_KINDS else _without_money(raw[d.document_id])
+        )
+        for d in documents
+    }
     first_reading = {
         doc_id: extract_document(doc_id, reading, settings) for doc_id, reading in raw.items()
     }
@@ -194,6 +235,6 @@ def read_document_set(
         cross_checks=checks,
         edits=edits,
         edit_rule_results=_edit_rules(edits, detected_needs, needs),
-        billing_totals_differ=_totals_differ(documents, final),
+        billing_documents_differ=_billing_documents_differ(documents, final),
         notes=notes + edit_notes,
     )

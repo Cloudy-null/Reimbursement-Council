@@ -18,15 +18,18 @@ def approval_blockers(
     payout: PayoutResult | None,
     settings: Settings,
     missing: Sequence[DocumentNeed] = (),
-    billing_totals_differ: bool = False,
+    billing_documents_differ: bool = False,
 ) -> list[str]:
-    """missing: required documents not in the claim. billing_totals_differ: two billing
-    documents name different totals, so we do not know which purchase is claimed."""
+    """missing: required documents not in the claim. billing_documents_differ: two billing
+    documents name different totals or VAT numbers, so we do not know which purchase is
+    claimed."""
     blockers: list[str] = []
     for need in missing:
         blockers.append(f"missing document: {' or '.join(need.group)}")
-    if billing_totals_differ:
-        blockers.append("the receipts or invoices in the claim show different totals")
+    if billing_documents_differ:
+        blockers.append(
+            "the receipts or invoices in the claim show different totals or VAT numbers"
+        )
     if extraction is None:
         return blockers
 

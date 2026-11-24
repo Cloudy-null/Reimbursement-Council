@@ -83,6 +83,7 @@ def process_claim(
         documents_read=documents.readings,
         needs=documents.needs,
         cross_checks=documents.cross_checks,
+        edits=documents.edits,
     )
     votes = run_council(case, settings)
     combined, disagreement = combine_votes(votes)
@@ -101,7 +102,7 @@ def process_claim(
             payout,
             settings,
             missing=documents.missing,
-            billing_totals_differ=documents.billing_totals_differ,
+            billing_documents_differ=documents.billing_documents_differ,
         ),
     )
 

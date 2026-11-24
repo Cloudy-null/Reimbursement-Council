@@ -168,12 +168,6 @@ def test_member_set_kind_is_kept_and_the_detected_kind_remembered() -> None:
     assert prescription.kind == "prescription" and prescription.detected_kind == "medical_report"
 
 
-def test_a_reading_with_no_text_and_no_qr_keeps_its_given_kind() -> None:
-    empty = ReaderOutput(fields=[], line_items=[], qr_payloads=[])
-    result = read(claim(doc("p", kind="prescription")), {"p": empty})
-    assert result.documents[0].kind == "prescription"
-
-
 def test_kind_change_that_hides_a_missing_prescription_is_a_member_edit() -> None:
     result = read(
         claim(doc("r"), doc("m", kind="prescription", kind_source="member")),
@@ -243,4 +237,70 @@ def test_two_billing_documents_conflict_only_when_totals_differ(
         "r": bill("r"),
         "i": bill("i", total=second_total, with_qr=False, text="Tax Invoice"),
     }
-    assert read(claim(doc("r"), doc("i")), readings).billing_totals_differ is conflict
+    assert read(claim(doc("r"), doc("i")), readings).billing_documents_differ is conflict
+
+
+EMPTY = ReaderOutput(fields=[], line_items=[], qr_payloads=[])
+
+
+def test_member_kind_on_an_unreadable_photo_is_a_member_edit() -> None:  # review C1
+    result = read(
+        claim(doc("r"), doc("p", kind="prescription", kind_source="member")),
+        {"r": bill("r"), "p": EMPTY},
+    )
+    prescription = next(d for d in result.documents if d.document_id == "p")
+    assert prescription.detected_kind == "other"
+    assert [r.rule for r in result.edit_rule_results] == ["member_edit"]
+
+
+def test_an_unreadable_photo_is_other() -> None:  # review C1, Review Focus 1
+    result = read(claim(doc("r"), doc("x", kind="receipt")), {"r": bill("r"), "x": EMPTY})
+    assert next(d.kind for d in result.documents if d.document_id == "x") == "other"
+
+
+def test_money_on_a_non_billing_document_does_not_back_an_edit() -> None:  # review I1
+    note = ReaderOutput(
+        fields=[field("n", "total", "9900")], line_items=[], qr_payloads=[], text_lines=["note"]
+    )
+    raised = FieldEdit(document_id="r", field="total", read_value="4600", typed_value="9900")
+    result = read(
+        claim(doc("r"), doc("n"), edits=[raised]),
+        {"r": bill("r", total=4600, with_qr=False, text="Receipt"), "n": note},
+    )
+    assert result.edits[0].evidence != "supports"
+    assert result.readings["r"].money("total") == 4600
+    assert result.readings["n"].best("total") is None
+
+
+def test_billing_documents_with_different_vat_numbers_differ() -> None:  # review I2
+    other_shop = bill("i", with_qr=False, text="Tax Invoice")
+    other_shop = other_shop.model_copy(
+        update={"fields": [*other_shop.fields, field("i", "vat_number", "300765432100003")]}
+    )
+    first = bill("r")
+    first = first.model_copy(
+        update={"fields": [*first.fields, field("r", "vat_number", "300000000000003")]}
+    )
+    result = read(claim(doc("r"), doc("i")), {"r": first, "i": other_shop})
+    assert result.billing_documents_differ is True
+
+
+def test_a_document_that_cannot_be_read_does_not_stop_the_claim() -> None:  # review I3
+    def reader_for(document: Document) -> object:
+        raise ValueError("no reader for file type '.pdf'")
+
+    result = read_document_set(
+        claim(doc("r"), doc("x")),
+        SARA,
+        repo_settings(),
+        reader_for,
+        {"r": bill("r")},  # type: ignore[arg-type]
+    )
+    assert next(d.kind for d in result.documents if d.document_id == "x") == "other"
+    assert any("could not be read" in note for note in result.notes)
+
+
+def test_read_value_comes_from_the_reading_not_the_form() -> None:  # review M2
+    edit = FieldEdit(document_id="r", field="total", read_value="1", typed_value="9900")
+    result = read(claim(doc("r"), edits=[edit]), {"r": bill("r", total=4600)})
+    assert result.edits[0].read_value == "4600"

@@ -73,6 +73,7 @@ def receipt(
             }
         ],
         "qr_payloads": [] if qr_timestamp is None else [qr(qr_timestamp, total, vat)],
+        "text_lines": ["Al Noor Clinic", "Receipt", "Patient: Sara Ahmed"],
     }
 
 
@@ -93,6 +94,7 @@ READINGS: dict[str, dict[str, Any]] = {
         "fields": [field("patient_name", "Sara Ahmed")],
         "line_items": [],
         "qr_payloads": [],
+        "text_lines": ["Prescription", "Patient: Sara Ahmed"],
     },
 }
 

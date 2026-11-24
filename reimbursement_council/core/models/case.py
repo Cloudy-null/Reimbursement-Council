@@ -2,7 +2,7 @@
 
 from pydantic import Field
 
-from reimbursement_council.core.models.claim import Claim, ExtractionResult
+from reimbursement_council.core.models.claim import Claim, ExtractionResult, FieldEdit
 from reimbursement_council.core.models.common import Model
 from reimbursement_council.core.models.decision import (
     CrossCheckResult,
@@ -25,3 +25,5 @@ class ClaimCase(Model):
     documents_read: dict[str, ExtractionResult] = Field(default_factory=dict)
     needs: list[DocumentNeed] = Field(default_factory=list)
     cross_checks: list[CrossCheckResult] = Field(default_factory=list)
+    edits: list[FieldEdit] = Field(default_factory=list)
+    """The member's edits as judged against the evidence (claim.edits are as sent)."""
