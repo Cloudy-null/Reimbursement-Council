@@ -104,6 +104,10 @@ def _serve(args: argparse.Namespace) -> int:
         samples=args.data_dir / "web" / "samples",
         results_root=args.data_dir,
     )
+    if settings.decision.reader == "easyocr":
+        from reimbursement_council.web.demo import start_warm_up
+
+        start_warm_up(context)  # load the OCR model and read the demo files now
     uvicorn.run(create_app(context), host=args.host, port=args.port)
     return 0
 

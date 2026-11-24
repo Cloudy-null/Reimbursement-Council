@@ -17,6 +17,10 @@
   </label>
   <div class="btns"><button class="btn primary" type="submit">{{ t.send }}</button></div>
   <p class="note">{{ t.reading_note }}</p>
+  <h2>{{ t.demo_title }}</h2>
+  <div class="btns">
+    {% for name in demos %}<button class="btn" type="submit" name="demo" value="{{ name }}">{{ t['demo_' ~ name] }}</button>{% endfor %}
+  </div>
   <h2>{{ t.or_sample }}</h2>
   <div class="samples">
     {% for name in samples %}

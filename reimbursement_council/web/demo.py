@@ -1,0 +1,88 @@
+"""Demo mode: the five demo claims as files, and a warm-up so the demo never waits.
+
+The files are drawn once per day (dated three days ago, so they are inside the claim window)
+into samples/demo/<date>/<claim>/. The warm-up loads the OCR model and reads every demo file
+once, so the readings are in the OCR cache before anyone clicks: no wait and no internet.
+"""
+
+import io
+import logging
+import threading
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+from PIL import Image
+
+from reimbursement_council.adapters.document_drawing import draw_clinical_document
+from reimbursement_council.adapters.receipt_drawing import draw_receipt
+from reimbursement_council.core.models.claim import Document
+from reimbursement_council.synthetic.demo_claims import DemoFile, demo_claims
+from reimbursement_council.web.context import WebContext
+
+logger = logging.getLogger(__name__)
+
+DEMO_NAMES = ("approve", "missing", "mismatch", "edit", "pdf")
+
+
+def _png(file: DemoFile) -> bytes:
+    if file.receipt is not None:
+        return draw_receipt(file.receipt).png
+    if file.clinical is not None:
+        return draw_clinical_document(file.clinical).png
+    raise ValueError(f"demo file {file.file_name} has nothing to draw")
+
+
+def _pdf(png: bytes) -> bytes:
+    buffer = io.BytesIO()
+    Image.open(io.BytesIO(png)).convert("RGB").save(buffer, format="PDF", resolution=72)
+    return buffer.getvalue()
+
+
+def demo_folder(ctx: WebContext) -> Path:
+    day = (datetime.now(UTC) + timedelta(hours=ctx.settings.policy.local_utc_offset_hours)).date()
+    return ctx.samples / "demo" / day.isoformat()
+
+
+def ensure_demo_files(ctx: WebContext) -> dict[str, list[Path]]:
+    """Every demo claim's files, drawn if today's are not there yet."""
+    folder = demo_folder(ctx)
+    day = datetime.fromisoformat(folder.name)
+    issued = (day - timedelta(days=3)).replace(hour=10, minute=30)
+    claims = demo_claims(issued, ctx.settings.prices, ctx.settings.policy.vat_rate)
+    paths: dict[str, list[Path]] = {}
+    for name in DEMO_NAMES:
+        paths[name] = []
+        for file in claims[name]:
+            path = folder / name / file.file_name
+            if not path.is_file():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                png = _png(file)
+                path.write_bytes(_pdf(png) if file.as_pdf else png)
+            paths[name].append(path)
+    return paths
+
+
+def warm_up(ctx: WebContext) -> None:
+    """Read every demo file once (this also loads the OCR model). Errors are only logged: a
+    failed warm-up makes the first demo slower, never broken."""
+    for name, paths in ensure_demo_files(ctx).items():
+        for path in paths:
+            document = Document(
+                document_id=f"warm-{name}-{path.stem}",
+                claim_id="warm-up",
+                kind="other",
+                file_path=str(path),
+                image_hash=None,
+                uploaded_at=datetime.now(UTC),
+            )
+            try:
+                ctx.reader_for(document).read(document)
+            except (ValueError, OSError) as error:
+                logger.warning("warm-up could not read demo file %s: %s", path.name, error)
+    logger.info("warm-up done: demo files are read and cached")
+
+
+def start_warm_up(ctx: WebContext) -> threading.Thread:
+    thread = threading.Thread(target=warm_up, args=(ctx,), name="demo-warm-up", daemon=True)
+    thread.start()
+    return thread

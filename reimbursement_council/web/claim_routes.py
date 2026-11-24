@@ -22,6 +22,7 @@ from reimbursement_council.synthetic.receipt_content import (
 from reimbursement_council.web.check_routes import check_values
 from reimbursement_council.web.confirm_routes import confirm_date_for
 from reimbursement_council.web.context import Page, WebContext, claim_view
+from reimbursement_council.web.demo import DEMO_NAMES, ensure_demo_files
 from reimbursement_council.web.i18n import text_for
 from reimbursement_council.web.uploads import accept, collect, read_and_store, store_documents
 
@@ -67,6 +68,7 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             "new_claim.html",
             lang,
             people=ctx.reference.members,
+            demos=DEMO_NAMES,
             samples=ensure_samples(ctx),
         )
 
@@ -78,6 +80,7 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         sample: Annotated[str, Form()] = "",
         photos: Annotated[list[UploadFile] | None, File()] = None,
         consent: Annotated[str, Form()] = "",
+        demo: Annotated[str, Form()] = "",
     ) -> Response:
         """Step 1 (spec 6.5): save the files as a draft claim. Nothing is decided yet. Nothing
         is read before the member agrees (consent step); the time they agreed is kept."""
@@ -87,7 +90,11 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             person = ctx.reference.member(patient)
         except LookupError as error:
             raise HTTPException(status_code=400, detail="Pick a person from the list.") from error
-        if sample:
+        if demo:
+            if demo not in DEMO_NAMES:
+                raise HTTPException(status_code=400, detail="Unknown demo claim.")
+            files = [(p.name, p.read_bytes()) for p in ensure_demo_files(ctx)[demo]]
+        elif sample:
             if sample not in SAMPLES:
                 raise HTTPException(status_code=400, detail="Unknown sample.")
             ensure_samples(ctx)
