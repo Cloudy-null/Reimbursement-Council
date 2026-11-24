@@ -14,7 +14,8 @@ Day 3 list, item by item:
 
 318 tests pass, ruff and mypy clean. Generated data is not in git: the day 3 sets are in data/sets/day3 on the laptop, and make-claims with the same seed makes them again. On the laptop, uv from the Claude desktop app needs UV_PYTHON_INSTALL_DIR=D:\dev\.uv-python (see section 5). The website runs with uv run reimbursement-council serve, or from the app's browser pane with .claude/launch.json (not committed, it holds a laptop path).
 
-The owner asked for website changes (account based names, read the photo into fields to check before sending, samples on their own page, a faster queue view with the photo, queue colors by likely outcome, gold and silver tier levels from the account). This is at the brainstorming step: no design or code yet.
+Now building on branch feat/document-set (cut from fix/day3, PR #4 still open): the official brief is in docs/brief/project-brief.md. Design: docs/superpowers/specs/2026-11-24-document-set-design.md (approved with the owner's two changes). Plan: docs/superpowers/plans/2026-11-24-document-set.md, 15 tasks, built by Claude with a fresh reviewer after tasks 7, 8 and 13. If usage runs low, tasks 1 to 8, 12 and 13 first; 9 to 11 and 15 tonight. Progress ledger (git-ignored): .superpowers/sdd/2026-11-24-document-set/progress.md.
+Document set progress: Task 1 done (data model).
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
