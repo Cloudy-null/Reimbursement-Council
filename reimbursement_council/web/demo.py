@@ -22,6 +22,7 @@ from reimbursement_council.web.context import WebContext
 logger = logging.getLogger(__name__)
 
 DEMO_NAMES = ("approve", "missing", "mismatch", "edit", "pdf")
+WARM_UP_DONE = threading.Event()  # GET /api/ready says when the demo files are read
 
 
 def _png(file: DemoFile) -> bytes:
@@ -93,10 +94,21 @@ def warm_up(ctx: WebContext) -> None:
                 ctx.reader_for(document).read(document)
             except (ValueError, OSError) as error:
                 logger.warning("warm-up could not read demo file %s: %s", path.name, error)
+    WARM_UP_DONE.set()
     logger.info("warm-up done: demo files are read and cached")
 
 
+_started = threading.Event()
+
+
+def warming() -> bool:
+    """A warm-up was started and has not finished."""
+    return _started.is_set() and not WARM_UP_DONE.is_set()
+
+
 def start_warm_up(ctx: WebContext) -> threading.Thread:
+    WARM_UP_DONE.clear()
+    _started.set()
     thread = threading.Thread(target=warm_up, args=(ctx,), name="demo-warm-up", daemon=True)
     thread.start()
     return thread

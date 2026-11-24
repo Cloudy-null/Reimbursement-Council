@@ -77,3 +77,17 @@ def test_the_mismatch_demo_has_a_right_report_to_send_in_the_fix_step(
 
     (path,) = ensure_demo_fix_files(web[1])["mismatch/fix"]
     assert path.name == "report-right-patient.png" and path.read_bytes()[:4] == b"\x89PNG"
+
+
+def test_ready_says_when_the_warm_up_is_done(web: tuple[TestClient, WebContext]) -> None:
+    from reimbursement_council.web import demo
+
+    client, _ = web
+    demo.WARM_UP_DONE.clear()
+    demo._started.clear()
+    assert client.get("/api/ready").json() == {"ready": True}  # no warm-up running
+    demo._started.set()
+    assert client.get("/api/ready").json() == {"ready": False}
+    demo.WARM_UP_DONE.set()
+    assert client.get("/api/ready").json() == {"ready": True}
+    demo._started.clear()

@@ -22,6 +22,7 @@ playwright = pytest.importorskip("playwright.sync_api")
 pytest.importorskip("easyocr")
 
 from reimbursement_council.adapters.export_schema import schema_errors  # noqa: E402
+from tests.e2e.browser import chromium_launch_options  # noqa: E402
 
 pytestmark = pytest.mark.e2e
 REPO = Path(__file__).resolve().parents[2]
@@ -40,7 +41,9 @@ def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[tuple[str, Path
     port = _free_port()
     command = [sys.executable, "-m", "reimbursement_council.cli.main", "serve",
                "--port", str(port), "--data-dir", str(data)]  # fmt: skip
-    process = subprocess.Popen(command, cwd=REPO, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    # The log goes to a file: a pipe nobody reads fills up and then blocks the server.
+    log = (data / "server.log").open("wb")
+    process = subprocess.Popen(command, cwd=REPO, stdout=log, stderr=subprocess.STDOUT)
     url = f"http://127.0.0.1:{port}"
     deadline = time.time() + START_SECONDS
     while time.time() < deadline:
@@ -52,15 +55,24 @@ def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[tuple[str, Path
     else:
         process.kill()
         raise RuntimeError("the server did not start")
+    import urllib.request
+
+    deadline = time.time() + START_SECONDS * 3  # the warm-up loads the OCR model first
+    while time.time() < deadline:
+        with urllib.request.urlopen(f"{url}/api/ready") as response:
+            if json.loads(response.read())["ready"]:
+                break
+        time.sleep(2)
     yield url, data
     process.terminate()
     process.wait(timeout=20)
+    log.close()
 
 
 @pytest.fixture(scope="module")
 def page(server: tuple[str, Path]) -> Iterator["playwright.Page"]:
     with playwright.sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(**chromium_launch_options(p.chromium.executable_path))
         context = browser.new_context(accept_downloads=True)
         tab = context.new_page()
         tab.set_default_timeout(180_000)  # the first OCR read loads the model
