@@ -9,6 +9,7 @@ import yaml
 
 from reimbursement_council.cli import claims_set
 from reimbursement_council.cli.main import main
+from reimbursement_council.config.loader import CONFIG_FILES
 from reimbursement_council.core.models.claim import Claim
 from tests.factories import REPO_CONFIG
 
@@ -162,7 +163,7 @@ def fit(tmp_path: Path, rows: list[dict[str, object]]) -> dict[str, Any]:
     results.write_text(json.dumps({"rows": rows, "metrics": {}}), encoding="utf-8")
     config = tmp_path / "config"
     config.mkdir()
-    for name in ("decision.yaml", "messages.yaml", "policy.yaml", "prices.yaml"):
+    for name in CONFIG_FILES:
         (config / name).write_bytes((REPO_CONFIG / name).read_bytes())
     assert run("fit-calibration", str(results), "--config-dir", str(config)) == 0
     params: dict[str, Any] = yaml.safe_load((config / "calibration.yaml").read_text("utf-8"))

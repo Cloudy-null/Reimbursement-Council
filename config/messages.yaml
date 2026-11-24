@@ -13,10 +13,13 @@ en:
     excluded_service: "The receipt includes a service this policy does not cover."
     duplicate: "This receipt was already sent in another claim."
     multiple_patients: "The documents show more than one patient. Please send one claim for each person."
+    member_edit: "A value you typed does not match what the documents show. A reviewer will check it."
   requests:
     retake_photo: "We could not read the {field}. Please take a clearer photo."
     add_document: "Please add the {field}."
     confirm_field: "Please check the {field} we read and fix it if needed."
+    missing_document: "Please add {documents}."
+    mismatch: "The {field} is not the same on {documents}. Please add the right document or correct it."
   fields:
     provider_name: "provider name"
     treatment_date: "treatment date"
@@ -26,6 +29,12 @@ en:
     receipt: "receipt"
     itemized_invoice: "itemized invoice that lists each service"
     line_items: "list of services on the receipt"
+  documents:
+    invoice: "an invoice"
+    receipt: "a receipt"
+    prescription: "a prescription"
+    medical_report: "a medical report"
+    other: "another document"
 ar:
   lanes:
     approved: "تمت الموافقة على مطالبتك. سنحول لك {amount} ريال."
@@ -40,10 +49,13 @@ ar:
     excluded_service: "الفاتورة تشمل خدمة لا تغطيها وثيقتك."
     duplicate: "هذه الفاتورة قدمت من قبل في مطالبة أخرى."
     multiple_patients: "المستندات تخص أكثر من مريض. قدم مطالبة لكل شخص."
+    member_edit: "قيمة كتبتها لا تطابق ما في المستندات. سيراجعها أحد موظفينا."
   requests:
     retake_photo: "لم نتمكن من قراءة {field}. التقط صورة أوضح من فضلك."
     add_document: "أضف {field} من فضلك."
     confirm_field: "راجع {field} كما قرأناه وصححه إن لزم."
+    missing_document: "أضف {documents} من فضلك."
+    mismatch: "{field} غير متطابق في {documents}. أضف المستند الصحيح أو صحح القيمة."
   fields:
     provider_name: "اسم مقدم الخدمة"
     treatment_date: "تاريخ العلاج"
@@ -53,3 +65,9 @@ ar:
     receipt: "الفاتورة"
     itemized_invoice: "فاتورة مفصلة تذكر كل خدمة"
     line_items: "قائمة الخدمات في الفاتورة"
+  documents:
+    invoice: "فاتورة"
+    receipt: "إيصال"
+    prescription: "وصفة طبية"
+    medical_report: "تقرير طبي"
+    other: "مستند آخر"

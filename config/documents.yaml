@@ -1,0 +1,34 @@
+# Which documents a claim needs, how a document type is recognized, and how strict the
+# cross-document checks are. Made-up starting values until Bupa's week 2 process material
+# arrives (CHECK in HANDOVER). Ratios are similarities from 0 to 1.
+
+# For each benefit category (from prices.yaml), the groups of documents the claim needs.
+# Any one kind in a group is enough. A claim with several categories needs all their groups.
+required_by_category:
+  outpatient: [[invoice, receipt], [medical_report]]
+  pharmacy: [[invoice, receipt], [prescription]]
+  lab: [[invoice, receipt]]
+  radiology: [[invoice, receipt], [medical_report]]
+  dental: [[invoice, receipt]]
+
+# Words that mark a document type, in English and Arabic. A ZATCA QR always means a billing
+# document (invoice or receipt).
+kind_keywords:
+  invoice: ["tax invoice", "invoice", "فاتورة ضريبية", "فاتورة ضريبية مبسطة"]
+  receipt: ["receipt", "cash receipt", "إيصال", "سند قبض"]
+  prescription: ["prescription", "rx", "وصفة طبية", "وصفة"]
+  medical_report: ["medical report", "diagnosis", "تقرير طبي", "التشخيص"]
+
+kind_match_ratio: 0.85
+# How close a patient or provider name must be to count as the same.
+name_match_ratio: 0.85
+# How many days treatment dates on different documents may differ and still agree.
+date_tolerance_days: 0
+# A failed cross check multiplies the document checker's score by this.
+cross_check_score_factor: 0.5
+# Provider names are compared between a medical report and the invoice only for these
+# categories. A prescription from a clinic and a bill from a pharmacy is normal.
+provider_check_categories: [outpatient, dental]
+# Confidence of a member-typed value with no evidence. Below the hard rule floor (0.90),
+# so it can never back a hard rule on its own.
+unbacked_edit_confidence: 0.6

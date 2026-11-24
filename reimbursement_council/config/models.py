@@ -5,7 +5,13 @@ from typing import Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from reimbursement_council.core.decision.calibration import PlattParams
-from reimbursement_council.core.models.common import FieldName, Halalas, MemberName, Score
+from reimbursement_council.core.models.common import (
+    DocumentKind,
+    FieldName,
+    Halalas,
+    MemberName,
+    Score,
+)
 from reimbursement_council.core.models.reference import PriceListItem
 
 
@@ -107,6 +113,7 @@ class DecisionConfig(ConfigModel):
     gemini_reader_enabled: bool
     reader: Literal["easyocr", "qr_only"]
     passed_check_confidence: Score
+    cross_checks_enabled: bool
     ocr: OcrConfig
     members: MembersConfig
 
@@ -126,6 +133,7 @@ TEMPLATE_PLACEHOLDERS = {
     "request": "",
     "claim_window_days": 0,
     "field": "",
+    "documents": "",
 }
 """Every value a member message template may use."""
 
@@ -145,12 +153,15 @@ class RuleMessages(ConfigModel):
     excluded_service: str
     duplicate: str
     multiple_patients: str
+    member_edit: str
 
 
 class RequestMessages(ConfigModel):
     retake_photo: str
     add_document: str
     confirm_field: str
+    missing_document: str
+    mismatch: str
 
 
 class LanguageMessages(ConfigModel):
@@ -158,6 +169,7 @@ class LanguageMessages(ConfigModel):
     rules: RuleMessages
     requests: RequestMessages
     fields: dict[str, str]
+    documents: dict[DocumentKind, str]
 
 
 class MessageConfig(ConfigModel):
@@ -169,6 +181,9 @@ class MessageConfig(ConfigModel):
         missing = set(self.en.fields) ^ set(self.ar.fields)
         if missing:
             raise ValueError(f"field labels must exist in both languages: {sorted(missing)}")
+        missing = set(self.en.documents) ^ set(self.ar.documents)
+        if missing:
+            raise ValueError(f"document names must exist in both languages: {sorted(missing)}")
         return self
 
     @model_validator(mode="after")
@@ -190,8 +205,23 @@ class MessageConfig(ConfigModel):
         return self
 
 
+class DocumentsConfig(ConfigModel):
+    """Which documents each benefit category needs, how a document type is recognized, and
+    how strict the cross-document checks are (config/documents.yaml)."""
+
+    required_by_category: dict[str, list[list[DocumentKind]]]
+    kind_keywords: dict[DocumentKind, list[str]]
+    kind_match_ratio: Score
+    name_match_ratio: Score
+    date_tolerance_days: int = Field(ge=0)
+    cross_check_score_factor: Score
+    provider_check_categories: list[str]
+    unbacked_edit_confidence: Score
+
+
 class Settings(ConfigModel):
     policy: PolicyConfig
+    documents: DocumentsConfig
     decision: DecisionConfig
     prices: dict[str, PriceListItem]
     messages: MessageConfig

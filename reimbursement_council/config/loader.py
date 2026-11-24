@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
 from reimbursement_council.config.models import (
     DecisionConfig,
+    DocumentsConfig,
     MessageConfig,
     PolicyConfig,
     Settings,
@@ -22,7 +23,7 @@ from reimbursement_council.core.text import normalize_text
 
 logger = logging.getLogger(__name__)
 
-CONFIG_FILES = ("decision.yaml", "messages.yaml", "policy.yaml", "prices.yaml")
+CONFIG_FILES = ("decision.yaml", "documents.yaml", "messages.yaml", "policy.yaml", "prices.yaml")
 CALIBRATION_FILE = "calibration.yaml"
 VERSION_LENGTH = 12
 TRUE_WORDS = frozenset({"true", "1", "yes"})
@@ -136,10 +137,19 @@ def load_settings(config_dir: Path, env: Mapping[str, str] | None = None) -> Set
     decision = _validate(DecisionConfig, _read_yaml(config_dir / "decision.yaml"), "decision.yaml")
     messages = _validate(MessageConfig, _read_yaml(config_dir / "messages.yaml"), "messages.yaml")
     prices = _load_prices(_read_yaml(config_dir / "prices.yaml"), policy)
+    documents = _validate(
+        DocumentsConfig, _read_yaml(config_dir / "documents.yaml"), "documents.yaml"
+    )
+    for category in sorted({item.category for item in prices.values()}):
+        if category not in documents.required_by_category:
+            raise ConfigError(
+                f"documents.yaml: category {category} from prices.yaml has no required documents"
+            )
     calibration = _load_calibration(config_dir, decision)
     settings = Settings(
         calibration=calibration,
         policy=policy,
+        documents=documents,
         decision=decision,
         prices=prices,
         messages=messages,
