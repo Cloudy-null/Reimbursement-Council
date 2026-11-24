@@ -22,7 +22,7 @@ from reimbursement_council.core.decision.calibration import fit_platt
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.pipeline.process_claim import process_claim
 from reimbursement_council.synthetic.claims import make_claim_set
-from reimbursement_council.synthetic.metrics import RunRow, metrics, paid_right
+from reimbursement_council.synthetic.metrics import RunRow, calibration_rows, metrics, paid_right
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +151,7 @@ def run_set(args: argparse.Namespace) -> int:
                 should_pay=truth["should_pay"],
                 correct_payout=truth["correct_payout"],
                 defects=truth["defects"],
+                hard_rule_failed=any(r.outcome == "fail" for r in result.rule_results),
             )
         )
     if resumed:
@@ -182,7 +183,8 @@ def run_set(args: argparse.Namespace) -> int:
 def fit_calibration(args: argparse.Namespace) -> int:
     settings = load_settings(args.config_dir)
     report = json.loads(args.results.read_text(encoding="utf-8"))
-    rows = [RunRow.model_validate(row) for row in report["rows"]]
+    all_rows = [RunRow.model_validate(row) for row in report["rows"]]
+    rows = calibration_rows(all_rows)
     tolerance = settings.decision.paid_right_tolerance_halalas
     params = fit_platt(
         [r.combined_score for r in rows], [1 if paid_right(r, tolerance) else 0 for r in rows]
@@ -195,7 +197,10 @@ def fit_calibration(args: argparse.Namespace) -> int:
                 "method": "platt",
                 "a": round(params.a, 6),
                 "b": round(params.b, 6),
-                "fitted_on": f"{args.results} ({len(rows)} claims)",
+                "fitted_on": (
+                    f"{args.results} ({len(rows)} claims; "
+                    f"{len(all_rows) - len(rows)} rejected by a hard rule left out)"
+                ),
             },
             sort_keys=False,
         ),

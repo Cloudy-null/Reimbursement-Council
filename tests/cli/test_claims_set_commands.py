@@ -137,8 +137,8 @@ def test_each_claim_logs_one_finish_line_with_timings(
     assert all(re.search(r"read \d+\.\d+s, total \d+\.\d+s$", line) for line in finished)
 
 
-def test_fit_calibration_writes_params(tmp_path: Path) -> None:
-    rows = [
+def calibration_rows() -> list[dict[str, object]]:
+    return [
         {
             "name": f"c{i}",
             "lane": "auto_approve",
@@ -149,9 +149,14 @@ def test_fit_calibration_writes_params(tmp_path: Path) -> None:
             "should_pay": True,
             "correct_payout": 15525,
             "defects": [],
+            "hard_rule_failed": False,
         }
         for i, s in enumerate([0.2, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.97, 0.99])
     ]
+
+
+def fit(tmp_path: Path, rows: list[dict[str, object]]) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     results = tmp_path / "results.json"
     results.write_text(json.dumps({"rows": rows, "metrics": {}}), encoding="utf-8")
     config = tmp_path / "config"
@@ -159,5 +164,30 @@ def test_fit_calibration_writes_params(tmp_path: Path) -> None:
     for name in ("decision.yaml", "messages.yaml", "policy.yaml", "prices.yaml"):
         (config / name).write_bytes((REPO_CONFIG / name).read_bytes())
     assert run("fit-calibration", str(results), "--config-dir", str(config)) == 0
-    params = yaml.safe_load((config / "calibration.yaml").read_text(encoding="utf-8"))
+    params: dict[str, Any] = yaml.safe_load((config / "calibration.yaml").read_text("utf-8"))
+    return params
+
+
+def test_fit_calibration_writes_params(tmp_path: Path) -> None:
+    params = fit(tmp_path, calibration_rows())
     assert params["method"] == "platt" and params["a"] > 0
+
+
+def test_fit_calibration_leaves_out_claims_a_hard_rule_rejected(tmp_path: Path) -> None:
+    rejected = [
+        row
+        | {
+            "name": f"r{i}",
+            "lane": "auto_reject",
+            "payout_calculated": None,
+            "should_pay": False,
+            "correct_payout": 0,
+            "hard_rule_failed": True,
+            "p_good": 0.99,
+            "combined_score": 0.99,
+        }
+        for i, row in enumerate(calibration_rows()[:5])
+    ]
+    alone = fit(tmp_path / "a", calibration_rows())
+    mixed = fit(tmp_path / "b", calibration_rows() + rejected)
+    assert (mixed["a"], mixed["b"]) == (alone["a"], alone["b"])
