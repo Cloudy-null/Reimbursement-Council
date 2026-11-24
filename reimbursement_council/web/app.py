@@ -18,6 +18,7 @@ from reimbursement_council.core.money import parse_sar_to_halalas
 from reimbursement_council.web.check_routes import add_check_routes
 from reimbursement_council.web.claim_routes import add_claim_routes
 from reimbursement_council.web.context import HERE, WebContext, claim_view, make_page
+from reimbursement_council.web.export_routes import add_export_routes
 
 __all__ = ["WebContext", "create_app"]
 
@@ -28,6 +29,7 @@ def create_app(ctx: WebContext) -> FastAPI:
     page = make_page(Jinja2Templates(directory=HERE / "templates"))
     add_claim_routes(app, ctx, page)
     add_check_routes(app, ctx, page)
+    add_export_routes(app, ctx)
 
     @app.get("/review", response_class=HTMLResponse)
     def queue(request: Request, lang: str = "en") -> HTMLResponse:

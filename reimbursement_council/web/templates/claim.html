@@ -28,6 +28,7 @@
         <button class="btn" type="submit">{{ t.to_reviewer }}</button>
       </form>
       {% endif %}
+      <div class="btns"><a class="btn" href="/api/claims/{{ claim.claim_id }}/export?download=1" download>{{ t.export }}</a></div>
     </section>
     <section class="card">
       <h2>{{ t.read_title }}</h2>

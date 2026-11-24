@@ -284,3 +284,39 @@ def test_make_claims_writes_one_png_per_document(tmp_path: Path) -> None:
     documents = [d for c in claims for d in c["documents"]]
     assert len(list(out.glob("*.png"))) == len(documents) > len(claims)
     assert all((out / d["file_path"]).is_file() for d in documents)
+
+
+def test_export_set_writes_one_valid_file_per_claim_and_a_summary(tmp_path: Path) -> None:
+    out = tmp_path / "set"
+    run(
+        "make-claims",
+        "--count",
+        "6",
+        "--seed",
+        "4",
+        "--out",
+        str(out),
+        "--config-dir",
+        str(REPO_CONFIG),
+    )
+    exported = tmp_path / "export"
+    code = run(
+        "export-set",
+        str(out),
+        "--out",
+        str(exported),
+        "--reader",
+        "qr_only",
+        "--config-dir",
+        str(REPO_CONFIG),
+        "--ocr-cache",
+        str(tmp_path / "c"),
+    )
+    summary = json.loads((exported / "summary.json").read_text(encoding="utf-8"))
+    assert (
+        code == 0 and summary["claims"] == 6 and summary["valid"] == 6 and summary["invalid"] == 0
+    )
+    files = [p for p in exported.glob("*.json") if p.name != "summary.json"]
+    assert len(files) == 6
+    first = json.loads(files[0].read_text(encoding="utf-8"))
+    assert first["schema_version"] == "1.0" and "decision" in first

@@ -1,0 +1,936 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CheckResult": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "items_sum_to_subtotal",
+            "vat_is_15_percent",
+            "subtotal_plus_vat_is_total",
+            "qr_matches_text"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "details": {
+          "title": "Details",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "passed",
+        "details",
+        "fields"
+      ],
+      "title": "CheckResult",
+      "type": "object"
+    },
+    "CrossCheckResult": {
+      "additionalProperties": false,
+      "description": "Whether documents agree. passed is None when there is not enough data to compare.",
+      "properties": {
+        "name": {
+          "enum": [
+            "patient_matches_account",
+            "dates_agree",
+            "providers_agree"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Passed"
+        },
+        "field": {
+          "enum": [
+            "provider_name",
+            "vat_number",
+            "invoice_timestamp",
+            "treatment_date",
+            "subtotal",
+            "vat_total",
+            "total",
+            "patient_name"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "document_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Document Ids",
+          "type": "array"
+        },
+        "details": {
+          "title": "Details",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "passed",
+        "field",
+        "document_ids",
+        "details"
+      ],
+      "title": "CrossCheckResult",
+      "type": "object"
+    },
+    "ExportDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "lane": {
+          "enum": [
+            "auto_approve",
+            "auto_reject",
+            "self_fix",
+            "human_review"
+          ],
+          "title": "Lane",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "complete",
+            "partial",
+            "error",
+            "queued"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "p_good": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "P Good",
+          "type": "number"
+        },
+        "decided_at": {
+          "format": "date-time",
+          "title": "Decided At",
+          "type": "string"
+        },
+        "config_version": {
+          "title": "Config Version",
+          "type": "string"
+        },
+        "self_fix_request": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SelfFixRequest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "member_message": {
+          "$ref": "#/$defs/MemberMessage"
+        },
+        "rule_results": {
+          "items": {
+            "$ref": "#/$defs/RuleResult"
+          },
+          "title": "Rule Results",
+          "type": "array"
+        }
+      },
+      "required": [
+        "lane",
+        "outcome",
+        "reason",
+        "p_good",
+        "decided_at",
+        "config_version",
+        "self_fix_request",
+        "member_message",
+        "rule_results"
+      ],
+      "title": "ExportDecision",
+      "type": "object"
+    },
+    "ExportDocument": {
+      "additionalProperties": false,
+      "properties": {
+        "document_id": {
+          "title": "Document Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "receipt",
+            "invoice",
+            "prescription",
+            "medical_report",
+            "other"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "kind_source": {
+          "enum": [
+            "detected",
+            "member"
+          ],
+          "title": "Kind Source",
+          "type": "string"
+        },
+        "file_name": {
+          "title": "File Name",
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sha256"
+        },
+        "is_primary": {
+          "title": "Is Primary",
+          "type": "boolean"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/ExportField"
+          },
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "document_id",
+        "kind",
+        "kind_source",
+        "file_name",
+        "sha256",
+        "is_primary",
+        "fields"
+      ],
+      "title": "ExportDocument",
+      "type": "object"
+    },
+    "ExportField": {
+      "additionalProperties": false,
+      "description": "One value read from a document, with where it came from and how sure we are.",
+      "properties": {
+        "name": {
+          "enum": [
+            "provider_name",
+            "vat_number",
+            "invoice_timestamp",
+            "treatment_date",
+            "subtotal",
+            "vat_total",
+            "total",
+            "patient_name"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "qr",
+            "ocr",
+            "vision",
+            "member_confirmed",
+            "member_typed",
+            "reviewer"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "source",
+        "confidence"
+      ],
+      "title": "ExportField",
+      "type": "object"
+    },
+    "ExportInvoice": {
+      "additionalProperties": false,
+      "description": "The billing document's values after the QR, the checks and any backed member edit.",
+      "properties": {
+        "treatment_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Treatment Date"
+        },
+        "invoice_timestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Invoice Timestamp"
+        },
+        "currency": {
+          "const": "SAR",
+          "default": "SAR",
+          "title": "Currency",
+          "type": "string"
+        },
+        "subtotal_halalas": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Subtotal Halalas"
+        },
+        "vat_total_halalas": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Vat Total Halalas"
+        },
+        "total_halalas": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Total Halalas"
+        },
+        "line_items": {
+          "items": {
+            "$ref": "#/$defs/ExportLineItem"
+          },
+          "title": "Line Items",
+          "type": "array"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/CheckResult"
+          },
+          "title": "Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "treatment_date",
+        "invoice_timestamp",
+        "subtotal_halalas",
+        "vat_total_halalas",
+        "total_halalas",
+        "line_items",
+        "checks"
+      ],
+      "title": "ExportInvoice",
+      "type": "object"
+    },
+    "ExportLineItem": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "service_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Service Code"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Category"
+        },
+        "quantity": {
+          "minimum": 1,
+          "title": "Quantity",
+          "type": "integer"
+        },
+        "unit_price_halalas": {
+          "minimum": 0,
+          "title": "Unit Price Halalas",
+          "type": "integer"
+        },
+        "amount_halalas": {
+          "minimum": 0,
+          "title": "Amount Halalas",
+          "type": "integer"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "description",
+        "service_code",
+        "category",
+        "quantity",
+        "unit_price_halalas",
+        "amount_halalas",
+        "confidence"
+      ],
+      "title": "ExportLineItem",
+      "type": "object"
+    },
+    "ExportPayout": {
+      "additionalProperties": false,
+      "properties": {
+        "requested_halalas": {
+          "minimum": 0,
+          "title": "Requested Halalas",
+          "type": "integer"
+        },
+        "network_cap_cut_halalas": {
+          "minimum": 0,
+          "title": "Network Cap Cut Halalas",
+          "type": "integer"
+        },
+        "copay_halalas": {
+          "minimum": 0,
+          "title": "Copay Halalas",
+          "type": "integer"
+        },
+        "limit_cut_halalas": {
+          "minimum": 0,
+          "title": "Limit Cut Halalas",
+          "type": "integer"
+        },
+        "vat_paid_halalas": {
+          "minimum": 0,
+          "title": "Vat Paid Halalas",
+          "type": "integer"
+        },
+        "calculated_halalas": {
+          "minimum": 0,
+          "title": "Calculated Halalas",
+          "type": "integer"
+        },
+        "unmatched_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unmatched Items",
+          "type": "array"
+        },
+        "is_partial": {
+          "title": "Is Partial",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "requested_halalas",
+        "network_cap_cut_halalas",
+        "copay_halalas",
+        "limit_cut_halalas",
+        "vat_paid_halalas",
+        "calculated_halalas",
+        "unmatched_items",
+        "is_partial"
+      ],
+      "title": "ExportPayout",
+      "type": "object"
+    },
+    "ExportProvider": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        },
+        "vat_number": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Vat Number"
+        },
+        "provider_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Provider Id"
+        },
+        "in_network": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "In Network"
+        }
+      },
+      "required": [
+        "name",
+        "vat_number",
+        "provider_id",
+        "in_network"
+      ],
+      "title": "ExportProvider",
+      "type": "object"
+    },
+    "ExportReview": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "approve",
+            "approve_amount",
+            "reject",
+            "ask_member"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "amount_halalas": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Amount Halalas"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "finished_at": {
+          "format": "date-time",
+          "title": "Finished At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "amount_halalas",
+        "reason",
+        "finished_at"
+      ],
+      "title": "ExportReview",
+      "type": "object"
+    },
+    "FieldEdit": {
+      "additionalProperties": false,
+      "description": "A field the member changed on the check screen, and what the evidence says about it.",
+      "properties": {
+        "document_id": {
+          "title": "Document Id",
+          "type": "string"
+        },
+        "field": {
+          "enum": [
+            "provider_name",
+            "vat_number",
+            "invoice_timestamp",
+            "treatment_date",
+            "subtotal",
+            "vat_total",
+            "total",
+            "patient_name"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "read_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Read Value"
+        },
+        "typed_value": {
+          "title": "Typed Value",
+          "type": "string"
+        },
+        "evidence": {
+          "default": "none",
+          "enum": [
+            "supports",
+            "contradicts",
+            "none"
+          ],
+          "title": "Evidence",
+          "type": "string"
+        },
+        "evidence_note": {
+          "default": "",
+          "title": "Evidence Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "field",
+        "read_value",
+        "typed_value"
+      ],
+      "title": "FieldEdit",
+      "type": "object"
+    },
+    "MemberMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "en": {
+          "title": "En",
+          "type": "string"
+        },
+        "ar": {
+          "title": "Ar",
+          "type": "string"
+        }
+      },
+      "required": [
+        "en",
+        "ar"
+      ],
+      "title": "MemberMessage",
+      "type": "object"
+    },
+    "RuleResult": {
+      "additionalProperties": false,
+      "properties": {
+        "rule": {
+          "enum": [
+            "late",
+            "policy_inactive",
+            "person_not_covered",
+            "excluded_service",
+            "duplicate",
+            "multiple_patients",
+            "member_edit"
+          ],
+          "title": "Rule",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_sure"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rule",
+        "outcome",
+        "reason",
+        "fields"
+      ],
+      "title": "RuleResult",
+      "type": "object"
+    },
+    "SelfFixRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "retake_photo",
+            "add_document",
+            "confirm_field",
+            "check_photo",
+            "fix_mismatch"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "documents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Documents",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "text"
+      ],
+      "title": "SelfFixRequest",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "exported_at": {
+      "format": "date-time",
+      "title": "Exported At",
+      "type": "string"
+    },
+    "claim_id": {
+      "title": "Claim Id",
+      "type": "string"
+    },
+    "status": {
+      "title": "Status",
+      "type": "string"
+    },
+    "submitted_at": {
+      "format": "date-time",
+      "title": "Submitted At",
+      "type": "string"
+    },
+    "member_id": {
+      "title": "Member Id",
+      "type": "string"
+    },
+    "patient_member_id": {
+      "title": "Patient Member Id",
+      "type": "string"
+    },
+    "policy_id": {
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "categories": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Categories",
+      "type": "array"
+    },
+    "consented_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Consented At"
+    },
+    "ready_for_processing": {
+      "title": "Ready For Processing",
+      "type": "boolean"
+    },
+    "provider": {
+      "$ref": "#/$defs/ExportProvider"
+    },
+    "invoice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExportInvoice"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "documents": {
+      "items": {
+        "$ref": "#/$defs/ExportDocument"
+      },
+      "title": "Documents",
+      "type": "array"
+    },
+    "missing_documents": {
+      "items": {
+        "items": {
+          "enum": [
+            "receipt",
+            "invoice",
+            "prescription",
+            "medical_report",
+            "other"
+          ],
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Missing Documents",
+      "type": "array"
+    },
+    "cross_checks": {
+      "items": {
+        "$ref": "#/$defs/CrossCheckResult"
+      },
+      "title": "Cross Checks",
+      "type": "array"
+    },
+    "member_edits": {
+      "items": {
+        "$ref": "#/$defs/FieldEdit"
+      },
+      "title": "Member Edits",
+      "type": "array"
+    },
+    "payout": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExportPayout"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "decision": {
+      "$ref": "#/$defs/ExportDecision"
+    },
+    "review": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExportReview"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "exported_at",
+    "claim_id",
+    "status",
+    "submitted_at",
+    "member_id",
+    "patient_member_id",
+    "policy_id",
+    "categories",
+    "consented_at",
+    "ready_for_processing",
+    "provider",
+    "invoice",
+    "documents",
+    "missing_documents",
+    "cross_checks",
+    "member_edits",
+    "payout",
+    "decision",
+    "review"
+  ],
+  "title": "ClaimExport",
+  "type": "object"
+}
