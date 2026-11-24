@@ -1,7 +1,7 @@
 # Handover
 
 ## 1. Current status
-Overnight build on branch build/overnight (owner said: make what we can, do it). Layer 1 done and tagged layer-1 (reading receipt photos with EasyOCR; accuracy in EXPERIMENTS.md). Layer 2 code done (synthetic claim sets, harness metrics, Platt calibration); the EasyOCR runs on data/sets/tune and data/sets/check are running. Layer 3 website built and tested: uv run reimbursement-council serve (http://127.0.0.1:8000): new claim with photo or sample receipt, result with what we read and payout math, self-fix resend, reviewer queue and card with decisions saved, numbers page from harness results. Checked in the browser on desktop and phone, English and Arabic. EasyOCR is an optional extra: uv sync --extra ocr.
+Branch build/overnight, open as PR #2 (not merged). Layer 1 done (receipt photos read with EasyOCR; accuracy in EXPERIMENTS.md; tag layer-1 only on the desktop). Layer 3 website done (uv run reimbursement-council serve). Layer 2 code done and tested, but the measuring run is NOT finished: it was paused on 2026-11-24 at 78 of 120 tuning claims to move to the owner's laptop. No calibration has been fitted yet and config/calibration.yaml does not exist. Generated data is not in git: the laptop must make the sets again (same seeds give the same claims) and read them with OCR (about 10 seconds per receipt, cached after). Resume steps: uv sync --extra ocr; uv run reimbursement-council make-claims --count 120 --seed 11 --out data/sets/tune; uv run reimbursement-council make-claims --count 60 --seed 12 --out data/sets/check; uv run reimbursement-council run-set data/sets/tune --reader easyocr --calibration off; uv run reimbursement-council fit-calibration data/sets/tune/results.json; uv run reimbursement-council run-set data/sets/check --reader easyocr --calibration off --results-name results_raw.json; uv run reimbursement-council run-set data/sets/check --reader easyocr --calibration on --results-name results_calibrated.json. Keep the laptop awake for about 45 minutes.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -43,9 +43,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
-1. Record the tune and check run numbers (E6 calibration off vs on) in EXPERIMENTS.md; commit config/calibration.yaml; tag layer-2.
-2. README and HANDOVER: how to run the website and the commands.
-3. Owner review: designs for layer 1 and 2 were Claude's calls; parser file is 331 lines (proposal: split row grouping into its own module).
+1. Finish the layer 2 run with the resume steps in section 1 (on the laptop).
+2. Write the E6 numbers (calibration off vs on, check set) into EXPERIMENTS.md with command and commit; commit config/calibration.yaml; decide whether calibration_enabled should be true; tag layer-2.
+3. Owner review of PR #2: designs written by Claude overnight, new config values, parser file over 300 lines.
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
