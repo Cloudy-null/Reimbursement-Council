@@ -53,7 +53,7 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
 - Deferred Task 13 review minors: hardcoded cat_* labels in i18n (a new category in config has no label), POST /claims with a refused file renders the check page instead of redirecting (a refresh makes a second draft), edits are cleared after /fix so the member retypes them, the old /claims/{id}/document route is redundant, a replaced document's reading row stays in the readings table.
 - CHECK (Task 14): the browser keeps an old app.css after a change (a hard refresh fixes it). A version query on the CSS link would stop this before the demo.
 - CHECK (Task 14): screenshots were checked in the built-in browser only. Saved Playwright screenshots and an Impeccable audit are still to do (neither is installed here).
-- CHECK (E12): the check set has only 3 mismatch claims and no missing-document claims, so E12 rests on few cases. The tune set run (120 claims) gives more; see EXPERIMENTS if it is recorded.
+- CHECK (E12): the check set has only 3 mismatch claims and no missing-document claims. The tune set run (120 claims, recorded in EXPERIMENTS) agrees: 7 of 7 mismatches caught, 2 false alarms in 113 from OCR misreading the Arabic patient name on a medical report, and 1 missing prescription not found because no line items were read.
 - CHECK (E12): a cross check on a low-confidence OCR name still counts as a mismatch. After the fixes no false alarms were left, but a heavy-damage name could still trip it. Consider "cannot tell" below the confidence floor.
 - CHECK: demo date and pitch length.
 - CHECK: the second required document in the real flow (proof of payment plus what?).

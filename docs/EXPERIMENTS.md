@@ -153,3 +153,40 @@ What it means: the only lane change is claim_12_0016, which has another patient'
   receipts with an unreadable photo (read as "other"), which is the right thing to ask for.
   Too few document defects in this set to call it a final number.
 ```
+
+```
+Run: E12 on the tune set (more document defects than the check set)
+Date: 2026-11-24
+Commit: 0deac30
+Command: uv run --extra ocr reimbursement-council make-claims --count 120 --seed 11 --out data/sets/docs/tune
+         uv run --no-sync reimbursement-council run-set data/sets/docs/tune --reader easyocr --cross-checks off --results-name e12_off.json --resume
+         uv run --no-sync reimbursement-council run-set data/sets/docs/tune --reader easyocr --cross-checks on --results-name e12_on.json --resume
+Test set: synthetic tune set, 120 claims (seed 11), 217 documents, 7 mismatch claims, 9 missing
+          documents. Calibration off. Synthetic, not real; tune sets are not for final numbers.
+Switch off: lanes human_review 27, auto_approve 22, self_fix 58, auto_reject 13.
+  automation_rate 0.2917, auto_approve_precision 1.0, payable_recall 0.2095,
+  false_reject_rate 0.0, correct_reject_rate 0.8667, reviews_per_1000 225.0,
+  self_fix_per_1000 483.3, ece 0.1544, total_cost_sar 675.0, heavy damage: 10 claims, all
+  self_fix, 0 wrong auto approves. document_kind_accuracy 0.9539 (217),
+  missing_document_recall 0.8889 (9), missing_document_precision 0.4444 (18),
+  cross_check_catch_rate 0.0 (7), cross_check_false_alarm_rate 0.0 (113),
+  expected_lane_match 0.8421 (19).
+Switch on: lanes human_review 25, auto_approve 21, self_fix 61, auto_reject 13.
+  automation_rate 0.2833, auto_approve_precision 1.0, payable_recall 0.2, false_reject_rate 0.0,
+  correct_reject_rate 0.8667, reviews_per_1000 208.3, self_fix_per_1000 508.3, ece 0.1573,
+  total_cost_sar 625.0, heavy damage: same. document metrics the same except
+  cross_check_catch_rate 1.0 (7), cross_check_false_alarm_rate 0.0177 (2 of 113),
+  expected_lane_match 1.0 (19).
+Lane changes: 3 patient name mismatches. claim_11_0039 was auto approved with checks off and
+  goes to self_fix with them on; claim_11_0035 and claim_11_0095 went to a person and now ask
+  the member first.
+Found: the 2 false alarms (claim_11_0034, claim_11_0068, no damage) are the Arabic patient name
+  on the medical report misread by OCR at 0.57 to 0.64 confidence. The one missed missing
+  prescription (claim_11_0044, light damage) had no line items read, so no category and no
+  need was known. Low missing_document_precision is mostly unreadable receipts flagged as a
+  missing invoice. Not tuned away; see the CHECK items in HANDOVER.
+What it means: same picture as the check set with more cases. Cross checks catch every
+  mismatch put in, stop a wrong auto approve, and send mismatches to the member before a
+  person, which cuts reviews from 225 to 208 per 1000 and cost from 675 to 625 SAR. The price
+  is 2 false alarms in 113 from OCR on Arabic names.
+```
