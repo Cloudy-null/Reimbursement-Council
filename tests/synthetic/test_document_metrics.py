@@ -109,3 +109,12 @@ def test_fairness_splits_payable_claims_by_member_tenure() -> None:
     assert scores["payable_new_members"] == 2 and scores["payable_tenured_members"] == 2
     assert scores["false_reject_rate_new"] == 0.5 and scores["false_reject_rate_tenured"] == 0.0
     assert scores["payable_recall_new"] == 0.5 and scores["payable_recall_tenured"] == 0.5
+
+
+def test_with_a_simulated_fix_the_first_try_is_scored() -> None:
+    from reimbursement_council.synthetic.metrics import heavy_damage_metrics
+
+    fixed = row(damage="unreadable", first_lane="self_fix", lane="auto_approve", fix_tried=True,
+                expected_lane="self_fix")  # fmt: skip
+    assert heavy_damage_metrics([fixed], 100)["heavy_damage_self_fix_share"] == 1.0
+    assert document_metrics([fixed])["expected_lane_match"] == 1.0

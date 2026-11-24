@@ -9,6 +9,11 @@ class MaskingFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         record.msg = mask_personal_data(record.getMessage())
         record.args = None
+        if record.exc_info:  # a traceback can hold values too
+            record.exc_text = mask_personal_data(
+                logging.Formatter().formatException(record.exc_info)
+            )
+            record.exc_info = None
         return True
 
 

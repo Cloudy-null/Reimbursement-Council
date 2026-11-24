@@ -93,10 +93,10 @@ def heavy_damage_metrics(rows: Sequence[RunRow], tolerance: int) -> dict[str, fl
     result: dict[str, float] = {"heavy_damage_claims": len(damaged)}
     for lane in HEAVY_DAMAGE_LANES:
         result[f"heavy_damage_{lane}_share"] = _share(
-            sum(r.lane == lane for r in damaged), len(damaged)
+            sum((r.first_lane or r.lane) == lane for r in damaged), len(damaged)
         )
     result["heavy_damage_wrong_auto_approves"] = sum(
-        r.lane == "auto_approve" and not paid_right(r, tolerance) for r in damaged
+        (r.first_lane or r.lane) == "auto_approve" and not paid_right(r, tolerance) for r in damaged
     )
     return result
 

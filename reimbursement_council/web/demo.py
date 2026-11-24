@@ -79,6 +79,16 @@ def ensure_demo_fix_files(ctx: WebContext) -> dict[str, list[Path]]:
 def warm_up(ctx: WebContext) -> None:
     """Read every demo file once (this also loads the OCR model). Errors are only logged: a
     failed warm-up makes the first demo slower, never broken."""
+    try:
+        _read_every_demo_file(ctx)
+    except Exception:  # never leave /api/ready waiting; the first demo is just slower
+        logger.exception("warm-up stopped early")
+    finally:
+        WARM_UP_DONE.set()
+    logger.info("warm-up done: demo files are read and cached")
+
+
+def _read_every_demo_file(ctx: WebContext) -> None:
     every = ensure_demo_files(ctx) | ensure_demo_fix_files(ctx)
     for name, paths in every.items():
         for path in paths:
@@ -94,8 +104,6 @@ def warm_up(ctx: WebContext) -> None:
                 ctx.reader_for(document).read(document)
             except (ValueError, OSError) as error:
                 logger.warning("warm-up could not read demo file %s: %s", path.name, error)
-    WARM_UP_DONE.set()
-    logger.info("warm-up done: demo files are read and cached")
 
 
 _started = threading.Event()

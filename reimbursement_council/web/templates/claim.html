@@ -2,7 +2,7 @@
 {% block content %}
 <div class="grid">
   <div class="doc-stack">
-    {% for doc in documents %}<img class="receipt-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="">{% endfor %}
+    {% for doc in documents %}<img class="receipt-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="{{ kind_names[doc.kind] }}">{% endfor %}
   </div>
   <div class="card" style="background: none; border: 0; padding: 0">
     <section class="card result lane-{{ decision.lane }}">

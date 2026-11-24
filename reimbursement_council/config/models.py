@@ -88,6 +88,8 @@ class OcrConfig(ConfigModel):
     pattern_miss_factor: Score
     heuristic_factor: Score
     row_overlap: Score
+    min_date_year: int = Field(ge=1900)
+    max_date_year: int = Field(le=2200)
 
 
 class DecisionConfig(ConfigModel):

@@ -168,6 +168,8 @@ def _row(
     first: Decision | None,
     past_claims: int | None,
 ) -> RunRow:
+    # The truth's documents are those of the first try, so they are scored on it.
+    read = first or result
     return RunRow(
         name=name,
         lane=result.lane,
@@ -180,11 +182,11 @@ def _row(
         defects=truth["defects"],
         damage=truth["damage"],
         hard_rule_failed=any(r.outcome == "fail" for r in result.rule_results),
-        kinds_read=dict(result.document_kinds),
+        kinds_read=dict(read.document_kinds),
         kinds_true=truth.get("document_kinds", {}),
-        needs_flagged=[list(g) for g in result.needs_missing],
+        needs_flagged=[list(g) for g in read.needs_missing],
         needs_missing=truth.get("needs_missing", []),
-        cross_check_failed=any(c.passed is False for c in result.cross_checks),
+        cross_check_failed=any(c.passed is False for c in read.cross_checks),
         cross_check_expected=bool(MISMATCH_DEFECTS & set(truth["defects"])),
         expected_lane=truth.get("expected_lane"),
         first_lane=None if first is None else first.lane,

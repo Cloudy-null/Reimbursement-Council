@@ -28,6 +28,7 @@ from reimbursement_council.synthetic.cases import (
 )
 from reimbursement_council.synthetic.document_sets import (
     DOCUMENT_DEFECTS,
+    EDIT_DEFECTS,
     add_documents,
     receipt_options,
 )
@@ -233,7 +234,8 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
                 else ("light" if original.damage == "none" else "none")
             )
             duplicate_of = original.name
-            inherited = list(original.truth.defects)
+            # The member's edit is not copied, so its label is not either.
+            inherited = [d for d in original.truth.defects if d not in EDIT_DEFECTS]
         else:
             receipt = make_receipt_content(rng, settings.prices, options, settings.policy.vat_rate)
 

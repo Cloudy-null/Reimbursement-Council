@@ -70,7 +70,8 @@ def test_sample_claim_is_decided_and_shown(web: tuple[TestClient, WebContext]) -
     assert decision is not None
     page = client.get(f"/claims/{claim_id}").text
     assert decision.member_message.en in page
-    assert client.get(f"/claims/{claim_id}/document").status_code == 200
+    first = decision.document_kinds and next(iter(decision.document_kinds))
+    assert client.get(f"/claims/{claim_id}/documents/{first}").status_code == 200
     assert client.get("/claims/missing").status_code == 404
 
 

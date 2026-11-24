@@ -168,10 +168,3 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             raise HTTPException(status_code=404, detail="No such sample.")
         ensure_samples(ctx)
         return FileResponse(ctx.samples / f"{name}.png")
-
-    @app.get("/claims/{claim_id}/document")
-    def document(claim_id: str) -> FileResponse:
-        claim = ctx.store.load_claim(claim_id)
-        if claim is None or not claim.documents:
-            raise HTTPException(status_code=404, detail="No such document.")
-        return FileResponse(claim.documents[0].file_path)

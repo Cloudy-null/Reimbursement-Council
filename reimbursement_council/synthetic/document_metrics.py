@@ -42,6 +42,8 @@ def document_metrics(rows: Sequence[RunRow]) -> dict[str, float]:
             "cross_check_false_alarm_rate", sum(r.cross_check_failed for r in clean), len(clean)
         )
         | _with_count(
-            "expected_lane_match", sum(r.lane == r.expected_lane for r in laned), len(laned)
+            "expected_lane_match",
+            sum((r.first_lane or r.lane) == r.expected_lane for r in laned),
+            len(laned),
         )
     )

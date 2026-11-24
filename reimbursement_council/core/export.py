@@ -151,8 +151,9 @@ def build_claim_export(
         policy_id=claim.policy_id,
         categories=list(categories),
         consented_at=claim.consented_at,
-        ready_for_processing=(decision.lane == "auto_approve" and paid_as_decided)
-        or approved_by_person,
+        ready_for_processing=approved_by_person
+        if review is not None
+        else decision.lane == "auto_approve" and paid_as_decided,
         provider=_provider(primary, provider),
         invoice=_invoice(primary, prices),
         documents=[_document(d, readings.get(d.document_id), primary_id) for d in documents],

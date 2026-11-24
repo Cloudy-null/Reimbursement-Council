@@ -115,3 +115,18 @@ def test_an_approval_without_a_payout_now_is_not_ready(tmp_path: Path) -> None:
     export = export_claim(claim, old, reference, repo_settings(), EXPORTED)
     assert export is not None and export.decision.lane == "auto_approve"
     assert export.payout is None and not export.ready_for_processing
+
+
+def test_a_reviewer_rejecting_an_approved_claim_makes_it_not_ready(tmp_path: Path) -> None:
+    review = ReviewRecord(
+        claim_id=load("clean").claim_id,
+        reviewer="r1",
+        started_at=EXPORTED,
+        finished_at=EXPORTED,
+        action="reject",
+        amount=None,
+        reason="not our patient",
+    )
+    export = exported("clean", tmp_path, review)
+    assert export is not None and export.decision.lane == "auto_approve"
+    assert not export.ready_for_processing

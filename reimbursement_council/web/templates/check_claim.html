@@ -31,7 +31,7 @@
   <div class="doc-grid">
     {% for doc in documents %}
     <section class="card">
-      <img class="doc-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="">
+      <img class="doc-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="{{ kind_names[doc.kind] }}">
       <label for="kind-{{ doc.document_id }}">{{ t.doc_type }}
         <select id="kind-{{ doc.document_id }}" name="kind_{{ doc.document_id }}">
           {% for kind in kinds %}<option value="{{ kind }}"{{ ' selected' if kind == selected_kinds[doc.document_id] }}>{{ kind_names[kind] }}</option>{% endfor %}

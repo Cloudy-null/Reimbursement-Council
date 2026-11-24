@@ -69,7 +69,7 @@ _DATE_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}):(\d{2}))?")
 # Day first: 08/11/2026, 29-12-2017, 5.6.2018, and two digit years 12/03/18 (found on real
 # receipts, E1 failure review). A dot with a two digit year is left out: it looks like a time.
 _DATE_DMY = re.compile(
-    r"(?<!\d)(\d{1,2})([/.-])(\d{1,2})\2(\d{4}|\d{2})(?![\d.])(?:\s+(\d{1,2}):(\d{2}))?"
+    r"(?<!\d)(\d{1,2})([/.-])(\d{1,2})\2(\d{4}|\d{2})(?!\d)(?!\.\d)(?:\s+(\d{1,2}):(\d{2}))?"
 )
 _DIGITISH = re.compile(r"[0-9OoIl]{2,}")
 _LONE_INT = re.compile(r"^\d{1,2}$")
@@ -233,19 +233,23 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
     return matched
 
 
-def _first_date(text: str) -> tuple[date, str | None, str | None] | None:
-    """The first real calendar date in the text, with the time after it if there is one."""
-    candidates: list[tuple[int, str, str, str, str | None, str | None]] = []
+def _first_date(text: str, years: tuple[int, int]) -> tuple[date, str | None, str | None] | None:
+    """The date in the text, with the time after it if there is one. A YYYY-MM-DD date wins over
+    a day-first one (a receipt may print the Hijri date first). Only real calendar dates in the
+    year range count; a two digit year counts only with slashes (12/03/18), not in codes."""
+    candidates: list[tuple[int, int, str, str, str, str | None, str | None]] = []
     for match in _DATE_ISO.finditer(text):
         year, month, day, hour, minute = match.groups()
-        candidates.append((match.start(), year, month, day, hour, minute))
+        candidates.append((0, match.start(), year, month, day, hour, minute))
     for match in _DATE_DMY.finditer(text):
         day, sep, month, year, hour, minute = match.groups()
-        if sep == "." and len(year) == 2:
+        if len(year) == 2 and sep != "/":
             continue
         full_year = f"20{year}" if len(year) == 2 else year
-        candidates.append((match.start(), full_year, month, day, hour, minute))
-    for _, year, month, day, hour, minute in sorted(candidates):
+        candidates.append((1, match.start(), full_year, month, day, hour, minute))
+    for _, _, year, month, day, hour, minute in sorted(candidates):
+        if not years[0] <= int(year) <= years[1]:
+            continue
         try:
             return date(int(year), int(month), int(day)), hour, minute
         except ValueError:
@@ -253,9 +257,11 @@ def _first_date(text: str) -> tuple[date, str | None, str | None] | None:
     return None
 
 
-def _date_fields(document_id: str, row_text: str, confidence: float) -> list[ExtractedField]:
+def _date_fields(
+    document_id: str, row_text: str, confidence: float, years: tuple[int, int]
+) -> list[ExtractedField]:
     text, _ = _fix_digits(row_text)
-    found = _first_date(text)
+    found = _first_date(text, years)
     if found is None:
         return []
     day_value, hour, minute = found
@@ -301,7 +307,8 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
                 fields.append(_field(document_id, kind, str(value), line.text, line.confidence))  # type: ignore[arg-type]
                 found.add(kind)
         if "treatment_date" not in found:
-            dated = _date_fields(document_id, join_row(row), min(x.confidence for x in row))
+            years = (cfg.min_date_year, cfg.max_date_year)
+            dated = _date_fields(document_id, join_row(row), min(x.confidence for x in row), years)
             if dated:
                 fields.extend(dated)
                 found.add("treatment_date")

@@ -201,3 +201,18 @@ def test_a_total_that_includes_tax_is_still_the_total() -> None:
 )
 def test_real_total_rows_are_kept(row: str, expected: str) -> None:
     assert value(parse([line(row, 100, width=500)]), "total") == expected
+
+
+@pytest.mark.parametrize(
+    "row, expected",
+    [  # data review, day 4: the wider date reading must not take these
+        ("Hijri 12/05/1448 Date 2026-10-25", "2026-10-25"),
+        ("Invoice 8-12-1234", None),
+        ("Ref 10-10-10", None),
+        ("Date 08/11/2026.", "2026-11-08"),
+    ],
+)
+def test_hijri_dates_old_years_and_codes_are_not_read_as_the_date(
+    row: str, expected: str | None
+) -> None:
+    assert value(parse([line(row, 100, width=400)]), "treatment_date") == expected
