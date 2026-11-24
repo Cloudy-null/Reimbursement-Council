@@ -1,6 +1,7 @@
 # Handover
 
 ## 1. Current status
+Overnight day 4 (branch overnight/day4) progress: (1) Claim export done: core/models/export.py (ClaimExport, schema_version 1.0, money in halalas), core/export.py builder, pipeline/export_claim.py rebuilds from stored readings (process_claim now saves the claim and raw readings), schemas/claim-export.schema.json (write-schema), GET /api/claims/{id}/export (?download=1), download button on the result page and review card, export-set command. New libraries jsonschema and pypdfium2 (decision 009 to write).
 Working on the desktop PC, branch feat/document-set-2 cut from main at 5a6cd51 (PRs #1 to #5 are merged, so the document set work so far is on main). Layers 1, 2 and 3 are done and tagged layer-1 and layer-2; both tags are on GitHub (layer-1 pushed from the desktop on 2026-11-24, points to 18308e6).
 
 Day 3 list, item by item:
@@ -81,9 +82,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   - a receipt that matches a still-open claim (self_fix or human_review) is rejected as a duplicate instead of going to a human.
 
 ## 6. Next 3 tasks
-1. Owner reviews the document set PR (feat/document-set-2): the check step in the browser, decision 008, the E12 result and the CHECK items above.
-2. Self-fix is still very common (29 of 60 on the check set): most come from a treatment date read under the 0.90 confidence floor on receipts with no QR. Find out whether the floor or the reader should change (E6 run CHECK).
-3. Owner decides calibration_enabled (E6) and reviews decisions 007 and 008; then piece 2 of the owner's list (JSON export).
+1. Part A: PDF and scanned input, consent step, log masking, CSS cache version, defect weights in config, one-tap date confirm
+2. Part A: export-set over the synthetic check set, docs/INTEGRATION.md
+3. Part B: real receipts (SROIE sample), reader accuracy E1/E11
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
