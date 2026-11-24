@@ -40,7 +40,7 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 | E9 | History member | history_member_enabled | Raises automation for trusted members and providers | Automation rate; false reject rate new vs tenured | pending |
 | E11 | Reader: EasyOCR vs PaddleOCR vs Gemini free tier | reader | A vision model reads messy and Arabic receipts better than OCR plus rules | Field accuracy | pending |
 | E10 | Member preview before submit | preview_enabled (simulated) | Fewer bad submissions reach the pipeline | Claims needing self-fix | pending |
-| E12 | Cross-document checks | cross_checks_enabled (run-set --cross-checks on or off) | Checking patient and date across the receipt, prescription and report catches mismatches with few false alarms, and sends them to self-fix instead of approving them | cross_check_catch_rate, cross_check_false_alarm_rate, auto approve precision | pending |
+| E12 | Cross-document checks | cross_checks_enabled (run-set --cross-checks on or off) | Checking patient and date across the receipt, prescription and report catches mismatches with few false alarms, and sends them to self-fix instead of approving them | cross_check_catch_rate, cross_check_false_alarm_rate, auto approve precision | Catch 3 of 3, false alarms 0 of 57, one wrong auto approve avoided (synthetic check, 60 claims, after 3 fixes) |
 
 E9 has a fairness check: the false reject rate for new members must not be higher than for tenured members. If it is, the history member is off until fixed.
 
@@ -114,4 +114,42 @@ What it means: calibration cuts the calibration error to a third (0.155 to 0.051
 approvals and no false rejects. The cost drop (175 to 125 SAR) is only two fewer reviews, and one
 of them became a self-fix, which has no cost yet (CHECK in HANDOVER), so the cost gain is small
 and partly an effect of how cost is counted. 60 claims is a small set.
+```
+
+```
+Run: E12, cross-document checks (patient, treatment date, provider)
+Date: 2026-11-24
+Commit: 0deac30 (rerun after three fixes). The first run at 507fdfd found the bugs, see below.
+Command: uv run --extra ocr reimbursement-council make-claims --count 60 --seed 12 --out data/sets/docs/check
+         uv run --no-sync reimbursement-council run-set data/sets/docs/check --reader easyocr --cross-checks off --results-name e12b_off.json
+         uv run --no-sync reimbursement-council run-set data/sets/docs/check --reader easyocr --cross-checks on --results-name e12b_on.json
+Test set: synthetic check set, 60 claims (seed 12) with document sets: 110 documents. Only 3
+          claims carry a patient or date mismatch and none a missing prescription or report, so
+          the document numbers rest on few claims. Calibration off. Synthetic, not real.
+Switch off: lanes auto_reject 7, auto_approve 17, self_fix 28, human_review 8.
+  automation_rate 0.40, auto_approve_precision 1.0, payable_recall 0.34, false_reject_rate 0.0,
+  correct_reject_rate 0.70, reviews_per_1000 133.3, self_fix_per_1000 466.7, ece 0.1997,
+  total_cost_sar 200.0, heavy damage: 5 claims, all self_fix, 0 wrong auto approves.
+  document_kind_accuracy 0.9545 (110), missing_document_recall 0.0 (0 missing),
+  missing_document_precision 0.0 (5 flagged), cross_check_catch_rate 0.0 (3),
+  cross_check_false_alarm_rate 0.0 (57), expected_lane_match 0.8 (5).
+Switch on: lanes auto_reject 7, auto_approve 16, self_fix 29, human_review 8.
+  automation_rate 0.3833, auto_approve_precision 1.0, payable_recall 0.32, false_reject_rate 0.0,
+  correct_reject_rate 0.70, reviews_per_1000 133.3, self_fix_per_1000 483.3, ece 0.2023,
+  total_cost_sar 200.0, heavy damage: 5 claims, all self_fix, 0 wrong auto approves.
+  document_kind_accuracy 0.9545 (110), missing_document_recall 0.0 (0 missing),
+  missing_document_precision 0.0 (5 flagged), cross_check_catch_rate 1.0 (3),
+  cross_check_false_alarm_rate 0.0 (57), expected_lane_match 1.0 (5).
+First run (507fdfd, e12_off.json and e12_on.json in the same folder): with checks on, 19 of the
+  57 claims with no mismatch had a failed cross check (false alarm rate 0.3333), automation fell
+  from 0.40 to 0.25 and self_fix rose from 28 to 42. Causes, all fixed with tests before the
+  rerun: (1) the QR gives the provider's Arabic name and the report was read in English, so the
+  provider check compared two scripts and always failed (12 claims); (2) OCR split the label
+  "اسم المريض" and "اسم" stayed in the patient name (8 claims, all light damage); (3) found
+  while looking: an unclear treatment date asked the member to confirm the provider name.
+What it means: the only lane change is claim_12_0016, which has another patient's name on its
+  medical report. With checks off it was auto approved; with checks on it goes to self_fix and
+  asks the member. No false alarms after the fixes. The 5 flagged missing documents are all
+  receipts with an unreadable photo (read as "other"), which is the right thing to ask for.
+  Too few document defects in this set to call it a final number.
 ```
