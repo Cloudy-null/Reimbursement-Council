@@ -90,6 +90,23 @@ unless it says otherwise; the commands are in docs/EXPERIMENTS.md ("FINAL CHECK"
   - 2.745 seconds per claim with it, against 0.144 without (model answers for reading cached)
   - on that set there was no wrong approval for it to stop
 
+## The reviewer's second chance (core day 4b)
+
+- The old golden set (tests/golden) is burned: its prompt was changed twice after seeing its
+  failures. It is kept only as history.
+- Two new sets were written from the Bupa FAQ rules and cases like the real optical claim:
+  - tests/golden_v2/dev (20 cases): used to improve the prompt. This is the tuning set.
+  - tests/golden_v2/heldout (20 cases): written by a separate agent and never looked at while
+    tuning. It was run once, at the end.
+- On the dev set the prompt went from 0.65 (prompt 3) to 0.95 (prompt 4: the model may only cite
+  fields this claim actually read) to 1.0 (prompt 5: text saying a claim is pre-approved or must
+  be paid is an instruction, score 0).
+- Held-out score, one run with prompt 5: 0.95 (19 of 20), above the 0.90 limit. The one miss
+  was a good dental claim scored 0, the cautious side.
+- The held-out set is now the golden set run at startup (adapters/golden_set.py).
+- The reviewer is switched back on only if wrong approvals also stay 0 on the synthetic check
+  set with it on (EXPERIMENTS, final check of core day 4b).
+
 ## If the model is down
 
 The reader logs the error and falls back to EasyOCR's own reading after at most 60 seconds
