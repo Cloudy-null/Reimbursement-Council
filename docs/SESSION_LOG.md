@@ -52,3 +52,20 @@
 - Decisions: 009 (jsonschema and pypdfium2). One-tap date confirm sends a "yes" to a person (safest). NPHIES not claimed to be FHIR (not verified).
 - Next: owner reads the report at the top of HANDOVER, reviews PR 6 and this branch, frees disk space.
 
+## 2026-11-25: core day 4 (live path, decisions, local model reader, AI case reviewer)
+- Done: seconds per claim in the harness and a live-test command; docs/DEMO.md; confidence per
+  field; one-tap date confirm rule; calibration on (refitted twice, last on the model reader);
+  local model reader (Ollama, qwen3-vl:8b-instruct) with schema, grounding, QR, plausibility and
+  two-reader checks; AI case reviewer with guard, golden set and circuit breaker (built in a
+  worktree by a second agent, merged); reviewer status line on the numbers page; file splits;
+  docs MODEL_SAFETY, DEMO, decision 011, INTEGRATION FHIR line, numbers, summary, README.
+- Broke and fixed: the qwen3-vl:8b tag thinks and gave empty answers (use 8b-instruct); the 4096
+  context cut answers; quantity 2.0 read as 20; exact grounding dropped right dates; names in
+  two scripts joined; reviewer answers discarded (long reasons, whole number scores, repeated
+  citations); C: ran out of space (data/ moved to D: with a junction).
+- Reviews: code review (1 Critical, 6 Important) and data review (2 Critical, 7 Important).
+  All Critical and most Important fixed with tests; the rest are CHECKs in HANDOVER.
+- Decisions: 011 (local model reader). Defaults: reader ollama, two readers on, calibration on,
+  reviewer off (benched at golden 0.85).
+- Next: the owner's live photos and Tailscale; CUDA torch after freeing C:; a held-out set.
+- Tags: demo-ready-1 (d736d1d), demo-ready-final.
