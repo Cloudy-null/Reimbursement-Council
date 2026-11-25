@@ -25,11 +25,15 @@ BUILT_MEMBERS: dict[MemberName, MemberVote] = {
     "history_member": history_member.vote,
 }
 
+SEPARATE_MEMBERS: frozenset[MemberName] = frozenset({"case_reviewer"})
+"""Members the pipeline runs on its own, after the council: the case reviewer needs a model
+call (an adapter) and can only send a claim to a person (core/decision/reviewer_guard.py)."""
+
 
 def run_council(case: ClaimCase, settings: Settings) -> list[Vote]:
     votes: list[Vote] = []
     for name, config in settings.decision.members.in_order():
-        if not config.enabled:
+        if not config.enabled or name in SEPARATE_MEMBERS:
             continue
         member_vote = BUILT_MEMBERS.get(name)
         if member_vote is None:
