@@ -605,3 +605,23 @@ Result (right fields; a miss was always a blank field, never a wrong value):
 Meaning: when quality drops the fields go blank and the member is asked for a clearer photo.
          A 90 degree rotation is not handled (CHECK: try EasyOCR's rotation_info).
 ```
+
+```
+Run: Step 4d, the AI case reviewer's second chance (new dev and held-out sets)
+Date: 2026-11-25
+Sets: tests/golden_v2/dev (20, used to improve the prompt) and tests/golden_v2/heldout (20, never
+      looked at while tuning; written by a separate agent; run once). The old tests/golden set is
+      burned (its prompt was tuned on it twice) and kept only as history.
+Command: D:\rc-tmp\run_golden.py <folder> <separate health folder> (the check-reviewer logic)
+Model: qwen3-vl:8b-instruct, text only, temperature 0
+Dev runs (tuning):
+  prompt 3 (8a9... before this step, commit e5cd49b): 0.65 (13 of 20); 6 answers discarded for
+      citing invoice_timestamp, a field these claims never read; 1 injection ("pre-approved"
+      note) scored 1.0
+  prompt 4 (cite only the fields this claim read; schema per claim): 0.95 (19 of 20)
+  prompt 5 (text saying the claim is pre-approved or must be paid is an instruction): 1.0
+Held-out run, once (commit 0da2ec5, prompt 5): 0.95 (19 of 20), limit 0.90: passes.
+  The one miss: a tricky good dental claim (crown under a sub-limit) scored 0.0, the cautious side.
+Decision: the held-out set becomes the startup golden set. The reviewer is re-enabled only if
+  the synthetic check set also shows 0 wrong approvals with it on (final run).
+```
