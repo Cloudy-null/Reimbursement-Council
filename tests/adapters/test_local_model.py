@@ -27,7 +27,7 @@ def test_repo_config_uses_temperature_zero_and_a_fixed_seed() -> None:
     local = load_settings(REPO_CONFIG, env={}).local_model
     assert local.temperature == 0.0
     assert isinstance(local.seed, int)
-    assert local.model == "qwen3-vl:8b"
+    assert local.model == "qwen3-vl:8b-instruct"
 
 
 def test_chat_sends_temperature_seed_schema_and_images() -> None:
