@@ -66,10 +66,10 @@ def test_fix_with_only_refused_files_changes_nothing(web: tuple[TestClient, WebC
     assert before is not None
     response = client.post(
         f"/claims/{claim_id}/fix",
-        files=[("photos", ("x.pdf", b"%PDF", "application/pdf"))],
+        files=[("photos", ("x.gif", b"GIF89a", "image/gif"))],
         data={"replace": before.documents[1].document_id},
     )
-    assert response.status_code == 400 and "x.pdf" in response.text
+    assert response.status_code == 400 and "x.gif" in response.text
     assert ctx.store.load_claim(claim_id) == before
 
 
@@ -97,7 +97,7 @@ def test_refusal_reasons_are_in_the_page_language(web: tuple[TestClient, WebCont
     client, _ = web
     response = client.post(
         "/claims",
-        data={"patient": member_id(0), "lang": "ar"},
+        data={"consent": "yes", "patient": member_id(0), "lang": "ar"},
         files=[
             ("photos", ("r.png", b"pharmacy", "image/png")),
             ("photos", ("notes.gif", b"GIF89a", "image/gif")),
@@ -111,3 +111,26 @@ def test_fix_form_names_each_document_by_its_type(web: tuple[TestClient, WebCont
     claim_id = sent_claim(web)
     page = client.get(f"/claims/{claim_id}?lang=ar").text
     assert "2. وصفة طبية" in page and "2. prescription" not in page
+
+
+def test_too_many_files_in_one_upload_are_refused_past_the_limit(
+    web: tuple[TestClient, WebContext],
+) -> None:
+    client, ctx = web
+    limit = ctx.settings.documents.max_files_per_upload
+    files = [("photos", (f"r{i}.png", b"pharmacy", "image/png")) for i in range(limit + 2)]
+    response = client.post("/claims", data={"consent": "yes", "patient": member_id(0)}, files=files)
+    assert "r11.png" in response.text
+    (claim,) = ctx.store.list_claims()
+    assert len(claim.documents) == limit
+
+
+def test_slow_reading_does_not_run_on_the_event_loop() -> None:
+    import inspect
+
+    from reimbursement_council.web import check_routes, claim_routes
+
+    for module in (check_routes, claim_routes):
+        source = inspect.getsource(module)
+        assert "run_in_threadpool(read_and_store" in source or "read_and_store" not in source
+    assert "run_in_threadpool(decide" in inspect.getsource(check_routes)

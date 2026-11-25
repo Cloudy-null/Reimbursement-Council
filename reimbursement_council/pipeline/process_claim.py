@@ -27,7 +27,7 @@ from reimbursement_council.pipeline.document_set import read_document_set
 logger = logging.getLogger(__name__)
 
 
-def _patient(reference: ReferenceData, claim: Claim, member: Member) -> Member:
+def patient_of(reference: ReferenceData, claim: Claim, member: Member) -> Member:
     """The person treated, for the name check. An unknown patient is checked against the
     member filing (the person_not_covered rule handles the coverage question)."""
     try:
@@ -60,7 +60,7 @@ def process_claim(
     history = reference.history(claim.patient_member_id)
 
     documents = read_document_set(
-        claim, _patient(reference, claim, member), settings, reader_for, readings
+        claim, patient_of(reference, claim, member), settings, reader_for, readings
     )
     primary = next((d for d in documents.documents if d.document_id == documents.primary_id), None)
     extraction = None if primary is None else documents.readings[primary.document_id]
@@ -143,6 +143,8 @@ def process_claim(
         cross_checks=documents.cross_checks,
     )
     store.save_decision(decision)
+    store.save_claim(claim)
+    store.save_readings(claim.claim_id, documents.raw_readings)
     keys = (
         None
         if extraction is None

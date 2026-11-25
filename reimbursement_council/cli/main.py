@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from reimbursement_council.adapters.files import load_claim_file, load_reference_file
+from reimbursement_council.adapters.log_privacy import mask_all_logs
 from reimbursement_council.adapters.ocr_engine import (
     CachedOcrEngine,
     EasyOcrEngine,
@@ -19,7 +20,7 @@ from reimbursement_council.adapters.ocr_engine import (
 )
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
-from reimbursement_council.cli import claims_set, receipts
+from reimbursement_council.cli import claims_set, export, real, receipts, run_set
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.money import format_sar
@@ -45,6 +46,9 @@ def _parser() -> argparse.ArgumentParser:
     run_claim.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
     receipts.add_commands(commands)
     claims_set.add_commands(commands)
+    run_set.add_commands(commands)
+    export.add_commands(commands)
+    real.add_commands(commands)
     serve = commands.add_parser("serve", help="Start the website on this computer.")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -100,6 +104,10 @@ def _serve(args: argparse.Namespace) -> int:
         samples=args.data_dir / "web" / "samples",
         results_root=args.data_dir,
     )
+    if settings.decision.reader == "easyocr":
+        from reimbursement_council.web.demo import start_warm_up
+
+        start_warm_up(context)  # load the OCR model and read the demo files now
     uvicorn.run(create_app(context), host=args.host, port=args.port)
     return 0
 
@@ -108,14 +116,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.INFO, stream=sys.stderr, format="%(levelname)s %(name)s: %(message)s"
     )
+    mask_all_logs()  # no personal data in logs (brief: data sensitivity)
     args = _parser().parse_args(argv)
     commands = {
         "make-receipts": receipts.make_receipts,
         "read-accuracy": receipts.read_accuracy,
         "make-claims": claims_set.make_claims,
-        "run-set": claims_set.run_set,
-        "fit-calibration": claims_set.fit_calibration,
         "serve": _serve,
+        **export.COMMANDS,
+        **run_set.COMMANDS,
+        **real.COMMANDS,
     }
     if args.command in commands:
         command = commands[args.command]

@@ -33,6 +33,8 @@ ocr:
   pattern_miss_factor: 0.5    # confidence multiplier when a value needed fixing or does not add up
   heuristic_factor: 0.9       # confidence multiplier for values found by position, not by label
   row_overlap: 0.5            # share of line height two boxes may differ by and still be one row
+  min_date_year: 2000         # a date outside these years is not a treatment date (a Hijri
+  max_date_year: 2099         # 1448 or an id like 8-12-1234 is left out; data review, day 4)
 members:
   document_checker: {enabled: true, weight: 1.0, required_fields: [provider_name, treatment_date, total], failed_check_score_cap: 0.5}
   coverage_checker: {enabled: true, weight: 1.0, no_items_score: 0.3}

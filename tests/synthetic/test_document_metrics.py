@@ -92,3 +92,29 @@ def test_empty_groups_give_zero_with_a_zero_count() -> None:
 
 def test_old_rows_without_document_fields_still_load() -> None:
     assert row().kinds_true == {} and row().expected_lane is None
+
+
+def test_fairness_splits_payable_claims_by_member_tenure() -> None:
+    from reimbursement_council.synthetic.metrics import fairness_metrics
+
+    rows = [
+        row(past_claims=0, lane="auto_reject"),
+        row(past_claims=1, lane="auto_approve"),
+        row(past_claims=5, lane="auto_approve"),
+        row(past_claims=5, lane="human_review"),
+        row(past_claims=9, lane="auto_reject", should_pay=False),
+        row(past_claims=None),
+    ]
+    scores = fairness_metrics(rows, 3)
+    assert scores["payable_new_members"] == 2 and scores["payable_tenured_members"] == 2
+    assert scores["false_reject_rate_new"] == 0.5 and scores["false_reject_rate_tenured"] == 0.0
+    assert scores["payable_recall_new"] == 0.5 and scores["payable_recall_tenured"] == 0.5
+
+
+def test_with_a_simulated_fix_the_first_try_is_scored() -> None:
+    from reimbursement_council.synthetic.metrics import heavy_damage_metrics
+
+    fixed = row(damage="unreadable", first_lane="self_fix", lane="auto_approve", fix_tried=True,
+                expected_lane="self_fix")  # fmt: skip
+    assert heavy_damage_metrics([fixed], 100)["heavy_damage_self_fix_share"] == 1.0
+    assert document_metrics([fixed])["expected_lane_match"] == 1.0

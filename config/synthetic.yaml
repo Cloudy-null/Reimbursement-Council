@@ -1,0 +1,22 @@
+# How the synthetic claim generator mixes its claims (make-claims). Weights are relative: a
+# defect with weight 6 appears about twice as often as one with weight 3. Changing them changes
+# every new set, so a set's set.json records the config version it was made with.
+qr_share: 0.7  # share of receipts printed with a ZATCA QR code
+defect_weights:
+  clean: 45
+  late: 6
+  inactive: 4
+  not_covered: 4
+  excluded: 5
+  duplicate: 6
+  over_limit: 6
+  overpriced: 7
+  unlisted: 7
+  unreadable: 6
+  tampered_total: 4
+  missing_prescription: 5
+  missing_medical_report: 5
+  patient_name_mismatch: 4
+  date_mismatch: 4
+  member_edit_supported: 3
+  member_edit_contradicts: 3

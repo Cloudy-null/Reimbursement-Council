@@ -25,16 +25,15 @@ from reimbursement_council.synthetic.receipt_content import (
     ReceiptOptions,
 )
 
-# How often each document defect appears, next to the weights in claims.py.
-DOCUMENT_DEFECT_WEIGHTS: dict[str, int] = {
-    "missing_prescription": 5,
-    "missing_medical_report": 5,
-    "patient_name_mismatch": 4,
-    "date_mismatch": 4,
-    "member_edit_supported": 3,
-    "member_edit_contradicts": 3,
-}
-DOCUMENT_DEFECTS = tuple(DOCUMENT_DEFECT_WEIGHTS)
+# The document defects (how often each appears is in config/synthetic.yaml).
+DOCUMENT_DEFECTS: tuple[str, ...] = (
+    "missing_prescription",
+    "missing_medical_report",
+    "patient_name_mismatch",
+    "date_mismatch",
+    "member_edit_supported",
+    "member_edit_contradicts",
+)
 EXPECTED_LANES: dict[str, Lane] = {
     "missing_prescription": "self_fix",
     "missing_medical_report": "self_fix",

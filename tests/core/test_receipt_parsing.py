@@ -150,3 +150,84 @@ def test_a_label_word_split_from_its_label_is_not_part_of_the_patient_name() -> 
         ]
     )
     assert value(out, "patient_name") == "ليلى حسن"
+
+
+@pytest.mark.parametrize(
+    "row, expected",
+    [
+        ("Date 29-12-2017 11:41", "2017-12-29"),  # real SROIE rows (E1 failure review)
+        ("Tax Invoice 12/03/18", "2018-03-12"),
+        ("Date: 5.6.2018", "2018-06-05"),
+        ("Date 2026-11-08 10:30", "2026-11-08"),
+        ("Date 08/11/2026", "2026-11-08"),
+    ],
+)
+def test_common_date_forms_are_read(row: str, expected: str) -> None:
+    assert value(parse([line(row, 100, width=400)]), "treatment_date") == expected
+
+
+def test_a_date_that_does_not_exist_is_not_read() -> None:
+    assert value(parse([line("Date 31/02/2018", 100, width=400)]), "treatment_date") is None
+
+
+def test_the_time_after_a_dashed_date_is_kept() -> None:
+    out = parse([line("Date 29-12-2017 11:41", 100, width=400)])
+    assert value(out, "invoice_timestamp") == "2017-12-29T11:41:00"
+
+
+def test_quantity_and_tax_total_rows_are_not_the_total() -> None:
+    out = parse(
+        [
+            line("Total Qty 65.00", 100, width=400),
+            line("Total GST 0.36", 140, width=400),
+            line("Total Sales (Inclusive of GST) 1,007.50", 180, width=500),
+        ]
+    )
+    assert value(out, "total") == "100750"
+
+
+def test_a_total_that_includes_tax_is_still_the_total() -> None:
+    assert value(parse([line("Total incl. GST 6.36", 100, width=400)]), "total") == "636"
+
+
+@pytest.mark.parametrize(
+    "row, expected",
+    [  # real SROIE rows that the first version of the rule got wrong
+        ("Item 2 Total with GST 6% 77.20", "7720"),
+        ("Total Salas (inclusiva of GST) 4.25", "425"),
+        ("Total (Excluding GST): 9.60", "960"),
+        ("Total After Rounding 5.00", "500"),
+    ],
+)
+def test_real_total_rows_are_kept(row: str, expected: str) -> None:
+    assert value(parse([line(row, 100, width=500)]), "total") == expected
+
+
+@pytest.mark.parametrize(
+    "row, expected",
+    [  # data review, day 4: the wider date reading must not take these
+        ("Hijri 12/05/1448 Date 2026-10-25", "2026-10-25"),
+        ("Invoice 8-12-1234", None),
+        ("Ref 10-10-10", None),
+        ("Date 08/11/2026.", "2026-11-08"),
+    ],
+)
+def test_hijri_dates_old_years_and_codes_are_not_read_as_the_date(
+    row: str, expected: str | None
+) -> None:
+    assert value(parse([line(row, 100, width=400)]), "treatment_date") == expected
+
+
+@pytest.mark.parametrize(
+    "row, expected",
+    [  # real SROIE rows: a short dashed date next to a time or a date label is a date
+        ("17-03-18 14 :49 $H01 1J86 R000110133", "2018-03-17"),
+        ("Date : 29-01-18 20:38", "2018-01-29"),
+        ("07:49PM 503094 14-12-16", "2016-12-14"),
+        ("Ref 10-10-10", None),
+    ],
+)
+def test_a_short_dashed_date_counts_next_to_a_time_or_a_date_label(
+    row: str, expected: str | None
+) -> None:
+    assert value(parse([line(row, 100, width=500)]), "treatment_date") == expected

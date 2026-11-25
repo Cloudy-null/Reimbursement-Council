@@ -8,10 +8,12 @@ dependencies = [
     "arabic-reshaper==3.1.0",
     "fastapi==0.165.0",
     "jinja2==3.1.6",
+    "jsonschema==4.26.0",
     "numpy==2.5.5",
     "opencv-python-headless==5.1.0.95",
     "pillow==13.0.0",
     "pydantic==2.14.4",
+    "pypdfium2==5.15.2",
     "python-bidi==0.6.12",
     "python-multipart==0.0.34",
     "pyyaml==6.0.4",
@@ -47,20 +49,25 @@ files = ["reimbursement_council"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["easyocr", "arabic_reshaper", "bidi", "bidi.*"]
+module = ["easyocr", "arabic_reshaper", "bidi", "bidi.*", "pypdfium2"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["slow: runs the real OCR model; needs the ocr extra"]
-addopts = "-m 'not slow'"
+markers = [
+    "slow: runs the real OCR model; needs the ocr extra",
+    "e2e: drives the real website in a browser (Playwright); run with -m e2e",
+]
+addopts = "-m 'not slow and not e2e'"
 pythonpath = ["."]
 
 [dependency-groups]
 dev = [
     "httpx==0.28.1",
     "mypy==2.4.1",
+    "playwright==1.65.2",
     "pytest==9.2.0",
     "ruff==0.17.6",
+    "types-jsonschema==4.26.0.20261006",
     "types-pyyaml==6.0.12.20261122",
 ]

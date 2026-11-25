@@ -4,7 +4,6 @@ Routes are thin: they load, call the pipeline, and render. All logic lives in co
 Member claim routes are in claim_routes.py; what routes share is in context.py.
 """
 
-import json
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -17,7 +16,17 @@ from reimbursement_council.adapters.storage import ReviewRecord
 from reimbursement_council.core.money import parse_sar_to_halalas
 from reimbursement_council.web.check_routes import add_check_routes
 from reimbursement_council.web.claim_routes import add_claim_routes
-from reimbursement_council.web.context import HERE, WebContext, claim_view, make_page
+from reimbursement_council.web.confirm_routes import add_confirm_routes
+from reimbursement_council.web.context import (
+    HERE,
+    WebContext,
+    asset_version,
+    claim_view,
+    make_page,
+)
+from reimbursement_council.web.errors import add_error_pages
+from reimbursement_council.web.export_routes import add_export_routes
+from reimbursement_council.web.numbers import find_reader_scores, find_runs
 
 __all__ = ["WebContext", "create_app"]
 
@@ -25,9 +34,15 @@ __all__ = ["WebContext", "create_app"]
 def create_app(ctx: WebContext) -> FastAPI:
     app = FastAPI(title="Reimbursement Council")
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
-    page = make_page(Jinja2Templates(directory=HERE / "templates"))
+    page = make_page(
+        Jinja2Templates(directory=HERE / "templates"),
+        css_version=asset_version(HERE / "static" / "app.css"),
+    )
     add_claim_routes(app, ctx, page)
     add_check_routes(app, ctx, page)
+    add_export_routes(app, ctx)
+    add_confirm_routes(app, ctx)
+    add_error_pages(app, page)
 
     @app.get("/review", response_class=HTMLResponse)
     def queue(request: Request, lang: str = "en") -> HTMLResponse:
@@ -80,16 +95,8 @@ def create_app(ctx: WebContext) -> FastAPI:
 
     @app.get("/metrics", response_class=HTMLResponse)
     def numbers(request: Request, lang: str = "en") -> HTMLResponse:
-        runs = []
-        for path in sorted(ctx.results_root.glob("**/results*.json")):
-            report = json.loads(path.read_text(encoding="utf-8"))
-            runs.append({"name": f"{path.parent.name} / {path.stem}", "report": report})
-        readers = []
-        for path in sorted(ctx.results_root.glob("**/accuracy.json")):
-            report = json.loads(path.read_text(encoding="utf-8"))
-            readers.append(
-                {"name": path.parent.name, "summary": report["summary"], "reader": report["reader"]}
-            )
+        runs = find_runs(ctx.results_root)
+        readers = find_reader_scores(ctx.results_root)
         return page(request, "metrics.html", lang, runs=runs, readers=readers)
 
     return app
