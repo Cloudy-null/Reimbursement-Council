@@ -57,11 +57,12 @@ class FakeModel:
         return self.answers.pop(0)
 
 
-def settings(tmp_path: Path, two_readers: bool = True) -> Settings:
+def settings(tmp_path: Path, two_readers: bool = True, rotation: bool = False) -> Settings:
     base = repo_settings()
     local = base.local_model.model_copy(update={"cache_dir": str(tmp_path / "cache")})
+    vision = base.decision.vision.model_copy(update={"rotation_retry": rotation})
     decision = base.decision.model_copy(
-        update={"reader": "ollama", "two_readers_enabled": two_readers}
+        update={"reader": "ollama", "two_readers_enabled": two_readers, "vision": vision}
     )
     return base.model_copy(update={"local_model": local, "decision": decision})
 

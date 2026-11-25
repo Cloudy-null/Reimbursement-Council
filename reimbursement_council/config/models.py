@@ -147,6 +147,8 @@ class VisionConfig(ConfigModel):
     vat_number_pattern: str
     future_days: int = Field(ge=0)
     parallel_ocr: bool
+    rotation_retry: bool = True
+    rotation_strong_below: int = Field(default=3, ge=0)
     staff_words: list[str] = Field(default_factory=list)
     item_type_services: dict[str, str] = Field(default_factory=dict)
 

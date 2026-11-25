@@ -16,6 +16,7 @@ from uuid import uuid4
 from fastapi import UploadFile
 
 from reimbursement_council.adapters.heic import HEIC_SUFFIXES, heic_to_jpeg
+from reimbursement_council.adapters.orientation import upright_upload
 from reimbursement_council.core.models.claim import Document, ReaderOutput
 from reimbursement_council.web.context import WebContext
 
@@ -64,8 +65,8 @@ def accept(
                 kept.append(Upload(name=name, data=heic_to_jpeg(data), suffix=".jpg"))
             except ValueError:
                 refused.append(Refusal(name, "refused_type"))
-        else:
-            kept.append(Upload(name=name, data=data, suffix=suffix))
+        else:  # a phone photo's EXIF orientation is applied, so readers see it upright
+            kept.append(Upload(name=name, data=upright_upload(data, suffix), suffix=suffix))
     return kept, refused
 
 

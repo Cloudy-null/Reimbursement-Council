@@ -35,6 +35,10 @@ vision:
   # Read with the model and EasyOCR at the same time. Only when EasyOCR is on the CPU: on one
   # 12 GB GPU the two ran out of memory together (core day 4b).
   parallel_ocr: false
+  # A photo on its side: when a reading has fewer sure fields plus items than this, the reader
+  # also tries the photo turned 90, 180 and 270 degrees and keeps the strongest (web/final).
+  rotation_retry: true
+  rotation_strong_below: 3
   # A name on a row with one of these words is staff, not the patient (core day 4b: the model
   # took the salesperson on optical invoices for the patient).
   staff_words: ["موظف البيع", "البائع", "الكاشير", "الصيدلي", "salesperson", "sales person", "cashier", "pharmacist", "served by"]
