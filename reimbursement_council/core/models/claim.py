@@ -39,6 +39,8 @@ class FieldEdit(Model):
     typed_value: str
     evidence: EditEvidence = "none"
     evidence_note: str = ""
+    # True for a one-tap "yes, this is right" on a value we read (not a typed change).
+    confirmed: bool = False
 
 
 class Claim(Model):
@@ -105,6 +107,10 @@ class ReaderOutput(Model):
     line_items: list[LineItem]
     qr_payloads: list[str]
     text_lines: list[str] = Field(default_factory=list)
+    # The local model reader's check counts (made_up, qr_mismatch, ...) for the harness.
+    reader_counts: dict[str, int] = Field(default_factory=dict)
+    # The document type the local model saw, a hint for type detection.
+    kind_hint: DocumentKind | None = None
 
 
 class ExtractionResult(Model):

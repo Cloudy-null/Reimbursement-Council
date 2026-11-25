@@ -16,6 +16,7 @@ from reimbursement_council.adapters.receipt_drawing import DAMAGE_PRESETS, draw_
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.core.extraction import extract_document
 from reimbursement_council.core.models.claim import Document
+from reimbursement_council.evaluation.reader_counts import reader_summary
 from reimbursement_council.synthetic.accuracy import FIELDS, compare, summarize
 from reimbursement_council.synthetic.receipt_content import ReceiptOptions, make_receipt_content
 
@@ -35,9 +36,11 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
     read = commands.add_parser("read-accuracy", help="Read a receipt set and score each field.")
     read.add_argument("folder", type=Path)
-    read.add_argument("--reader", choices=["easyocr", "qr_only"], default=None)
+    read.add_argument("--reader", choices=["easyocr", "qr_only", "ollama"], default=None)
     read.add_argument("--config-dir", type=Path, default=Path("config"))
     read.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
+    read.add_argument("--results-name", default="accuracy.json")
+    read.add_argument("--two-readers", choices=["config", "on", "off"], default="config")
 
 
 def make_receipts(args: argparse.Namespace) -> int:
@@ -70,11 +73,17 @@ def make_receipts(args: argparse.Namespace) -> int:
 
 def read_accuracy(args: argparse.Namespace) -> int:
     settings = load_settings(args.config_dir)
+    changes: dict[str, object] = {}
     if args.reader:
-        decision = settings.decision.model_copy(update={"reader": args.reader})
-        settings = settings.model_copy(update={"decision": decision})
+        changes["reader"] = args.reader
+    if args.two_readers != "config":
+        changes["two_readers_enabled"] = args.two_readers == "on"
+    decision = settings.decision.model_copy(update=changes)
+    settings = settings.model_copy(update={"decision": decision})
     pick = make_reader_for(settings, CachedOcrEngine(EasyOcrEngine(), args.ocr_cache))
     rows = []
+    counts: list[dict[str, int]] = []
+    seconds: list[float] = []
     started = time.time()
     for image in sorted(args.folder.glob("*.png")):
         truth = json.loads(
@@ -88,12 +97,15 @@ def read_accuracy(args: argparse.Namespace) -> int:
             image_hash=None,
             uploaded_at=datetime.now(UTC),
         )
+        read_started = time.perf_counter()
         reading = pick(document).read(document)
+        seconds.append(time.perf_counter() - read_started)
+        counts.append(reading.reader_counts)
         extraction = extract_document(document.document_id, reading, settings)
         row = compare(truth, extraction, qr_found=bool(reading.qr_payloads))
         row |= {"receipt": image.stem, "damage": truth["damage"], "layout": truth["layout"]}
         rows.append(row)
-    summary = summarize(rows)
+    summary = summarize(rows) | reader_summary(counts, seconds)
     by_damage = {
         name: summarize([row for row in rows if row["damage"] == name])
         for name in sorted({row["damage"] for row in rows})
@@ -103,9 +115,14 @@ def read_accuracy(args: argparse.Namespace) -> int:
         "seconds": round(time.time() - started, 1),
         "summary": summary,
         "by_damage": by_damage,
+        "by_layout": {
+            name: summarize([row for row in rows if row["layout"] == name])
+            for name in sorted({row["layout"] for row in rows})
+        },
+        "two_readers": settings.decision.two_readers_enabled,
         "rows": rows,
     }
-    (args.folder / "accuracy.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
+    (args.folder / args.results_name).write_text(json.dumps(report, indent=1), encoding="utf-8")
     lines = [f"receipts: {summary['receipts']}  reader: {settings.decision.reader}"]
     lines += [f"{name:<16} {summary[name]:.3f}" for name in (*FIELDS, "item_codes")]
     sys.stdout.write("\n".join(lines) + "\n")

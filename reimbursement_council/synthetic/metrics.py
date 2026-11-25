@@ -45,6 +45,9 @@ class RunRow(Model):
     past_claims: int | None = None
     # The AI case reviewer's status on this claim (used, discarded, skipped, benched), if on.
     reviewer_status: str | None = None
+    # Seconds for the first try of this claim: all of it, and the part spent reading documents.
+    seconds_total: float | None = None
+    seconds_read: float | None = None
 
 
 def paid_right(row: RunRow, tolerance: int) -> bool:

@@ -123,6 +123,17 @@ class OcrConfig(ConfigModel):
     max_date_year: int = Field(le=2200)
 
 
+class VisionConfig(ConfigModel):
+    """Checks and confidences for the local model reader (decision.yaml, vision)."""
+
+    field_confidence: Score
+    agree_confidence: Score
+    disagree_confidence: Score
+    ground_ratio: Score
+    vat_number_pattern: str
+    future_days: int = Field(ge=0)
+
+
 class DecisionConfig(ConfigModel):
     hard_rule_confidence_floor: Score
     disagreement_limit: Score
@@ -144,8 +155,12 @@ class DecisionConfig(ConfigModel):
     self_fix_p_good_limit: Score
     paid_right_tolerance_halalas: Halalas
     gemini_reader_enabled: bool
-    reader: Literal["easyocr", "qr_only"]
+    reader: Literal["easyocr", "qr_only", "ollama"]
+    vision: VisionConfig
+    two_readers_enabled: bool
     passed_check_confidence: Score
+    member_confirmed_confidence: Score
+    confirm_date_margin_days: int = Field(ge=0)
     cross_checks_enabled: bool
     ocr: OcrConfig
     members: MembersConfig
@@ -282,7 +297,11 @@ class LocalModelConfig(ConfigModel):
     seed: int
     timeout_seconds: float = Field(gt=0)
     keep_alive: str
+    num_ctx: int = Field(gt=0)
+    num_predict: int = Field(gt=0)
     prompt_version: str = Field(min_length=1)
+    max_image_side: int = Field(gt=0)
+    cache_dir: str
 
 
 class Settings(ConfigModel):

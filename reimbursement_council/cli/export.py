@@ -32,7 +32,7 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     )
     export.add_argument("folder", type=Path)
     export.add_argument("--out", type=Path, default=Path("outputs/export"))
-    export.add_argument("--reader", choices=["easyocr", "qr_only"], default=None)
+    export.add_argument("--reader", choices=["easyocr", "qr_only", "ollama"], default=None)
     export.add_argument("--config-dir", type=Path, default=Path("config"))
     export.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
 

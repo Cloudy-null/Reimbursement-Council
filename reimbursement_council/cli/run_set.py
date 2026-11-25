@@ -14,7 +14,7 @@ from typing import Any
 import yaml
 
 from reimbursement_council.adapters.files import load_claim_file, load_reference_file
-from reimbursement_council.adapters.ocr_engine import CachedOcrEngine, EasyOcrEngine
+from reimbursement_council.adapters.ocr_engine import CachedOcrEngine, EasyOcrEngine, OcrEngine
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
 from reimbursement_council.config.loader import load_settings
@@ -23,6 +23,7 @@ from reimbursement_council.core.decision.calibration import fit_platt
 from reimbursement_council.core.models.claim import Claim
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.models.reference import ReferenceData
+from reimbursement_council.evaluation.timing import ReadClock, timing_metrics
 from reimbursement_council.pipeline.case_review import make_case_reviewer
 from reimbursement_council.pipeline.process_claim import process_claim
 from reimbursement_council.synthetic.apply_fix import claim_after_fix
@@ -44,7 +45,7 @@ SET_MANIFEST = "set.json"
 def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     run = commands.add_parser("run-set", help="Run a claim set through the pipeline and score it.")
     run.add_argument("folder", type=Path)
-    run.add_argument("--reader", choices=["easyocr", "qr_only"], default=None)
+    run.add_argument("--reader", choices=["easyocr", "qr_only", "ollama"], default=None)
     run.add_argument("--calibration", choices=["config", "on", "off"], default="config")
     run.add_argument("--cross-checks", choices=["config", "on", "off"], default="config")
     run.add_argument(
@@ -64,6 +65,11 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     run.add_argument("--config-dir", type=Path, default=Path("config"))
     run.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
     run.add_argument("--data-dir", type=Path, default=Path("data"), help="Reviewer health file.")
+    run.add_argument(
+        "--no-ocr-cache",
+        action="store_true",
+        help="Read every image again, for honest seconds per claim.",
+    )
     run.add_argument("--results-name", default="results.json")
     run.add_argument(
         "--resume",
@@ -215,7 +221,10 @@ def run_set(args: argparse.Namespace) -> int:
     manifest = _read_manifest(args.folder, len(claim_paths))
     reference = load_reference_file(args.folder / "reference.json")
     store = _open_store(args, settings, manifest)
-    pick = make_reader_for(settings, CachedOcrEngine(EasyOcrEngine(), args.ocr_cache))
+    engine: OcrEngine = EasyOcrEngine()
+    if not args.no_ocr_cache:
+        engine = CachedOcrEngine(engine, args.ocr_cache)
+    pick = ReadClock(make_reader_for(settings, engine))
     reviewer = None
     if decision.members.case_reviewer.enabled:  # golden check first when never checked
         reviewer = make_case_reviewer(settings, args.data_dir)
@@ -240,9 +249,12 @@ def run_set(args: argparse.Namespace) -> int:
         if result is None:
             logger.info("claim %d/%d %s: start", number, len(claim_paths), claim.claim_id)
             now = datetime.now(UTC)
+            pick.reset()
+            claim_started = time.perf_counter()
             result = process_claim(
                 claim, reference, settings, store, now, reader_for=pick, case_reviewer=reviewer
             )
+            seconds = (time.perf_counter() - claim_started, pick.seconds)
             fix = truth.get("fix")
             if args.simulate_fix and result.lane == "self_fix" and fix:
                 first = result
@@ -253,8 +265,12 @@ def run_set(args: argparse.Namespace) -> int:
                 logger.info("claim %s: after the fix, lane %s", claim.claim_id, result.lane)
         else:
             resumed += 1
+            seconds = None
         name = claim_path.name.replace(".claim.json", "")
-        rows.append(_row(name, result, truth, first, _past_claims(reference, claim)))
+        row = _row(name, result, truth, first, _past_claims(reference, claim))
+        if seconds is not None:
+            row = row.model_copy(update={"seconds_total": seconds[0], "seconds_read": seconds[1]})
+        rows.append(row)
     if resumed:
         logger.info("resumed: %d of %d claims came from the stored run", resumed, len(rows))
     tolerance = decision.paid_right_tolerance_halalas
@@ -263,6 +279,7 @@ def run_set(args: argparse.Namespace) -> int:
         | document_metrics(rows)
         | self_fix_metrics(rows, tolerance)
         | fairness_metrics(rows, decision.members.history_member.min_past_claims)
+        | timing_metrics(rows)
     )
     lanes: dict[str, int] = {}
     for row in rows:
@@ -274,6 +291,7 @@ def run_set(args: argparse.Namespace) -> int:
         "cross_checks": decision.cross_checks_enabled,
         "overrides": list(args.set),
         "simulate_fix": args.simulate_fix,
+        "ocr_cache": not args.no_ocr_cache,
         "config_version": settings.config_version,
         "seconds": round(time.time() - started, 1),
         "lanes": lanes,
