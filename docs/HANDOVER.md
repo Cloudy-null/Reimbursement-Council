@@ -1,5 +1,9 @@
 # Handover
 
+## web/final note (read first)
+Done (tag demo-ready-final-5): EXIF orientation on upload plus a turn retry for weak readings (real invoice at 90 degrees now fully read); Arabic-Indic numbers matched as digit sets (synthetic: date 0 to 0.833, total 0 to 0.5, kept under the floor for the member to confirm); patient names matched word by word, by consonants across Arabic and English, low-confidence names cannot tell, prescriptions may be 30 days older (optical false alarms 0.45 to 0.05, check set still 3 of 3 caught, 0 of 57 false alarms; precision 1.0, false rejects 0).
+Not done: full reruns of every set, numbers.md update, reviews. CHECK: the reviewer was benched by its live monitor (discarded answers 0.22 over 0.20) during check runs; golden check 0.95 passed and a person-step reviewer-enable turned it back on; watch it before the demo.
+
 ## Core day 4b final report (read this first)
 
 Merged to main and tagged demo-ready-final-4. Numbers are from commit ac2a7e4 (docs/EXPERIMENTS.md
