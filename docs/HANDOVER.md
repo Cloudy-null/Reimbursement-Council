@@ -1,5 +1,8 @@
 # Handover
 
+## fix/monitor note (read first)
+Cause of the reviewer bench: the "discarded answers" monitor, 0.40 (4 of the last 10 answers) above the 0.20 limit, after 10 answers. A test-run artifact: unit tests ran run-set with the reviewer on (repo config) and the default data folder, so they asked the real model about tiny test claims and wrote the real data/reviewer/health.json. Fixed (tag demo-ready-final-8): commands take their data folder from RC_DATA_DIR (tests set a temporary one, checked by a test), run-set tests run without the reviewer, and the rolling monitors judge only after 20 live answers. check-reviewer: golden 0.95 (19 of 20, the miss is the cautious dental crown case), reviewer-enable done; the numbers page says "AI reviewer: healthy". 895 unit tests and e2e 4 of 4 pass.
+
 ## fix/final note (read first)
 Done (tag demo-ready-final-7): hard rules apply on every path (a confident date on another document can fail the 90-day and policy rules when the bill has no date; send-to-reviewer never moves a rejected claim; the check page warns before submit). Precision and recall on the synthetic check set at 120febe: approvals 1.0 (21/21), payable recall 0.42 (21/50), problem precision 0.6923 (27/39), problem recall 0.9 (27/30); not computable on real e2e (no defect labels, payout unknown). Numbers page rebuilt for judges: four plain tiles, real reading, the real Bupa claim, damage chart, reviewer status, plain-named ablations; synthetic and real marked. 893 unit tests and e2e 4 of 4 pass.
 CHECK: the AI reviewer shows "benched" again (its live monitor); run check-reviewer and reviewer-enable before the demo. Tile numbers live in reimbursement_council/web/headline.json: update them with each new measured commit.
