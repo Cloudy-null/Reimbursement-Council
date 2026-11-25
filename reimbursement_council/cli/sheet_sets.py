@@ -10,6 +10,7 @@ from pathlib import Path
 from reimbursement_council.adapters.sheet_drawing import draw_sheet
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.config.models import Settings
+from reimbursement_council.synthetic.dental_claims import make_dental_set
 from reimbursement_council.synthetic.optical_claims import make_optical_set
 from reimbursement_council.synthetic.sheet_cases import SheetSet
 
@@ -21,6 +22,7 @@ SET_MANIFEST = "set.json"
 def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     for name, what in (
         ("make-optical-claims", "an optical claim set (glasses) with right answers"),
+        ("make-dental-claims", "a dental claim set (tooth number) with right answers"),
     ):
         command = commands.add_parser(name, help=f"Make {what}.")
         command.add_argument("out", type=Path, help="A new, empty folder.")
@@ -81,6 +83,13 @@ def make_optical_claims(args: argparse.Namespace) -> int:
     return 0
 
 
+def make_dental_claims(args: argparse.Namespace) -> int:
+    settings = load_settings(args.config_dir)
+    write_sheet_set(make_dental_set(args.seed, settings), args.out, settings)
+    return 0
+
+
 COMMANDS = {
     "make-optical-claims": make_optical_claims,
+    "make-dental-claims": make_dental_claims,
 }

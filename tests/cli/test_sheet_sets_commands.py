@@ -31,7 +31,10 @@ def _check_folder(out: Path, count: int, kind: str) -> list[dict[str, object]]:
     return truths
 
 
-@pytest.mark.parametrize(("command", "count", "kind"), [("make-optical-claims", 20, "optical")])
+@pytest.mark.parametrize(
+    ("command", "count", "kind"),
+    [("make-optical-claims", 20, "optical"), ("make-dental-claims", 6, "dental")],
+)
 def test_sheet_set_commands_write_the_make_claims_format(
     tmp_path: Path, command: str, count: int, kind: str
 ) -> None:
