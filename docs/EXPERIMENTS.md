@@ -584,3 +584,24 @@ First run (0f4b592): no date (2026/07/29 not read), invoice number not found (pr
          0.00 and the member was asked for a full tax invoice. Fixed with tests in a8dd032.
 The sub-limit usage came from Bupa's answer, not from a prediction.
 ```
+
+```
+Run: Step 4b, image variants of the real invoice (real data, kept in realtest/variants)
+Date: 2026-11-25
+Commit: 5746949
+Command: D:\rc-tmp\real_variants.py (reader ollama with two readers; fields compared with the
+         known right values: date, total, VAT, the two item amounts)
+Result (right fields; a miss was always a blank field, never a wrong value):
+  pdf (original)      date, total, VAT, items all right; 12.04 s (first call)
+  image (rendered)    all right; 7.0 s
+  rotated 90 degrees  nothing read (EasyOCR and the model lost the text); 6.67 s
+  rotated 7 degrees   date, total, items right; VAT not read; 6.91 s
+  blurry (radius 2.5) nothing read; 8.09 s
+  low light (0.35)    all right; 8.54 s
+  cropped edge (10%)  total and VAT right; date and items not read; 7.58 s
+  photo of a screen   date and total right (total under the floor: readers disagreed);
+                      VAT and items not read; 8.74 s
+  Totals over 8 variants: date 5, total 6, VAT 4, items 4.
+Meaning: when quality drops the fields go blank and the member is asked for a clearer photo.
+         A 90 degree rotation is not handled (CHECK: try EasyOCR's rotation_info).
+```
