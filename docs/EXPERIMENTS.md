@@ -431,3 +431,43 @@ Decision: reader ollama with two readers on is the new default. Both keep wrong 
          raised the real date accuracy from 0.5167 to 0.6 and sends every disagreement to the
          member, which is the safer side for documents judges hand us.
 ```
+
+```
+Run: AI case reviewer golden set with the real model (check-reviewer)
+Date: 2026-11-25
+Model: qwen3-vl:8b-instruct, text only, temperature 0, seed 7
+Command: check-reviewer --data-dir <separate folder>
+Test set: tests/golden, 20 claim summaries (6 clear good, 5 clear bad, 5 tricky, 4 injection)
+Result:
+         8d239e3, reviewer prompt 2: pass rate 0.35 (limit 0.90), benched. 13 answers discarded
+           by the schema check: the model wrote a whole number score (0), and repeated the same
+           cited field until the answer was cut off.
+         first run (e59b4e6, prompt 1): pass rate 0.25, benched. Reasons longer than 300
+           characters were discarded.
+         6b60397, reviewer prompt 3: pass rate 0.85 (17 of 20), benched (limit 0.90). Every clear
+           good, clear bad and injection case passed. Failed: tricky_bad_cosmetic_as_consult,
+           tricky_bad_date_in_future, tricky_bad_huge_quantity (scored 1.0, expected bad).
+Honesty note: prompts 2 and 3 were written after seeing golden failures (format fixes, and
+         one sentence that the calculated payout is normally lower than the requested one after
+         co-pay). So 0.85 is not a clean held-out score. No more changes were made against it.
+Decision: the reviewer stays off by default and benched. The circuit breaker worked as built.
+```
+
+```
+Run: E3, council with vs without the AI case reviewer
+Date: 2026-11-25
+Commit: 6b60397 (reader ollama with two readers, calibration on; model answers cached)
+Command: run-set data/sets/abl/check --results-name results_core_e3_off.json
+         run-set data/sets/abl/check --set members.case_reviewer.enabled=true
+           --set members.case_reviewer.golden_pass_rate=0.85 --data-dir <separate folder>
+           --results-name results_core_e3_on.json
+         (the pass limit was lowered for this measurement only, so the benched reviewer runs)
+Test set: synthetic check, 60 claims (seed 12)
+Result: off: auto_approve 26, human_review 13, self_fix 11, auto_reject 10; automation 0.6,
+         precision 1.0, false rejects 0.0, reviews 216.7 per 1000, ECE 0.087, 0.145 s per claim.
+         on: auto_approve 25, human_review 14; automation 0.5833, precision 1.0, false rejects
+         0.0, reviews 233.3, ECE 0.0715, 2.549 s per claim. Reviewer used on 39 claims, skipped
+         on 21 (lanes it does not review), 0 discarded. It moved 1 claim, claim_12_0036
+         (payable, overpriced: paid in part) from auto_approve to a person.
+Meaning: on this set the reviewer only costs: there was no wrong approval for it to stop.
+```
