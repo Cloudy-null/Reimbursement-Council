@@ -70,37 +70,21 @@ sign in on both machines, then on the PC
 6. The review items not fixed are listed in section 5.
 
 ## 1. Current status
-main is at d736d1d (tag demo-ready-1: part (b), the model reader off by default, live-test,
-DEMO.md). Branch core/day4 has everything since, including the AI case reviewer (merged from
-core/day4-reviewer). Not merged to main yet.
+main and core/day4 are the same and tagged demo-ready-final (core day 4 report above). All
+numbers are from 38cc89d. Defaults: reader ollama (qwen3-vl:8b-instruct through Ollama on this
+PC) with two readers on, calibration on, AI case reviewer off (benched by its golden set).
 
-Done since demo-ready-1 (each with tests; numbers in EXPERIMENTS "Core day 4 night"):
-- Model reader measured and made the default: reader ollama with two readers on
-  (qwen3-vl:8b-instruct; the plain 8b tag thinks and returned empty answers).
-- AI case reviewer merged: guard (only moves auto_approve to a person), golden set (20 cases),
-  circuit breaker, check-reviewer and reviewer-enable commands, status line on the numbers
-  page. Golden pass rate with the real model 0.85 (limit 0.90): benched, off by default.
-- (e) Arabic and English reading on the synthetic receipts with the model; mixed-script names
-  keep their Latin words. The model's document type is stored as a hint only.
-- Splits: run_set.py, receipt_parsing.py (dates to receipt_dates.py), vision_checks.py
-  (answer to vision_answer.py), config/models.py (messages to message_models.py): all under 300.
-- Code review and data review done. Fixed with tests: model kind never fills a required
-  document; values the model read that only nearly match the print, or that only the model
-  read, are under the 0.90 floor; a value that differs from the QR is dropped; disagreeing
-  fields are not lifted by arithmetic; one-tap confirm goes to a person on a reader
-  disagreement or near the policy dates; supporting documents need the floor; item confidence
-  includes a matched description; no proxy for model calls; safe cache and health writes;
-  model warm-up at startup and a 60 s model timeout; a golden run with the model down is not
-  judged; no reviewer answer text in logs. The model and EasyOCR now read at the same time.
-- docs: MODEL_SAFETY.md, decision 011, DATA_MODEL fields, INTEGRATION FHIR line.
+Where tonight's pieces are: adapters/local_model.py (Ollama client, this machine only, no
+proxy), adapters/vision_reader.py (QR, EasyOCR and the model at the same time, checks, cache),
+core/vision_checks.py and core/vision_answer.py (the checks), core/two_readers.py,
+core/date_confirm.py, core/receipt_dates.py; the AI case reviewer in core/council/case_reviewer*.py,
+core/decision/reviewer_guard.py, core/reviewer_health.py, pipeline/case_review.py and
+cli/reviewer.py; the harness in evaluation/ (timing, reader_counts, run_rows, live_report) and
+cli/live_test.py.
 
-Running now: calibration refit on the tune set with the model reader (data review finding:
-calibration was fitted on EasyOCR scores). Then every headline number is rerun at one commit.
-
-Machine notes: drive C: had 7 MB free; data/ is now a junction to D:\rc-data\data. EasyOCR
-runs on the CPU (torch is the CPU build; the CUDA build does not fit on C:), so a new photo
-takes about 15 s of OCR. Tailscale is not installed on this PC. data/live_test did not exist;
-a labeled stand-in set is in data/live_standin (real SROIE scans and synthetic documents).
+Machine notes: data/ is a junction to D:\rc-data\data (C: was full). Ollama models are in
+D:\ollama-models. EasyOCR runs on the CPU. Set TMP and TEMP to a folder on D: while C: is full.
+Tailscale is not installed on this PC.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -207,11 +191,10 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   uv pip install torch --index-url https://download.pytorch.org/whl/cu124 (check the version).
 
 ## 6. Next 3 tasks
-1. Refit calibration with the model reader on the tune set, then rerun every headline number at
-   one commit (synthetic check, E8, E12, E3, E6, SROIE, real e2e, eval_s1, export, live stand-in).
-2. Update numbers.md, SUMMARY.md and MODEL_SAFETY.md from that commit; run the e2e demo test;
-   merge to main and tag demo-ready-final; report at the top of HANDOVER.
-3. Owner: put real photos in data/live_test and run live-test; install Tailscale (docs/DEMO.md).
+1. Owner: real photos into data/live_test, then live-test; install Tailscale (docs/DEMO.md).
+2. Free space on C:, install the CUDA build of torch, rerun live-test for seconds per claim.
+3. Make a fresh held-out synthetic set and confirm the defaults on it; website pass for the
+   reviewer card (decision.case_review is in the decision and the export).
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
