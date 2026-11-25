@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from reimbursement_council.adapters.case_reviewer_model import ReviewerTimeoutError
+from reimbursement_council.adapters.export_schema import schema_errors
 from reimbursement_council.adapters.files import load_claim_file, load_reference_file
 from reimbursement_council.adapters.golden_set import load_golden_set
 from reimbursement_council.adapters.local_model import LocalModelError
@@ -20,6 +21,7 @@ from reimbursement_council.core.council.case_reviewer_summary import DATA_END, D
 from reimbursement_council.core.models.claim import Claim
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.pipeline.case_review import CaseReviewerService
+from reimbursement_council.pipeline.export_claim import export_claim
 from reimbursement_council.pipeline.process_claim import process_claim
 from tests.factories import repo_settings, settings_with
 
@@ -300,3 +302,16 @@ def test_enable_needs_a_passing_check_after_the_bench(tmp_path: Path) -> None:
     later = datetime(2026, 11, 20, 10, 0, tzinfo=UTC)
     assert reviewer.run_check(later)[0].status == "benched"  # still benched after a pass
     assert reviewer.enable().status == "healthy"
+
+
+def test_the_review_is_in_the_export_and_matches_the_schema(tmp_path: Path) -> None:
+    reviewer = service(tmp_path, FakeModel(lambda data: reply(0.1, data)))
+    store = ClaimStore(tmp_path / "a.sqlite")
+    reference = load_reference_file(FIXTURES / "reference.json")
+    claim = fixture("clean")
+    process_claim(claim, reference, enabled_settings(), store, NOW, case_reviewer=reviewer)
+    export = export_claim(claim, store, reference, enabled_settings(), NOW)
+    assert export is not None and export.case_review is not None
+    assert export.case_review.status == "used" and export.case_review.changed_lane
+    assert export.case_review.cited_fields
+    assert schema_errors(json.loads(export.model_dump_json())) == []

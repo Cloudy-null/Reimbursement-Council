@@ -1,6 +1,108 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "CaseReview": {
+      "additionalProperties": false,
+      "description": "What the case reviewer did on one claim, stored on the Decision and in the export.",
+      "properties": {
+        "status": {
+          "enum": [
+            "used",
+            "discarded",
+            "skipped",
+            "benched"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "problem": {
+          "anyOf": [
+            {
+              "enum": [
+                "schema",
+                "citation",
+                "timeout",
+                "error",
+                "not_connected",
+                "unchecked",
+                "lane_not_reviewed",
+                "benched"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Problem"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "weight": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Weight",
+          "type": "number"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "cited_fields": {
+          "items": {
+            "$ref": "#/$defs/CitedField"
+          },
+          "title": "Cited Fields",
+          "type": "array"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_version": {
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "changed_lane": {
+          "default": false,
+          "title": "Changed Lane",
+          "type": "boolean"
+        },
+        "effect": {
+          "default": "",
+          "title": "Effect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "model",
+        "prompt_version"
+      ],
+      "title": "CaseReview",
+      "type": "object"
+    },
     "CheckResult": {
       "additionalProperties": false,
       "properties": {
@@ -37,6 +139,25 @@
         "fields"
       ],
       "title": "CheckResult",
+      "type": "object"
+    },
+    "CitedField": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "CitedField",
       "type": "object"
     },
     "CrossCheckResult": {
@@ -921,6 +1042,17 @@
           "type": "null"
         }
       ]
+    },
+    "case_review": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CaseReview"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [
