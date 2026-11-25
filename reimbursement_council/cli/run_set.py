@@ -17,23 +17,20 @@ from reimbursement_council.adapters.files import load_claim_file, load_reference
 from reimbursement_council.adapters.ocr_engine import CachedOcrEngine, EasyOcrEngine, OcrEngine
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
+from reimbursement_council.cli.calibration import fit_calibration
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.config.models import DecisionConfig, Settings
-from reimbursement_council.core.decision.calibration import fit_platt
-from reimbursement_council.core.models.claim import Claim
 from reimbursement_council.core.models.decision import Decision
-from reimbursement_council.core.models.reference import ReferenceData
+from reimbursement_council.evaluation.run_rows import past_claims_of, run_row
 from reimbursement_council.evaluation.timing import ReadClock, timing_metrics
 from reimbursement_council.pipeline.case_review import make_case_reviewer
 from reimbursement_council.pipeline.process_claim import process_claim
 from reimbursement_council.synthetic.apply_fix import claim_after_fix
-from reimbursement_council.synthetic.document_metrics import MISMATCH_DEFECTS, document_metrics
+from reimbursement_council.synthetic.document_metrics import document_metrics
 from reimbursement_council.synthetic.metrics import (
     RunRow,
-    calibration_rows,
     fairness_metrics,
     metrics,
-    paid_right,
     self_fix_metrics,
 )
 
@@ -170,48 +167,6 @@ def _stored_result(store: ClaimStore, claim_id: str) -> Decision | None:
     return decision if decision is not None and store.has_receipt(claim_id) else None
 
 
-def _row(
-    name: str,
-    result: Decision,
-    truth: dict[str, Any],
-    first: Decision | None,
-    past_claims: int | None,
-) -> RunRow:
-    # The truth's documents are those of the first try, so they are scored on it.
-    read = first or result
-    return RunRow(
-        name=name,
-        lane=result.lane,
-        outcome=result.outcome,
-        payout_calculated=result.payout_calculated,
-        p_good=result.p_good,
-        combined_score=result.combined_score,
-        should_pay=truth["should_pay"],
-        correct_payout=truth["correct_payout"],
-        defects=truth["defects"],
-        damage=truth["damage"],
-        hard_rule_failed=any(r.outcome == "fail" for r in result.rule_results),
-        kinds_read=dict(read.document_kinds),
-        kinds_true=truth.get("document_kinds", {}),
-        needs_flagged=[list(g) for g in read.needs_missing],
-        needs_missing=truth.get("needs_missing", []),
-        cross_check_failed=any(c.passed is False for c in read.cross_checks),
-        cross_check_expected=bool(MISMATCH_DEFECTS & set(truth["defects"])),
-        expected_lane=truth.get("expected_lane"),
-        first_lane=None if first is None else first.lane,
-        fix_tried=first is not None,
-        past_claims=past_claims,
-        reviewer_status=None if result.case_review is None else result.case_review.status,
-    )
-
-
-def _past_claims(reference: ReferenceData, claim: Claim) -> int | None:
-    try:
-        return reference.history(claim.patient_member_id).past_claims
-    except LookupError:
-        return None
-
-
 def run_set(args: argparse.Namespace) -> int:
     settings = _settings_for(args)
     decision = settings.decision
@@ -267,7 +222,7 @@ def run_set(args: argparse.Namespace) -> int:
             resumed += 1
             seconds = None
         name = claim_path.name.replace(".claim.json", "")
-        row = _row(name, result, truth, first, _past_claims(reference, claim))
+        row = run_row(name, result, truth, first, past_claims_of(reference, claim))
         if seconds is not None:
             row = row.model_copy(update={"seconds_total": seconds[0], "seconds_read": seconds[1]})
         rows.append(row)
@@ -306,36 +261,6 @@ def run_set(args: argparse.Namespace) -> int:
     lines += [f"lanes: {lanes}"]
     lines += [f"{name:<36} {value}" for name, value in scores.items()]
     sys.stdout.write("\n".join(lines) + "\n")
-    return 0
-
-
-def fit_calibration(args: argparse.Namespace) -> int:
-    settings = load_settings(args.config_dir)
-    report = json.loads(args.results.read_text(encoding="utf-8"))
-    all_rows = [RunRow.model_validate(row) for row in report["rows"]]
-    rows = calibration_rows(all_rows)
-    tolerance = settings.decision.paid_right_tolerance_halalas
-    params = fit_platt(
-        [r.combined_score for r in rows], [1 if paid_right(r, tolerance) else 0 for r in rows]
-    )
-    target = args.config_dir / "calibration.yaml"
-    target.write_text(
-        "# Platt calibration, fitted by: reimbursement-council fit-calibration\n"
-        + yaml.safe_dump(
-            {
-                "method": "platt",
-                "a": round(params.a, 6),
-                "b": round(params.b, 6),
-                "fitted_on": (
-                    f"{args.results} ({len(rows)} claims; "
-                    f"{len(all_rows) - len(rows)} rejected by a hard rule left out)"
-                ),
-            },
-            sort_keys=False,
-        ),
-        encoding="utf-8",
-    )
-    sys.stdout.write(f"a={params.a:.4f} b={params.b:.4f} written to {target}\n")
     return 0
 
 

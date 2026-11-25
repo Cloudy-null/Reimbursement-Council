@@ -23,7 +23,8 @@ from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import ExtractedField, LineItem
 from reimbursement_council.core.models.common import DocumentKind, FieldName, Model
 from reimbursement_council.core.money import parse_sar_to_halalas
-from reimbursement_council.core.receipt_parsing import MONEY_PATTERN, first_date, fix_digits
+from reimbursement_council.core.receipt_dates import first_date, fix_digits
+from reimbursement_council.core.receipt_parsing import MONEY_PATTERN
 from reimbursement_council.core.text import normalize_text
 from reimbursement_council.core.zatca import ZatcaInvoice
 
