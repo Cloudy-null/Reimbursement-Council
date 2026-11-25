@@ -1,0 +1,11 @@
+# The local model (Ollama on this machine). No document or claim leaves the computer.
+# The model only reads and gives one opinion. It never decides (docs/MODEL_SAFETY.md).
+url: "http://127.0.0.1:11434"
+model: "qwen3-vl:8b"
+temperature: 0.0
+seed: 7
+timeout_seconds: 180
+# How long Ollama keeps the model in GPU memory after a call, so the next claim does not wait.
+keep_alive: "30m"
+# Raise when a prompt changes, so cached answers and logged checks name the prompt they came from.
+prompt_version: "1"

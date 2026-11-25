@@ -242,8 +242,21 @@ class SyntheticConfig(ConfigModel):
         return weights
 
 
+class LocalModelConfig(ConfigModel):
+    """The local Ollama model (config/local_model.yaml)."""
+
+    url: str = Field(pattern=r"^https?://")
+    model: str = Field(min_length=1)
+    temperature: float = Field(ge=0.0, le=2.0)
+    seed: int
+    timeout_seconds: float = Field(gt=0)
+    keep_alive: str
+    prompt_version: str = Field(min_length=1)
+
+
 class Settings(ConfigModel):
     policy: PolicyConfig
+    local_model: LocalModelConfig
     documents: DocumentsConfig
     decision: DecisionConfig
     prices: dict[str, PriceListItem]
