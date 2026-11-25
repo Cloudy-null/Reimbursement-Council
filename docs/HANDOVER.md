@@ -1,6 +1,37 @@
 # Handover
 
-## Core day 4 report (read this first)
+## Core day 4b report (read this first)
+
+Merged to main and tagged demo-ready-final-3. Stopped early: the session hit its usage limit.
+Tests: 862 pass at 3924032; the e2e demo test passes (4 of 4) at a5c7cb3 (only a rule pattern
+in config changed after). Numbers are in docs/EXPERIMENTS.md "Core day 4b".
+
+- Case study (docs/pitch/real_claim_case.md): our estimate before submit 450 SAR, Bupa paid 450
+  SAR. Sent today: rejected as late (119 days). Sent on Bupa's received date: 450 SAR, human_review.
+- Seconds per claim (stand-in live set): 13.855 s (EasyOCR on CPU) to 8.057 s (GPU, taking turns).
+- Real invoice variants (8): date right 5, total 6, VAT 4, items 4; misses are blanks, never
+  wrong values. 90 degree rotation not handled.
+- Reviewer: tuned on tests/golden_v2/dev (0.65 to 1.0), held-out run once: 0.95 (19 of 20).
+  The held-out set is the startup golden set. Reviewer left OFF: the E3 check of wrong approvals
+  with the final rules (run /d/rc-tmp/f3, reviewer.txt) was not read before the stop. At a5c7cb3
+  it changed no lane and precision stayed 1.0.
+- Synthetic check set with all new rules (a5c7cb3): precision 1.0, false rejects 0, automation
+  0.3833 (from 0.5667): 12 dental claims asked for a tooth number (synthetic receipts never print
+  one), 10 asked for a full tax invoice (fixed in 3924032: a receipt number now counts).
+- Languages (synthetic): French flagged for translation 6 of 6, Urdu 0 of 6 (EasyOCR turns Urdu
+  letters into Arabic ones; words like "نمبر", "كا", "تعداد" could catch it). Arabic-Indic
+  digits: date and total 0 of 6 (OCR garbles them; the model reads them but is not confirmed).
+- Live test on data/live_test: no photos were there.
+
+Not done (left on the branch or to do): read /d/rc-tmp/f3 results (claim-level reruns at
+3924032, 30 damage folders) into EXPERIMENTS, the damage chart, numbers.md and SUMMARY.md from
+one commit, the reviewer on/off decision, the Urdu word rule.
+
+CHECKs: Tabby treated as paid (not a credit invoice); synthetic dental receipts lack tooth
+numbers; Urdu not detected; Arabic-Indic digits not confirmed; 90 degree rotation; the uv cache
+is at D:V-cache (user setting UV_CACHE_DIR); torch pinned to 2.14.1+cu130 on Windows.
+
+## Core day 4 report
 
 Branch core/day4, merged to main and tagged demo-ready-final (demo-ready-1 was the halfway
 point). Every number below is from commit 38cc89d; commands in docs/EXPERIMENTS.md "FINAL

@@ -69,3 +69,7 @@
   reviewer off (benched at golden 0.85).
 - Next: the owner's live photos and Tailscale; CUDA torch after freeing C:; a held-out set.
 - Tags: demo-ready-1 (d736d1d), demo-ready-final.
+
+## 2026-11-25: core day 4b (stopped at the usage limit)
+- Done: privacy for realtest/, EasyOCR on the GPU, add-member, Bupa FAQ rules, real case study (450 SAR matches Bupa), real variants, generators, reviewer dev and held-out sets (held-out 0.95), HEIC, two demo claims, e2e extended.
+- Left: final reruns in /d/rc-tmp/f3 not recorded, numbers and summary not updated, reviewer stays off.
