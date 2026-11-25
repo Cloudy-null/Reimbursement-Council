@@ -42,6 +42,14 @@ en:
     medical_report: "a medical report"
     other: "another document"
   or_word: "or"
+  estimate:
+    total: "Estimated payout: {amount} SAR of the {requested} SAR you paid."
+    sub_limit: "{cut} SAR is over your {benefit} limit for this year ({left} SAR of {limit} SAR was left)."
+    share: "Your share: {share} SAR."
+    share_capped: "Your share: {share} SAR (20 percent, at most {cap} SAR)."
+    vat: "VAT ({vat} SAR) is not covered."
+    benefit_optical_frames: "eyeglass frames"
+
 ar:
   lanes:
     approved: "تمت الموافقة على مطالبتك. سنحول لك {amount} ريال."
@@ -85,3 +93,10 @@ ar:
     medical_report: "تقرير طبي"
     other: "مستند آخر"
   or_word: "أو"
+  estimate:
+    total: "المبلغ المتوقع: {amount} ريال من {requested} ريال دفعتها."
+    sub_limit: "{cut} ريال تتجاوز حد {benefit} لهذا العام (كان المتبقي {left} ريال من {limit} ريال)."
+    share: "حصتك: {share} ريال."
+    share_capped: "حصتك: {share} ريال (20 بالمئة، وبحد أقصى {cap} ريال)."
+    vat: "ضريبة القيمة المضافة ({vat} ريال) غير مغطاة."
+    benefit_optical_frames: "إطارات النظارات"

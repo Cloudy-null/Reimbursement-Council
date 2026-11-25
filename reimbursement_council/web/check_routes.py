@@ -14,12 +14,15 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Resp
 
 from reimbursement_council.adapters.readers import PDF_SUFFIX
 from reimbursement_council.adapters.readers import document_image as document_image_bytes
+from reimbursement_council.config.message_models import LanguageMessages
 from reimbursement_council.core.decision.document_requests import (
     document_label,
     mismatch_documents,
 )
 from reimbursement_council.core.models.claim import Claim, ExtractionResult
 from reimbursement_council.core.models.common import FieldName
+from reimbursement_council.core.payout import calculate_payout
+from reimbursement_council.core.payout_preview import estimate_lines
 from reimbursement_council.pipeline.document_set import DocumentSet
 from reimbursement_council.web.check_form import (
     DOCUMENT_KINDS,
@@ -41,6 +44,25 @@ from reimbursement_council.web.uploads import accept, collect, read_and_store, s
 
 ASKED_KINDS = frozenset({"retake_photo", "check_photo", "fix_mismatch"})
 """Requests about one field: asked once, then a human (claim.retake_fields)."""
+
+
+def _estimate(
+    ctx: WebContext, claim: Claim, reading: ExtractionResult | None, language: LanguageMessages
+) -> list[str]:
+    """The payout we expect and why it is lower, shown before the member sends the claim."""
+    if reading is None:
+        return []
+    try:
+        policy = ctx.reference.policy(claim.policy_id)
+        history = ctx.reference.history(claim.patient_member_id)
+    except LookupError:
+        return []
+    tier = ctx.settings.policy.tiers.get(policy.tier)
+    if tier is None:
+        return []
+    payout = calculate_payout(reading, policy, history, ctx.settings)
+    vat = reading.money("vat_total") or 0
+    return estimate_lines(payout, tier, history, vat, language)
 
 
 def check_values(
@@ -81,7 +103,12 @@ def check_values(
         "kind_names": {k: document_label(language, k) for k in DOCUMENT_KINDS},
         "missing": [
             need.request.ar if lang == "ar" else need.request.en for need in documents.missing
+        ]
+        + [
+            language.requests.add_document.format(field=language.fields.get(r.field, r.field))
+            for r in documents.rule_requests
         ],
+        "estimate": _estimate(ctx, claim, reading, language),
         "mismatches": mismatches,
         "unread": unread,
         "categories": list(ctx.settings.documents.required_by_category),
