@@ -135,12 +135,18 @@ def test_nothing_read_gives_unknown_not_fail() -> None:
     assert [c.passed for c in checks] == [None, None, None]
 
 
-def test_no_arabic_name_on_the_account_skips_arabic_names() -> None:
+def test_an_arabic_name_is_compared_with_the_english_account_name() -> None:
+    """web/final: with no Arabic name on the account, the Arabic name read is compared with the
+    English one by its consonants (it used to be skipped)."""
     member = OMAR.model_copy(update={"name_ar": None})
-    checks = cross_checks(
+    same = cross_checks(
         [doc("p", "prescription", patient_name="عمر أحمد")], member, ["pharmacy"], repo_settings()
     )
-    assert result(checks, "patient_matches_account").passed is None
+    assert result(same, "patient_matches_account").passed is True
+    other = cross_checks(
+        [doc("p", "prescription", patient_name="سارة خالد")], member, ["pharmacy"], repo_settings()
+    )
+    assert result(other, "patient_matches_account").passed is False
 
 
 def with_also(

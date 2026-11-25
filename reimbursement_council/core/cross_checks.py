@@ -20,6 +20,7 @@ from reimbursement_council.core.models.claim import Document, ExtractionResult
 from reimbursement_council.core.models.common import BILLING_KINDS, FieldName
 from reimbursement_council.core.models.decision import CrossCheckResult
 from reimbursement_council.core.models.reference import Member
+from reimbursement_council.core.name_match import is_a_name, same_person
 from reimbursement_council.core.receipt_rows import ARABIC_LETTERS
 from reimbursement_council.core.text import normalize_text
 
@@ -41,19 +42,23 @@ def _value(extraction: ExtractionResult, name: FieldName) -> str | None:
 
 
 def _patient_check(
-    documents: Sequence[DocumentReading], patient: Member, ratio: float
+    documents: Sequence[DocumentReading], patient: Member, ratio: float, min_confidence: float
 ) -> CrossCheckResult:
+    """A name read below min_confidence, or one that is not a name, cannot tell (web/final:
+    every false alarm on the optical set was such a name)."""
     compared: list[str] = []
     wrong: list[str] = []
     for document, extraction in documents:
-        read = _value(extraction, "patient_name")
-        if read is None:
+        field = extraction.best("patient_name")
+        if field is None or field.confidence < min_confidence or not is_a_name(field.value):
             continue
-        account = patient.name_ar if ARABIC_LETTERS.search(read) else patient.display_name
-        if account is None:
+        read = field.value
+        same_script = patient.name_ar if ARABIC_LETTERS.search(read) else patient.display_name
+        accounts = [n for n in (same_script, patient.display_name, patient.name_ar) if n]
+        if not accounts:
             continue
         compared.append(document.document_id)
-        if not _same_name(read, account, ratio):
+        if not any(same_person(read, account, ratio) for account in accounts):
             wrong.append(document.document_id)
     if not compared:
         details = "no patient name could be compared with the account"
@@ -170,7 +175,9 @@ def cross_checks(
 ) -> list[CrossCheckResult]:
     config = settings.documents
     return [
-        _patient_check(documents, patient, config.name_match_ratio),
+        _patient_check(
+            documents, patient, config.name_match_ratio, config.patient_name_min_confidence
+        ),
         _dates_check(documents, config.date_tolerance_days),
         _providers_check(documents, categories, settings),
     ]

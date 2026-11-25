@@ -235,6 +235,7 @@ class DocumentsConfig(ConfigModel):
     pdf_render_scale: float = Field(gt=0)
     max_pdf_pixels: int = Field(gt=0)
     max_files_per_upload: int = Field(gt=0)
+    patient_name_min_confidence: Score = 0.8
     bupa_rules: BupaRulesConfig
 
 
