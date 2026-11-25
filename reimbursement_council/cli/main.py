@@ -55,7 +55,7 @@ def _parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=8000)
     serve.add_argument("--config-dir", type=Path, default=Path("config"))
     serve.add_argument("--data-dir", type=Path, default=Path("data"))
-    serve.add_argument("--reader", choices=["easyocr", "qr_only"], default=None)
+    serve.add_argument("--reader", choices=["easyocr", "qr_only", "ollama"], default=None)
     return parser
 
 

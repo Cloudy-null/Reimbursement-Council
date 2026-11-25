@@ -35,7 +35,7 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
     read = commands.add_parser("read-accuracy", help="Read a receipt set and score each field.")
     read.add_argument("folder", type=Path)
-    read.add_argument("--reader", choices=["easyocr", "qr_only"], default=None)
+    read.add_argument("--reader", choices=["easyocr", "qr_only", "ollama"], default=None)
     read.add_argument("--config-dir", type=Path, default=Path("config"))
     read.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
 

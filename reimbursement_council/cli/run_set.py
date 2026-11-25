@@ -43,7 +43,7 @@ SET_MANIFEST = "set.json"
 def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     run = commands.add_parser("run-set", help="Run a claim set through the pipeline and score it.")
     run.add_argument("folder", type=Path)
-    run.add_argument("--reader", choices=["easyocr", "qr_only"], default=None)
+    run.add_argument("--reader", choices=["easyocr", "qr_only", "ollama"], default=None)
     run.add_argument("--calibration", choices=["config", "on", "off"], default="config")
     run.add_argument("--cross-checks", choices=["config", "on", "off"], default="config")
     run.add_argument(
