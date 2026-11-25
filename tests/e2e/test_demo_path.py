@@ -149,3 +149,17 @@ def test_a_new_member_is_added_and_can_file_a_claim(
     page.wait_for_url("**/?**")
     selected = page.locator("#patient option:checked").inner_text()
     assert selected == "Layla Hassan"
+
+
+def test_glasses_over_the_frame_limit_show_the_partial_payout_before_submit(
+    page: "playwright.Page", server: tuple[str, Path]
+) -> None:
+    """Core day 4b: the check page names the frame sub-limit cut before the member sends."""
+    url, _ = server
+    start_demo(page, url, "Glasses over the frame limit (paid in part)")
+    estimate = page.locator("#estimate").inner_text()
+    assert "over your eyeglass frames limit" in estimate
+    page.get_by_role("button", name="Send claim").click()
+    page.wait_for_selector("section.result")
+    assert lane(page) in {"auto_approve", "human_review", "self_fix"}
+    assert lane(page) != "auto_reject"
