@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 from reimbursement_council.config.models import (
     DecisionConfig,
     DocumentsConfig,
+    LocalModelConfig,
     MessageConfig,
     PolicyConfig,
     Settings,
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 CONFIG_FILES = (
     "decision.yaml",
     "documents.yaml",
+    "local_model.yaml",
     "messages.yaml",
     "policy.yaml",
     "prices.yaml",
@@ -156,8 +158,12 @@ def load_settings(config_dir: Path, env: Mapping[str, str] | None = None) -> Set
     synthetic = _validate(
         SyntheticConfig, _read_yaml(config_dir / "synthetic.yaml"), "synthetic.yaml"
     )
+    local_model = _validate(
+        LocalModelConfig, _read_yaml(config_dir / "local_model.yaml"), "local_model.yaml"
+    )
     calibration = _load_calibration(config_dir, decision)
     settings = Settings(
+        local_model=local_model,
         calibration=calibration,
         policy=policy,
         documents=documents,

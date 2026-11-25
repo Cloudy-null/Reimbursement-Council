@@ -231,3 +231,41 @@ def test_a_short_dashed_date_counts_next_to_a_time_or_a_date_label(
     row: str, expected: str | None
 ) -> None:
     assert value(parse([line(row, 100, width=500)]), "treatment_date") == expected
+
+
+def _field_confidence(reading: ReaderOutput, name: str) -> float:
+    return next(f.confidence for f in reading.fields if f.name == name)
+
+
+def test_a_misread_date_label_does_not_lower_the_date_confidence() -> None:
+    """Confidence per field: the date's own text box counts, not a misread label beside it."""
+    rows = [
+        line("التاريخ", 100, x=300, confidence=0.40),
+        line("2026-11-20", 100, x=40, confidence=0.97),
+    ]
+    reading = parse_receipt_lines(DOC_ID, rows, repo_settings())
+    assert _field_confidence(reading, "treatment_date") == pytest.approx(0.97)
+
+
+def test_a_date_split_over_two_boxes_takes_the_lower_of_the_two() -> None:
+    rows = [
+        line("Date:", 100, x=10, confidence=0.30, width=60),
+        line("17-03-18", 100, x=90, confidence=0.93, width=90),
+        line("14:49", 100, x=200, confidence=0.88, width=60),
+    ]
+    reading = parse_receipt_lines(DOC_ID, rows, repo_settings())
+    assert _field_confidence(reading, "treatment_date") == pytest.approx(0.88)
+
+
+def test_an_item_amount_confidence_comes_from_its_numbers_not_the_description() -> None:
+    settings = repo_settings()
+    rows = [
+        line("Item Qty Price Amount", 100, width=400),
+        line("blurry words", 140, x=40, confidence=0.35),
+        line("1", 140, x=200, confidence=0.96, width=20),
+        line("50.00", 140, x=260, confidence=0.94, width=60),
+        line("50.00", 140, x=340, confidence=0.95, width=60),
+    ]
+    reading = parse_receipt_lines(DOC_ID, rows, settings)
+    if reading.line_items:  # the header words decide if this row is an item row
+        assert reading.line_items[0].confidence == pytest.approx(0.94)

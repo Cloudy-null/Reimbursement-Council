@@ -2,7 +2,7 @@ import pytest
 
 from reimbursement_council.core.decision.combine import combine_votes, p_good_from_score
 from reimbursement_council.core.models.decision import Vote
-from tests.factories import repo_settings, settings_with
+from tests.factories import settings_with
 
 
 def votes(*scores: float, weights: tuple[float, ...] | None = None) -> list[Vote]:
@@ -35,7 +35,7 @@ def test_combine_zero_weight_raises() -> None:
 
 
 def test_p_good_is_the_score_while_calibration_is_off() -> None:
-    assert p_good_from_score(0.8, repo_settings()) == 0.8
+    assert p_good_from_score(0.8, settings_with(calibration_enabled=False)) == 0.8
 
 
 def test_p_good_uses_platt_when_calibration_is_on() -> None:

@@ -15,6 +15,7 @@ from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.core.extraction import extract_document
 from reimbursement_council.core.models.claim import Document
+from reimbursement_council.evaluation.reader_counts import reader_summary
 from reimbursement_council.evaluation.real_claims import real_claim, real_reference
 from reimbursement_council.evaluation.sroie import compare_real, parse_sroie_key, summarize_real
 
@@ -26,10 +27,16 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
         "read-sroie", help="Score the reader on SROIE receipts (folder with img/ and key/)."
     )
     read.add_argument("folder", type=Path)
-    read.add_argument("--reader", choices=["easyocr", "qr_only"], default=None)
+    read.add_argument("--reader", choices=["easyocr", "qr_only", "ollama"], default=None)
     read.add_argument("--config-dir", type=Path, default=Path("config"))
     read.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
     read.add_argument("--results-name", default="accuracy.json")
+    read.add_argument(
+        "--two-readers",
+        choices=["config", "on", "off"],
+        default="config",
+        help="With --reader ollama: let EasyOCR check the model field by field.",
+    )
 
     make = commands.add_parser(
         "make-real-claims",
@@ -44,16 +51,22 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
 
 def read_sroie(args: argparse.Namespace) -> int:
     settings = load_settings(args.config_dir)
+    changes: dict[str, object] = {}
     if args.reader:
-        settings = settings.model_copy(
-            update={"decision": settings.decision.model_copy(update={"reader": args.reader})}
-        )
+        changes["reader"] = args.reader
+    if args.two_readers != "config":
+        changes["two_readers_enabled"] = args.two_readers == "on"
+    settings = settings.model_copy(
+        update={"decision": settings.decision.model_copy(update=changes)}
+    )
     images = sorted((args.folder / "img").glob("*.jpg"))
     if not images:
         raise ValueError(f"no receipts in {args.folder / 'img'}")
     pick = make_reader_for(settings, CachedOcrEngine(EasyOcrEngine(), args.ocr_cache))
     ratio = settings.documents.name_match_ratio
     rows = []
+    counts: list[dict[str, int]] = []
+    seconds: list[float] = []
     started = time.time()
     for number, image in enumerate(images, start=1):
         key = json.loads((args.folder / "key" / f"{image.stem}.json").read_text(encoding="utf-8"))
@@ -66,7 +79,11 @@ def read_sroie(args: argparse.Namespace) -> int:
             image_hash=None,
             uploaded_at=datetime.now(UTC),
         )
-        extraction = extract_document(image.stem, pick(document).read(document), settings)
+        read_started = time.perf_counter()
+        output = pick(document).read(document)
+        seconds.append(time.perf_counter() - read_started)
+        counts.append(output.reader_counts)
+        extraction = extract_document(image.stem, output, settings)
         row = compare_real(truth, extraction, ratio)
         read = {
             name: (None if (f := extraction.best(name)) is None else f.value)
@@ -74,9 +91,11 @@ def read_sroie(args: argparse.Namespace) -> int:
         }
         rows.append({"receipt": image.stem, **row, "truth": truth.model_dump(), "read": read})
         logger.info("receipt %d/%d %s: %s", number, len(images), image.stem, row)
-    summary = summarize_real(rows)
+    summary = summarize_real(rows) | reader_summary(counts, seconds)
     report = {
         "reader": settings.decision.reader,
+        "two_readers": settings.decision.two_readers_enabled,
+        "model": settings.local_model.model if settings.decision.reader == "ollama" else None,
         "seconds": round(time.time() - started, 1),
         "summary": summary,
         "rows": rows,

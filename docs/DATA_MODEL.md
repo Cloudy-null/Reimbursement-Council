@@ -49,6 +49,7 @@ Document
 FieldEdit
 - document_id, field, read_value (or none), typed_value
 - evidence: supports, contradicts or none, from the QR on the same document, the same field on another document, or the arithmetic checks; evidence_note says which
+- confirmed: true for a one-tap "yes, this date is right" on a value we read (core day 4). It counts only after core/date_confirm.py allows it, with member_confirmed_confidence and source member_confirmed
 
 ExtractedField
 - document_id, name (provider_name, vat_number, invoice_timestamp, treatment_date, subtotal, vat_total, total, patient_name)
@@ -69,6 +70,8 @@ CheckResult (arithmetic and QR match)
 
 ReaderOutput (what a reader returns for one document)
 - fields: list of ExtractedField, line_items: list of LineItem, qr_payloads: list of raw QR strings, text_lines: the read text row by row (used to find the document type)
+- reader_counts: the local model reader's check counts (returned, kept, made_up, implausible, unparsed, qr_compared, qr_mismatch, schema_failed, model_error, readers_agree, readers_disagree); empty for other readers
+- kind_hint: the document type the local model saw; used only when keywords and QR find nothing (core/document_kinds.py kind_with_hint)
 
 ExtractionResult (one document after QR merge and checks)
 - document_id, fields, line_items, checks

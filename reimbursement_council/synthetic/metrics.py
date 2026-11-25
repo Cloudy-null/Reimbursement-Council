@@ -43,6 +43,9 @@ class RunRow(Model):
     fix_tried: bool = False
     # The patient's past claims, for the fairness check (E9: new vs tenured members).
     past_claims: int | None = None
+    # Seconds for the first try of this claim: all of it, and the part spent reading documents.
+    seconds_total: float | None = None
+    seconds_read: float | None = None
 
 
 def paid_right(row: RunRow, tolerance: int) -> bool:
