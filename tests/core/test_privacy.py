@@ -49,3 +49,9 @@ def test_a_traceback_is_masked_too() -> None:
         and "300000000000003" not in record.exc_text
         and "سارة" not in record.exc_text
     )
+
+
+def test_membership_and_claim_numbers_are_masked_but_amounts_are_not() -> None:
+    masked = mask_personal_data("member 39314197 claim 357710901 paid 1750.00 and 1,750.00")
+    assert "39314197" not in masked and "357710901" not in masked
+    assert "1750.00" in masked and "1,750.00" in masked

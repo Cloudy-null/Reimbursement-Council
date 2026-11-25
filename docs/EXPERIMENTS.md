@@ -545,3 +545,24 @@ Live, through the website: live-test data/live_standin_final --url http://127.0.
   read at the same time (1cdb625): mean 20.766 (8 claims re-saved once, 0e8b746).
 Browser e2e demo test: uv run pytest -m e2e: 2 passed in 81.37 s.
 ```
+
+## Core day 4b (branch core/day4b)
+
+```
+Run: Step 1, speed: EasyOCR on the GPU
+Date: 2026-11-25
+Change: PyTorch 2.14.1+cu130 on Windows (was 2.15.0 CPU build), ocr.use_gpu true; the model and
+         EasyOCR take turns on the one GPU (vision.parallel_ocr false)
+Command: live-test <stand-in set, re-saved so nothing is cached> --url http://127.0.0.1:8011
+Test set: the 9 claim stand-in live set (4 real SROIE scans, 4 synthetic Arabic-first receipts of
+         which 2 heavily damaged, 1 receipt with its report). Not the owner's photos.
+Before (38cc89d, EasyOCR on the CPU, reading in parallel): mean 13.855 s per claim, median 13.31,
+         max 23.193
+After (09b4717, EasyOCR on the GPU, taking turns): mean 8.057 s, median 7.122, max 12.509;
+         9 of 9 finished, 0 errors, 0 model timeouts
+First try (12510f0, GPU and parallel): stopped after 20 minutes with 2 model timeouts. GPU memory
+         was 11.8 of 12.3 GB (model 6.6 GB, EasyOCR up to 1.6 GB, desktop apps), and the two
+         slowed each other to a crawl.
+EasyOCR alone, 3 documents, model unloaded: GPU 1.09, 0.99, 0.52 s (1556 MB); CPU 12.79, 9.96,
+         5.97 s.
+```

@@ -123,6 +123,7 @@ class OcrConfig(ConfigModel):
     pattern_miss_factor: Score
     heuristic_factor: Score
     row_overlap: Score
+    use_gpu: bool
     min_date_year: int = Field(ge=1900)
     max_date_year: int = Field(le=2200)
 
@@ -136,6 +137,7 @@ class VisionConfig(ConfigModel):
     ground_ratio: Score
     vat_number_pattern: str
     future_days: int = Field(ge=0)
+    parallel_ocr: bool
 
 
 class DecisionConfig(ConfigModel):

@@ -105,7 +105,9 @@ def _serve(args: argparse.Namespace) -> int:
     if args.reader:
         decision = settings.decision.model_copy(update={"reader": args.reader})
         settings = settings.model_copy(update={"decision": decision})
-    engine = CachedOcrEngine(EasyOcrEngine(), args.data_dir / "cache" / "ocr")
+    engine = CachedOcrEngine(
+        EasyOcrEngine(settings.decision.ocr.use_gpu), args.data_dir / "cache" / "ocr"
+    )
     case_reviewer = (
         make_case_reviewer(settings, args.data_dir)
         if settings.decision.members.case_reviewer.enabled
@@ -162,7 +164,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         settings = load_settings(args.config_dir)
         reference = load_reference_file(args.reference)
         claim = load_claim_file(args.claim_path)
-        engine = CachedOcrEngine(EasyOcrEngine(), args.ocr_cache)
+        engine = CachedOcrEngine(EasyOcrEngine(settings.decision.ocr.use_gpu), args.ocr_cache)
         decision = process_claim(
             claim,
             reference,

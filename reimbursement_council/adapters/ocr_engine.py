@@ -40,6 +40,15 @@ def _easyocr_name() -> str:
         return "easyocr-not-installed-ar-en"
 
 
+def _cuda_ready() -> bool:
+    """True when PyTorch was built with CUDA and sees a GPU; otherwise EasyOCR uses the CPU."""
+    try:
+        import torch
+    except ImportError:
+        return False
+    return bool(torch.cuda.is_available())
+
+
 class EasyOcrEngine:
     """EasyOCR on the CPU. The model loads once, on the first read (about 15 to 30 seconds).
 
@@ -48,7 +57,8 @@ class EasyOcrEngine:
     read, and one EasyOCR model must not be used by two threads at once (found by the e2e test).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, use_gpu: bool = False) -> None:
+        self._use_gpu = use_gpu
         self._reader: Any = None
         self._lock = threading.Lock()
         self.name = _easyocr_name()
@@ -62,7 +72,9 @@ class EasyOcrEngine:
                     "EasyOCR is not installed. Run: uv sync --extra ocr"
                 ) from error
             logger.info("loading EasyOCR models for %s", LANGUAGES)
-            self._reader = easyocr.Reader(LANGUAGES, gpu=False, verbose=False)
+            gpu = self._use_gpu and _cuda_ready()
+            logger.info("EasyOCR on the %s", "GPU" if gpu else "CPU")
+            self._reader = easyocr.Reader(LANGUAGES, gpu=gpu, verbose=False)
         return self._reader
 
     def read(self, image_bytes: bytes) -> list[OcrLine]:

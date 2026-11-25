@@ -176,7 +176,7 @@ def run_set(args: argparse.Namespace) -> int:
     manifest = _read_manifest(args.folder, len(claim_paths))
     reference = load_reference_file(args.folder / "reference.json")
     store = _open_store(args, settings, manifest)
-    engine: OcrEngine = EasyOcrEngine()
+    engine: OcrEngine = EasyOcrEngine(settings.decision.ocr.use_gpu)
     if not args.no_ocr_cache:
         engine = CachedOcrEngine(engine, args.ocr_cache)
     pick = ReadClock(make_reader_for(settings, engine))

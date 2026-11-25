@@ -62,7 +62,9 @@ def read_sroie(args: argparse.Namespace) -> int:
     images = sorted((args.folder / "img").glob("*.jpg"))
     if not images:
         raise ValueError(f"no receipts in {args.folder / 'img'}")
-    pick = make_reader_for(settings, CachedOcrEngine(EasyOcrEngine(), args.ocr_cache))
+    pick = make_reader_for(
+        settings, CachedOcrEngine(EasyOcrEngine(settings.decision.ocr.use_gpu), args.ocr_cache)
+    )
     ratio = settings.documents.name_match_ratio
     rows = []
     counts: list[dict[str, int]] = []
