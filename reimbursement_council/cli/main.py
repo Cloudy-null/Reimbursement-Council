@@ -20,7 +20,7 @@ from reimbursement_council.adapters.ocr_engine import (
 )
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
-from reimbursement_council.cli import claims_set, export, real, receipts, run_set
+from reimbursement_council.cli import claims_set, export, live_test, real, receipts, run_set
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.money import format_sar
@@ -49,6 +49,7 @@ def _parser() -> argparse.ArgumentParser:
     run_set.add_commands(commands)
     export.add_commands(commands)
     real.add_commands(commands)
+    live_test.add_commands(commands)
     serve = commands.add_parser("serve", help="Start the website on this computer.")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -126,6 +127,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         **export.COMMANDS,
         **run_set.COMMANDS,
         **real.COMMANDS,
+        "live-test": live_test.live_test,
     }
     if args.command in commands:
         command = commands[args.command]
