@@ -12,7 +12,8 @@ def test_every_defect_appears_in_a_big_set() -> None:
     claim_set = make_claim_set(1, 300, repo_settings())
     seen = Counter(d for case in claim_set.cases for d in case.truth.defects)
     assert set(DEFECTS) <= set(seen) | {"clean"}
-    assert sum(not case.truth.defects for case in claim_set.cases) > 100
+    # clean is 45 of 124 weight since the document defects (Task 10), about 109 of 300
+    assert sum(not case.truth.defects for case in claim_set.cases) > 80
 
 
 def test_hard_rule_defects_should_not_be_paid() -> None:

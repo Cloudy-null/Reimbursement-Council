@@ -39,7 +39,10 @@ nav a { text-decoration: none; padding: 6px 12px; border-radius: 8px; color: var
 nav a.lang { color: var(--accent); }
 .note { color: var(--ink-muted); font-size: 14px; margin: 0; }
 .grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; align-items: start; }
-@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .grid > .doc-stack { order: 2; } /* on a phone the decision comes before the photos */
+}
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 12px; min-width: 0; }
 .card h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .receipt-img { width: 100%; max-width: 420px; border-radius: 8px; box-shadow: var(--shadow); background: #FFFFFF; justify-self: center; }
@@ -94,3 +97,16 @@ table.numbers th, table.numbers td { text-align: start; padding: 8px; border-blo
 table.numbers td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 @media (max-width: 700px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+.doc-grid > .card { align-content: start; }
+.doc-img { width: 100%; max-height: 360px; object-fit: contain; object-position: top; border-radius: 8px; background: #FFFFFF; }
+.doc-stack { display: grid; gap: 16px; align-content: start; }
+.notice { border-inline-start: 4px solid var(--lane); background: var(--tint); border-radius: 8px; padding: 12px 16px; }
+.notice.selffix { --lane: var(--lane-selffix); --tint: var(--tint-selffix); }
+.notice.review { --lane: var(--lane-review); --tint: var(--tint-review); }
+.notice h3 { margin: 0 0 4px; font-size: 14px; }
+ul.plain { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
+.field-error { color: var(--lane-reject); font-size: 13px; }
+p.note.low { background: var(--confidence-low); color: var(--confidence-low-ink); padding: 8px; border-radius: 6px; }
+details.card summary { cursor: pointer; font-weight: 600; }
+.row input { width: 100%; }

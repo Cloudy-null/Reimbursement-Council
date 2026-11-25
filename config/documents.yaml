@@ -32,3 +32,5 @@ provider_check_categories: [outpatient, dental]
 # Confidence of a member-typed value with no evidence. Below the hard rule floor (0.90),
 # so it can never back a hard rule on its own.
 unbacked_edit_confidence: 0.6
+# The largest photo a member can upload. A phone photo is a few MB; this only stops abuse.
+max_upload_megabytes: 15

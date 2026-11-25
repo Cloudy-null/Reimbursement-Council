@@ -3,6 +3,7 @@
 Date: 2026-11-23
 Owner: Abdulrahman Aljahdali
 Status: Approved by the owner on 2026-11-23
+Later: the claim as a set of documents with a check step before submit is designed in 2026-11-24-document-set-design.md (from the official brief, docs/brief/project-brief.md; decision 008).
 
 ## 1. What this is and why
 
@@ -149,7 +150,7 @@ Automation rate, precision and recall of auto approve, false reject rate, calibr
 
 ## 7. Data plan
 
-- Synthetic data for building and tuning. A generator creates members, policies, providers, a price list, and receipt images (Arabic, English, mixed; with and without a ZATCA QR) with known truth. It injects defects on purpose: late, inactive policy, excluded service, duplicate, over limit, overpriced, unreadable photo, QR mismatch, arithmetic error, two patients on one receipt, missing prescription. Fixable defects also get a fixed version, used to simulate self-fix.
+- Synthetic data for building and tuning. A generator creates members, policies, providers, a price list, and receipt images (Arabic, English, mixed; with and without a ZATCA QR) with known truth. It injects defects on purpose: late, inactive policy, excluded service, duplicate, over limit, overpriced, unreadable photo, QR mismatch, arithmetic error, two patients on one receipt, missing prescription, missing medical report, another patient's name on the prescription or report, a different date on the prescription or report, a member edit the QR supports, and a member edit the QR contradicts. Each claim also gets the prescription or medical report its services need (section 6.6). Fixable defects also get a fixed version, used to simulate self-fix.
 - Real data for testing.
   - Extraction accuracy: public receipt datasets. ReceiptSense (Arabic and English receipts), SROIE, CORD. CHECK: licenses allow this use.
   - End to end: real receipt images from the public datasets, each paired with a synthetic claim context (member, policy, history, submission date). The document is real, so reading is tested for real; the claim context is generated, so the correct outcome is known from our policy without hand labeling. Field labels come with the datasets.

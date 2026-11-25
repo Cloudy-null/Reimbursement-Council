@@ -8,6 +8,8 @@ council does not see the hard rules, so a late claim can score high and still be
 
 from collections.abc import Sequence
 
+from pydantic import Field
+
 from reimbursement_council.core.models.common import Halalas, Lane, Model, Outcome, Score
 
 AUTOMATED: frozenset[str] = frozenset({"auto_approve", "auto_reject"})
@@ -28,6 +30,14 @@ class RunRow(Model):
     defects: list[str]
     hard_rule_failed: bool
     damage: str
+    # Documents (Task 11). Empty for runs made before document sets.
+    kinds_read: dict[str, str] = Field(default_factory=dict)
+    kinds_true: dict[str, str] = Field(default_factory=dict)
+    needs_flagged: list[list[str]] = Field(default_factory=list)
+    needs_missing: list[list[str]] = Field(default_factory=list)
+    cross_check_failed: bool = False
+    cross_check_expected: bool = False
+    expected_lane: Lane | None = None
 
 
 def paid_right(row: RunRow, tolerance: int) -> bool:

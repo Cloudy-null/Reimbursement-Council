@@ -39,7 +39,7 @@ Claim (like FHIR Claim)
 - retries_used (for self-fix)
 - claim_categories: benefit categories of the claim (worked out from the invoice, or set by the member); detected_categories: what the system worked out, kept so a member change can be compared
 - edits: list of FieldEdit (fields the member changed on the check screen)
-- retake_fields: fields the member was already asked to retake a photo for (a retake is asked only once)
+- retake_fields: fields the member was already asked about, by a photo request (retake_photo or check_photo) or a mismatch (fix_mismatch). Each is asked only once; if it is still wrong on the next try it goes to a human
 
 Document
 - document_id, claim_id, kind (receipt, invoice, prescription, medical_report, other), file_path, image_hash, uploaded_at
@@ -109,7 +109,7 @@ PayoutResult
 - is_partial (true when the network cap or a limit cut the payout, or an item is unmatched; co-pay alone does not make it partial)
 
 SelfFixRequest
-- kind (retake_photo, add_document, confirm_field), field, text
+- kind (retake_photo, add_document, confirm_field, check_photo, fix_mismatch), field, text, documents (the kinds that disagree, for fix_mismatch)
 
 Decision (like FHIR ClaimResponse)
 - claim_id, decided_at, config_version (hash of the config files)
@@ -121,6 +121,8 @@ Decision (like FHIR ClaimResponse)
 - self_fix_request (for the self_fix lane)
 - member_message (plain text, Arabic and English)
 - votes, rule_results, check_results
+- edits (the judged FieldEdits)
+- document_kinds (document_id to the kind the pipeline used), needs_missing (required groups not found), cross_checks (CrossCheckResult list). Used to score a run.
 
 Review (human)
 - claim_id, reviewer, started_at, finished_at
@@ -134,7 +136,10 @@ GroundTruth
 - claim_id
 - correct_fields (the true values)
 - should_pay (bool), correct_payout
-- defects (list: late, inactive, excluded, duplicate, over_limit, overpriced, unreadable, qr_mismatch, arithmetic_error, multiple_patients, missing_prescription)
-- fixable (bool), fixed_version_document_ids
+- defects (list, as made by synthetic/claims.py and synthetic/document_sets.py: late, inactive, not_covered, excluded, duplicate, over_limit, overpriced, unlisted, unreadable, tampered_total, missing_prescription, missing_medical_report, patient_name_mismatch, date_mismatch, member_edit_supported, member_edit_contradicts. A duplicate also carries the defects of the claim it copies.)
+- document_kinds (document_id to its true kind; the receipt is always "invoice")
+- needs_missing (the required document groups the claim does not have)
+- expected_lane (the lane a document defect should lead to: self_fix for the missing and mismatch defects, human_review for a contradicting edit, empty otherwise)
+- Planned, not built yet: qr_mismatch, arithmetic_error, multiple_patients, and a fixed version of each fixable defect (fixable, fixed_version_document_ids). CHECK in HANDOVER.
 
 Review and GroundTruth are built in later layers.

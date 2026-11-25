@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="grid">
-  <img class="receipt-img" src="/claims/{{ claim.claim_id }}/document" alt="">
+  <div class="doc-stack">
+    {% for doc in documents %}<img class="receipt-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="">{% endfor %}
+  </div>
   <div class="card" style="background: none; border: 0; padding: 0">
     <section class="card result lane-{{ decision.lane }}">
       <span class="pill"><span class="dot"></span>{{ decision.lane }}</span>
@@ -31,6 +33,18 @@
         <ul class="list">{% for c in decision.check_results %}<li><span class="state {{ 'pass' if c.passed else 'fail' }}">{{ 'pass' if c.passed else 'fail' }}</span><span dir="ltr"><b>{{ c.name }}</b> {{ c.details }}</span></li>{% else %}<li><span></span><span class="note">-</span></li>{% endfor %}</ul>
       </section>
     </div>
+    {% if edits %}
+    <section class="card"><h2>{{ t.edits_title }}</h2>
+      <div class="table-wrap"><table class="numbers">
+        <thead><tr><th></th><th>{{ t.read_value }}</th><th>{{ t.typed_value }}</th><th>{{ t.evidence }}</th></tr></thead>
+        <tbody>{% for e in edits %}
+          <tr><td>{{ t['f_' ~ e.field] if ('f_' ~ e.field) in t else e.field }}</td>
+            <td class="num">{{ sar_text(e.field, e.read_value) }}</td><td class="num">{{ sar_text(e.field, e.typed_value) }}</td>
+            <td dir="ltr"><span class="state {{ 'pass' if e.evidence == 'supports' else ('fail' if e.evidence == 'contradicts' else 'not_sure') }}">{{ e.evidence }}</span> {{ e.evidence_note }}</td></tr>
+        {% endfor %}</tbody>
+      </table></div>
+    </section>
+    {% endif %}
     <section class="card"><h2>{{ t.read_title }}</h2>
       <div class="rows">{% for f in fields %}<div class="row{{ ' low' if f.low }}"><span class="label">{{ t['f_' ~ f.name] }}</span><span dir="auto">{{ f.value }}</span><span><span class="tag">{{ t['src_' ~ f.source] }}</span> <span class="mono">{{ f.confidence }}</span></span></div>{% endfor %}</div>
     </section>

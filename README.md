@@ -7,11 +7,14 @@ Built for the Solve for Bupa hackathon, November 2026. Not affiliated with or us
 ## The idea in one picture
 
 ```
- Member photo
+ Member documents (invoice or receipt, prescription, medical report)
      |
      v
- Read it ---- ZATCA QR first, then offline reader, then arithmetic checks
-     |
+ Read each -- ZATCA QR first, then offline reader, then arithmetic checks;
+     |        find each document's type and what the claim still needs
+     v
+ Check ------ the member sees what was read, adds what is missing, fixes
+     |        mistakes; patient and dates must agree across documents
      v
  Hard rules -- yes or no veto (late, not covered, duplicate, ...)
      |
@@ -28,7 +31,7 @@ Built for the Solve for Bupa hackathon, November 2026. Not affiliated with or us
 ```
 
 ## Status
-Layers 1 to 3 of the spec are built on synthetic data: receipt photos are read offline with EasyOCR (QR first), claims are decided by hard rules, a council and cost-based lanes, and a website shows the member flow, the reviewer card and the measured numbers. Nothing has been measured on real claims yet. See docs/HANDOVER.md.
+Layers 1 to 3 of the spec are built on synthetic data: receipt photos are read offline with EasyOCR (QR first), claims are decided by hard rules, a council and cost-based lanes, and a website shows the member flow, the reviewer card and the measured numbers. A claim is a set of documents: the member uploads them, each gets a type, the check step names any missing document or mismatch and lets the member correct what was read, and only then is the claim sent (decision 008). Nothing has been measured on real claims yet. See docs/HANDOVER.md.
 
 ## Code map
 ```
@@ -45,6 +48,7 @@ tests/                    mirrors the package; tests/fixtures holds synthetic cl
 
 ## Docs
 - Design: docs/superpowers/specs/2026-11-23-reimbursement-council-design.md
+- Document sets and the check step: docs/superpowers/specs/2026-11-24-document-set-design.md
 - Conventions: docs/CONVENTIONS.md
 - Data model: docs/DATA_MODEL.md
 - UI design: docs/DESIGN.md

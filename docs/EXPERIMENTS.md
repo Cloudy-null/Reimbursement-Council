@@ -12,6 +12,13 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 - Total cost: wrong payouts plus review cost, in SAR. A false reject counts as the payout that should have been made (decision 007).
 - Heavy damage lanes: for claims whose photo has heavy or unreadable damage, the share that went to self_fix, auto_approve, auto_reject and human_review, and the count of wrong auto approves among them. Wrong auto approves on unreadable photos is the number we care about most; it should be 0.
 - Extraction field accuracy (for extraction experiments).
+- Document metrics (synthetic/document_metrics.py, in every run-set output since Task 11). Each is a share with its group size next to it (name_count), so a 0.0 from an empty group is not a bad result.
+  - document_kind_accuracy: of all documents, share whose found type equals the true type (strict: a billing document read as receipt when it is an invoice counts as wrong).
+  - missing_document_recall: of the required groups that are truly missing, share the pipeline flagged.
+  - missing_document_precision: of the groups the pipeline flagged as missing, share that are truly missing.
+  - cross_check_catch_rate: of claims with a patient or date mismatch put in on purpose, share where a cross check failed.
+  - cross_check_false_alarm_rate: of the other claims, share where a cross check failed anyway.
+  - expected_lane_match: of claims whose document defect decides the lane (missing document, mismatch, contradicting edit), share that went to that lane.
 
 ## Test sets
 - synthetic_tune: generated, used for tuning weights and calibration. Never used for final numbers.
@@ -33,6 +40,7 @@ Every idea is a hypothesis with a switch. We turn it off, measure, turn it on, m
 | E9 | History member | history_member_enabled | Raises automation for trusted members and providers | Automation rate; false reject rate new vs tenured | pending |
 | E11 | Reader: EasyOCR vs PaddleOCR vs Gemini free tier | reader | A vision model reads messy and Arabic receipts better than OCR plus rules | Field accuracy | pending |
 | E10 | Member preview before submit | preview_enabled (simulated) | Fewer bad submissions reach the pipeline | Claims needing self-fix | pending |
+| E12 | Cross-document checks | cross_checks_enabled (run-set --cross-checks on or off) | Checking patient and date across the receipt, prescription and report catches mismatches with few false alarms, and sends them to self-fix instead of approving them | cross_check_catch_rate, cross_check_false_alarm_rate, auto approve precision | Catch 3 of 3, false alarms 0 of 57, one wrong auto approve avoided (synthetic check, 60 claims, after 3 fixes) |
 
 E9 has a fairness check: the false reject rate for new members must not be higher than for tenured members. If it is, the history member is off until fixed.
 
@@ -106,4 +114,79 @@ What it means: calibration cuts the calibration error to a third (0.155 to 0.051
 approvals and no false rejects. The cost drop (175 to 125 SAR) is only two fewer reviews, and one
 of them became a self-fix, which has no cost yet (CHECK in HANDOVER), so the cost gain is small
 and partly an effect of how cost is counted. 60 claims is a small set.
+```
+
+```
+Run: E12, cross-document checks (patient, treatment date, provider)
+Date: 2026-11-24
+Commit: 0deac30 (rerun after three fixes). The first run at 507fdfd found the bugs, see below.
+Command: uv run --extra ocr reimbursement-council make-claims --count 60 --seed 12 --out data/sets/docs/check
+         uv run --no-sync reimbursement-council run-set data/sets/docs/check --reader easyocr --cross-checks off --results-name e12b_off.json
+         uv run --no-sync reimbursement-council run-set data/sets/docs/check --reader easyocr --cross-checks on --results-name e12b_on.json
+Test set: synthetic check set, 60 claims (seed 12) with document sets: 110 documents. Only 3
+          claims carry a patient or date mismatch and none a missing prescription or report, so
+          the document numbers rest on few claims. Calibration off. Synthetic, not real.
+Switch off: lanes auto_reject 7, auto_approve 17, self_fix 28, human_review 8.
+  automation_rate 0.40, auto_approve_precision 1.0, payable_recall 0.34, false_reject_rate 0.0,
+  correct_reject_rate 0.70, reviews_per_1000 133.3, self_fix_per_1000 466.7, ece 0.1997,
+  total_cost_sar 200.0, heavy damage: 5 claims, all self_fix, 0 wrong auto approves.
+  document_kind_accuracy 0.9545 (110), missing_document_recall 0.0 (0 missing),
+  missing_document_precision 0.0 (5 flagged), cross_check_catch_rate 0.0 (3),
+  cross_check_false_alarm_rate 0.0 (57), expected_lane_match 0.8 (5).
+Switch on: lanes auto_reject 7, auto_approve 16, self_fix 29, human_review 8.
+  automation_rate 0.3833, auto_approve_precision 1.0, payable_recall 0.32, false_reject_rate 0.0,
+  correct_reject_rate 0.70, reviews_per_1000 133.3, self_fix_per_1000 483.3, ece 0.2023,
+  total_cost_sar 200.0, heavy damage: 5 claims, all self_fix, 0 wrong auto approves.
+  document_kind_accuracy 0.9545 (110), missing_document_recall 0.0 (0 missing),
+  missing_document_precision 0.0 (5 flagged), cross_check_catch_rate 1.0 (3),
+  cross_check_false_alarm_rate 0.0 (57), expected_lane_match 1.0 (5).
+First run (507fdfd, e12_off.json and e12_on.json in the same folder): with checks on, 19 of the
+  57 claims with no mismatch had a failed cross check (false alarm rate 0.3333), automation fell
+  from 0.40 to 0.25 and self_fix rose from 28 to 42. Causes, all fixed with tests before the
+  rerun: (1) the QR gives the provider's Arabic name and the report was read in English, so the
+  provider check compared two scripts and always failed (12 claims); (2) OCR split the label
+  "اسم المريض" and "اسم" stayed in the patient name (8 claims, all light damage); (3) found
+  while looking: an unclear treatment date asked the member to confirm the provider name.
+What it means: the only lane change is claim_12_0016, which has another patient's name on its
+  medical report. With checks off it was auto approved; with checks on it goes to self_fix and
+  asks the member. No false alarms after the fixes. The 5 flagged missing documents are all
+  receipts with an unreadable photo (read as "other"), which is the right thing to ask for.
+  Too few document defects in this set to call it a final number.
+```
+
+```
+Run: E12 on the tune set (more document defects than the check set)
+Date: 2026-11-24
+Commit: 0deac30
+Command: uv run --extra ocr reimbursement-council make-claims --count 120 --seed 11 --out data/sets/docs/tune
+         uv run --no-sync reimbursement-council run-set data/sets/docs/tune --reader easyocr --cross-checks off --results-name e12_off.json --resume
+         uv run --no-sync reimbursement-council run-set data/sets/docs/tune --reader easyocr --cross-checks on --results-name e12_on.json --resume
+Test set: synthetic tune set, 120 claims (seed 11), 217 documents, 7 mismatch claims, 9 missing
+          documents. Calibration off. Synthetic, not real; tune sets are not for final numbers.
+Switch off: lanes human_review 27, auto_approve 22, self_fix 58, auto_reject 13.
+  automation_rate 0.2917, auto_approve_precision 1.0, payable_recall 0.2095,
+  false_reject_rate 0.0, correct_reject_rate 0.8667, reviews_per_1000 225.0,
+  self_fix_per_1000 483.3, ece 0.1544, total_cost_sar 675.0, heavy damage: 10 claims, all
+  self_fix, 0 wrong auto approves. document_kind_accuracy 0.9539 (217),
+  missing_document_recall 0.8889 (9), missing_document_precision 0.4444 (18),
+  cross_check_catch_rate 0.0 (7), cross_check_false_alarm_rate 0.0 (113),
+  expected_lane_match 0.8421 (19).
+Switch on: lanes human_review 25, auto_approve 21, self_fix 61, auto_reject 13.
+  automation_rate 0.2833, auto_approve_precision 1.0, payable_recall 0.2, false_reject_rate 0.0,
+  correct_reject_rate 0.8667, reviews_per_1000 208.3, self_fix_per_1000 508.3, ece 0.1573,
+  total_cost_sar 625.0, heavy damage: same. document metrics the same except
+  cross_check_catch_rate 1.0 (7), cross_check_false_alarm_rate 0.0177 (2 of 113),
+  expected_lane_match 1.0 (19).
+Lane changes: 3 patient name mismatches. claim_11_0039 was auto approved with checks off and
+  goes to self_fix with them on; claim_11_0035 and claim_11_0095 went to a person and now ask
+  the member first.
+Found: the 2 false alarms (claim_11_0034, claim_11_0068, no damage) are the Arabic patient name
+  on the medical report misread by OCR at 0.57 to 0.64 confidence. The one missed missing
+  prescription (claim_11_0044, light damage) had no line items read, so no category and no
+  need was known. Low missing_document_precision is mostly unreadable receipts flagged as a
+  missing invoice. Not tuned away; see the CHECK items in HANDOVER.
+What it means: same picture as the check set with more cases. Cross checks catch every
+  mismatch put in, stop a wrong auto approve, and send mismatches to the member before a
+  person, which cuts reviews from 225 to 208 per 1000 and cost from 675 to 625 SAR. The price
+  is 2 false alarms in 113 from OCR on Arabic names.
 ```

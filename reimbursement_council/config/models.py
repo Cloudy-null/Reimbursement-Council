@@ -162,6 +162,7 @@ class RequestMessages(ConfigModel):
     confirm_field: str
     missing_document: str
     mismatch: str
+    check_photo: str
 
 
 class LanguageMessages(ConfigModel):
@@ -218,6 +219,7 @@ class DocumentsConfig(ConfigModel):
     cross_check_score_factor: Score
     provider_check_categories: list[str]
     unbacked_edit_confidence: Score
+    max_upload_megabytes: int = Field(gt=0)
 
 
 class Settings(ConfigModel):

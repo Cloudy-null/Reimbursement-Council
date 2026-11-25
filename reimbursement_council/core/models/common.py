@@ -51,7 +51,9 @@ RuleOutcome = Literal["pass", "fail", "not_sure"]
 CheckName = Literal[
     "items_sum_to_subtotal", "vat_is_15_percent", "subtotal_plus_vat_is_total", "qr_matches_text"
 ]
-RequestKind = Literal["retake_photo", "add_document", "confirm_field"]
+RequestKind = Literal[
+    "retake_photo", "add_document", "confirm_field", "check_photo", "fix_mismatch"
+]
 
 
 class Model(BaseModel):

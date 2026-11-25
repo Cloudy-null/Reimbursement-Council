@@ -1,7 +1,9 @@
 """A set of synthetic claims with known right answers. Pure: no drawing, no files.
 
-Each case is a claim with one generated receipt, the defects put into it on purpose, and the
-ground truth: should we pay, and how much. All people, clinics and numbers are made up.
+Each case is a claim with one generated receipt, the prescription or report its services need
+(document_sets.py), the defects put into it on purpose, and the ground truth: should we pay,
+how much, and which lane a document defect should lead to. All people, clinics and numbers are
+made up.
 """
 
 import random
@@ -9,7 +11,6 @@ from datetime import UTC, date, datetime, timedelta
 
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Claim, Document, ExtractionResult, LineItem
-from reimbursement_council.core.models.common import Halalas, Model
 from reimbursement_council.core.models.reference import (
     Member,
     MemberHistory,
@@ -18,15 +19,28 @@ from reimbursement_council.core.models.reference import (
     ReferenceData,
 )
 from reimbursement_council.core.payout import calculate_payout
+from reimbursement_council.synthetic.cases import (
+    PEOPLE,
+    GroundTruth,
+    SyntheticCase,
+    SyntheticSet,
+    member_id,
+)
+from reimbursement_council.synthetic.document_sets import (
+    DOCUMENT_DEFECT_WEIGHTS,
+    add_documents,
+    receipt_options,
+)
 from reimbursement_council.synthetic.receipt_content import (
     PATIENTS,
     PROVIDERS,
     SAUDI,
-    PersonName,
     ReceiptContent,
     ReceiptOptions,
     make_receipt_content,
 )
+
+__all__ = ["PEOPLE", "GroundTruth", "SyntheticCase", "SyntheticSet", "make_claim_set", "member_id"]
 
 DEFECT_WEIGHTS: dict[str, int] = {
     "clean": 45,
@@ -40,46 +54,16 @@ DEFECT_WEIGHTS: dict[str, int] = {
     "unlisted": 7,
     "unreadable": 6,
     "tampered_total": 4,
+    **DOCUMENT_DEFECT_WEIGHTS,
 }
 DEFECTS = tuple(name for name in DEFECT_WEIGHTS if name != "clean")
 HARD_RULE_DEFECTS = frozenset({"late", "inactive", "not_covered", "excluded", "duplicate"})
 QR_SHARE = 0.7
 
-PEOPLE: tuple[PersonName, ...] = (
-    *PATIENTS,
-    PersonName(en="Hind Saad", ar="هند سعد"),  # on a policy that has ended
-    PersonName(en="Fahad Nasser", ar="فهد ناصر"),  # has used almost all benefits
-    PersonName(en="Ali Mansour", ar="علي منصور"),  # not covered by the policy
-)
 REGULAR = range(len(PATIENTS))
 ENDED, LIMIT_USED, OUTSIDER = len(PATIENTS), len(PATIENTS) + 1, len(PATIENTS) + 2
 ACTIVE_POLICY = "00000000-0000-4000-8000-0000000000b1"
 ENDED_POLICY = "00000000-0000-4000-8000-0000000000b2"
-
-
-class GroundTruth(Model):
-    should_pay: bool
-    correct_payout: Halalas
-    defects: list[str]
-
-
-class SyntheticCase(Model):
-    name: str
-    claim: Claim
-    receipt: ReceiptContent
-    damage: str
-    truth: GroundTruth
-    duplicate_of: str | None = None
-
-
-class SyntheticSet(Model):
-    seed: int
-    reference: ReferenceData
-    cases: list[SyntheticCase]
-
-
-def member_id(index: int) -> str:
-    return f"00000000-0000-4000-8000-{index:012d}"
 
 
 def _reference(rng: random.Random, settings: Settings) -> ReferenceData:
@@ -87,6 +71,7 @@ def _reference(rng: random.Random, settings: Settings) -> ReferenceData:
         Member(
             member_id=member_id(i),
             display_name=person.en,
+            name_ar=person.ar,
             date_joined=date(2023, 1, 1),
             policy_id=ENDED_POLICY if i == ENDED else ACTIVE_POLICY,
         )
@@ -197,6 +182,7 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
         delay_days = rng.randint(95, 130) if defect == "late" else rng.randint(1, 4)
         duplicate_of: str | None = None
         inherited: list[str] = []
+        original: SyntheticCase | None = None
         options = ReceiptOptions(with_qr=rng.random() < QR_SHARE)
         if defect == "inactive":
             claimant = patient = ENDED
@@ -219,6 +205,7 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
             options = options.model_copy(
                 update={"printed_total_delta": rng.choice([1000, 2500, 5000])}
             )
+        options = receipt_options(defect, rng, options)
         options = options.model_copy(update={"patient": PEOPLE[patient]})
         if defect == "late":
             issued = datetime(2026, 7, 10, 9, 0) + timedelta(days=rng.randrange(0, 20))
@@ -244,7 +231,7 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
             receipt = make_receipt_content(rng, settings.prices, options, settings.policy.vat_rate)
 
         submitted = (receipt.issued_at + timedelta(days=delay_days)).replace(tzinfo=SAUDI)
-        if duplicate_of is not None:
+        if original is not None:
             # Always sent after the original, a few hours to three days later.
             submitted = original.claim.submitted_at.astimezone(SAUDI) + timedelta(
                 hours=rng.randint(2, 72)
@@ -261,7 +248,7 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
                 Document(
                     document_id=f"{claim_id}-doc",
                     claim_id=claim_id,
-                    kind="receipt",
+                    kind="invoice",
                     file_path=f"{name}.png",
                     image_hash=None,
                     uploaded_at=submitted,
@@ -279,14 +266,13 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
                 reference.history(member_id(patient)),
                 settings,
             )
-        cases.append(
-            SyntheticCase(
-                name=name,
-                claim=claim,
-                receipt=receipt,
-                damage=damage,
-                duplicate_of=duplicate_of,
-                truth=GroundTruth(should_pay=should_pay, correct_payout=payout, defects=defects),
-            )
+        case = SyntheticCase(
+            name=name,
+            claim=claim,
+            receipt=receipt,
+            damage=damage,
+            duplicate_of=duplicate_of,
+            truth=GroundTruth(should_pay=should_pay, correct_payout=payout, defects=defects),
         )
+        cases.append(add_documents(case, defect, seed, index, settings, original))
     return SyntheticSet(seed=seed, reference=reference, cases=cases)

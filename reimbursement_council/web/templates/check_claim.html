@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>{{ t.check_title }}</h2>
+  <p class="note">{{ t.check_sub }}</p>
+  {% include "_refused.html" %}
+  {% if missing %}
+  <div class="notice selffix">
+    <h3>{{ t.missing_title }}</h3>
+    <ul class="plain">{% for text in missing %}<li dir="auto">{{ text }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if mismatches %}
+  <div class="notice review">
+    <h3>{{ t.mismatch_title }}</h3>
+    <ul class="plain">{% for text in mismatches %}<li dir="auto">{{ text }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  <form class="stack" method="post" action="/claims/{{ claim.claim_id }}/documents" enctype="multipart/form-data">
+    <input type="hidden" name="lang" value="{{ lang }}">
+    <label for="more">{{ t.add_files }}
+      <input id="more" type="file" name="photos" accept="image/png,image/jpeg" multiple>
+    </label>
+    <div class="btns"><button class="btn" type="submit">{{ t.add_files }}</button></div>
+  </form>
+</section>
+
+<form method="post" action="/claims/{{ claim.claim_id }}/submit" class="stack">
+  <input type="hidden" name="lang" value="{{ lang }}">
+  <h2>{{ t.documents_title }}</h2>
+  <div class="doc-grid">
+    {% for doc in documents %}
+    <section class="card">
+      <img class="doc-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="">
+      <label for="kind-{{ doc.document_id }}">{{ t.doc_type }}
+        <select id="kind-{{ doc.document_id }}" name="kind_{{ doc.document_id }}">
+          {% for kind in kinds %}<option value="{{ kind }}"{{ ' selected' if kind == selected_kinds[doc.document_id] }}>{{ kind_names[kind] }}</option>{% endfor %}
+        </select>
+      </label>
+      {% if doc.document_id in unread %}<p class="note low">{{ t.unread_note }}</p>{% endif %}
+      {% if doc.document_id == primary_id %}
+      <div class="rows">
+        {% for name in editable %}
+        <label class="row{{ ' low' if name in low }}" for="f-{{ name }}">
+          <span class="label">{{ t['f_' ~ name] }}</span>
+          <input id="f-{{ name }}" type="text" name="field_{{ name }}" value="{{ values[name] }}" dir="auto"
+            {% if name in ('subtotal', 'vat_total', 'total') %}inputmode="decimal"{% endif %}>
+          {% if errors and name in errors %}<span class="field-error">{{ t[errors[name]] }}</span>{% else %}<span></span>{% endif %}
+        </label>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </div>
+  <details class="card"{{ ' open' if not chosen_categories or unread }}>
+    <summary>{{ t.category }}{% if chosen_categories %} {% for c in chosen_categories %}{{ t['cat_' ~ c] }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}</summary>
+    <label for="category">{{ t.category }}
+      <select id="category" name="category">
+        <option value="">{{ t.category_auto }}</option>
+        {% for c in categories %}<option value="{{ c }}"{{ ' selected' if c == selected_category }}>{{ t['cat_' ~ c] }}</option>{% endfor %}
+      </select>
+    </label>
+  </details>
+  <p class="note">{{ t.submit_note }}</p>
+  <div class="btns"><button class="btn primary" type="submit">{{ t.submit }}</button></div>
+</form>
+{% endblock %}

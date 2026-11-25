@@ -1,16 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="grid">
-  <img class="receipt-img" src="/claims/{{ claim.claim_id }}/document" alt="">
+  <div class="doc-stack">
+    {% for doc in documents %}<img class="receipt-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="">{% endfor %}
+  </div>
   <div class="card" style="background: none; border: 0; padding: 0">
     <section class="card result lane-{{ decision.lane }}">
       <span class="pill"><span class="dot"></span>{{ t['lane_' ~ decision.lane] }}</span>
       <p class="message" dir="auto">{{ decision.member_message[lang] }}</p>
       {% if decision.lane == 'self_fix' %}
+      {% include "_refused.html" %}
       <form class="stack" method="post" action="/claims/{{ claim.claim_id }}/fix" enctype="multipart/form-data">
         <input type="hidden" name="lang" value="{{ lang }}">
-        <label for="fix-photo">{{ t.fix_title }}
-          <input id="fix-photo" type="file" name="photo" accept="image/png,image/jpeg" capture="environment" required>
+        <label for="fix-photos">{{ t.add_or_replace }}
+          <input id="fix-photos" type="file" name="photos" accept="image/png,image/jpeg" multiple required>
+        </label>
+        <label for="replace">{{ t.replace_which }}
+          <select id="replace" name="replace">
+            <option value="">{{ t.replace_none }}</option>
+            {% for doc in documents %}<option value="{{ doc.document_id }}">{{ loop.index }}. {{ kind_names[doc.kind] }}</option>{% endfor %}
+          </select>
         </label>
         <div class="btns"><button class="btn primary" type="submit">{{ t.fix_send }}</button></div>
       </form>

@@ -1,0 +1,3 @@
+{% if refused %}
+<div class="row low"><span class="label">{{ t.refused }}</span><span dir="auto">{% for r in refused %}{{ r.name }}: {{ t[r.reason] }}{{ '; ' if not loop.last }}{% endfor %}</span><span></span></div>
+{% endif %}

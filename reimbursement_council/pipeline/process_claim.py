@@ -13,6 +13,7 @@ from reimbursement_council.config.models import Settings
 from reimbursement_council.core.council.registry import run_council
 from reimbursement_council.core.decision.blockers import approval_blockers
 from reimbursement_council.core.decision.combine import combine_votes, p_good_from_score
+from reimbursement_council.core.decision.document_requests import human_reasons, member_requests
 from reimbursement_council.core.decision.lanes import choose_lane, expected_loss
 from reimbursement_council.core.explain import build_member_message
 from reimbursement_council.core.models.case import ClaimCase
@@ -104,6 +105,17 @@ def process_claim(
             missing=documents.missing,
             billing_documents_differ=documents.billing_documents_differ,
         ),
+        member_fixable=member_requests(
+            documents.needs,
+            documents.cross_checks,
+            documents.edits,
+            claim.retake_fields,
+            settings,
+            {d.document_id: d.kind for d in documents.documents},
+        ),
+        human_only=human_reasons(
+            rule_results, documents.edits, documents.cross_checks, claim.retake_fields, settings
+        ),
     )
 
     decision = Decision(
@@ -126,6 +138,9 @@ def process_claim(
         rule_results=rule_results,
         check_results=[] if extraction is None else extraction.checks,
         edits=documents.edits,
+        document_kinds={d.document_id: d.kind for d in documents.documents},
+        needs_missing=[list(n.group) for n in documents.missing],
+        cross_checks=documents.cross_checks,
     )
     store.save_decision(decision)
     keys = (
