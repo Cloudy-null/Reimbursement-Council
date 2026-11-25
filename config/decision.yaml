@@ -58,4 +58,22 @@ members:
   price_checker: {enabled: true, weight: 1.0, zero_score_ratio: 3.0, unknown_item_score: 0.5}
   # provider_trust_weight: share of the score from provider trust; the rest is member history
   history_member: {enabled: true, weight: 1.0, min_past_claims: 3, provider_trust_weight: 0.5}
-  case_reviewer: {enabled: false, weight: 1.0}
+  # The AI case reviewer: a local model reads a summary of the case and gives one score.
+  # It can only send a claim that would be auto approved to a person (decision 010).
+  case_reviewer:
+    enabled: false
+    weight: 1.0
+    timeout_seconds: 10           # live path: a slower answer is skipped, the council decides alone
+    check_timeout_seconds: 120    # golden check: the first call may load the model
+    review_lanes: [auto_approve, human_review]  # lanes (without the reviewer) it is asked about
+    score_floor: 0.3              # a reviewer score below this sends an approve to a person
+    disagreement_gap: 0.4         # the others' score minus the reviewer's above this: a person
+    min_cited_fields: 1           # an answer must point at this many read fields
+    max_reason_characters: 300
+    golden_good_min_score: 0.6    # a golden good claim passes at or above this score
+    golden_bad_max_score: 0.4     # a golden bad claim passes at or below this score
+    golden_pass_rate: 0.9         # share of the golden set that must pass, or it is benched
+    monitor_window: 50            # the last N answers the monitors look at
+    monitor_min_votes: 10         # monitors judge only after this many answers
+    max_discarded_rate: 0.2       # more discarded answers than this share benches it
+    min_score_spread: 0.02        # a standard deviation of scores below this benches it

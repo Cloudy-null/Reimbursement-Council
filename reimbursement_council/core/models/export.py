@@ -11,6 +11,7 @@ from typing import Literal
 
 from pydantic import AwareDatetime, Field
 
+from reimbursement_council.core.models.case_review import CaseReview
 from reimbursement_council.core.models.claim import CheckResult, FieldEdit
 from reimbursement_council.core.models.common import (
     DocumentKind,
@@ -136,3 +137,5 @@ class ClaimExport(Model):
     payout: ExportPayout | None
     decision: ExportDecision
     review: ExportReview | None
+    # The AI case reviewer's score, reason, cited fields and status. None when it is off.
+    case_review: CaseReview | None = None

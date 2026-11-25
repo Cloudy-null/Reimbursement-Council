@@ -9,6 +9,7 @@ from reimbursement_council.core.models.common import (
     DocumentKind,
     FieldName,
     Halalas,
+    Lane,
     MemberName,
     Score,
 )
@@ -56,18 +57,48 @@ class HistoryMemberConfig(MemberConfig):
     provider_trust_weight: Score
 
 
+class CaseReviewerConfig(MemberConfig):
+    """The AI case reviewer (decision 010). It can only send a claim to a person."""
+
+    timeout_seconds: float = Field(gt=0)
+    check_timeout_seconds: float = Field(gt=0)
+    review_lanes: list[Lane]
+    score_floor: Score
+    disagreement_gap: Score
+    min_cited_fields: int = Field(ge=0)
+    max_reason_characters: int = Field(gt=0)
+    golden_good_min_score: Score
+    golden_bad_max_score: Score
+    golden_pass_rate: Score
+    monitor_window: int = Field(ge=1)
+    monitor_min_votes: int = Field(ge=1)
+    max_discarded_rate: Score
+    min_score_spread: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def usable_limits(self) -> Self:
+        if self.monitor_min_votes > self.monitor_window:
+            raise ValueError("monitor_min_votes cannot be more than monitor_window")
+        if self.golden_bad_max_score >= self.golden_good_min_score:
+            raise ValueError("golden_bad_max_score must be below golden_good_min_score")
+        return self
+
+
 class MembersConfig(ConfigModel):
     document_checker: DocumentCheckerConfig
     coverage_checker: CoverageCheckerConfig
     price_checker: PriceCheckerConfig
     history_member: HistoryMemberConfig
-    case_reviewer: MemberConfig
+    case_reviewer: CaseReviewerConfig
 
     @model_validator(mode="after")
     def usable_council(self) -> Self:
-        if self.case_reviewer.enabled:
-            raise ValueError("case_reviewer is not built yet, keep it disabled")
-        if not any(config.enabled and config.weight > 0 for _, config in self.in_order()):
+        # The case reviewer does not count: the council must be able to decide without it.
+        if not any(
+            config.enabled and config.weight > 0
+            for name, config in self.in_order()
+            if name != "case_reviewer"
+        ):
             raise ValueError("at least one council member must be enabled with weight above 0")
         return self
 

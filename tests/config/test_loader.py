@@ -97,11 +97,35 @@ def test_no_enabled_member_rejected(tmp_path: Path) -> None:
         load_settings(changed_config(tmp_path, "decision.yaml", all_off), env={})
 
 
-def test_case_reviewer_not_built_yet(tmp_path: Path) -> None:
+def test_case_reviewer_can_be_turned_on(tmp_path: Path) -> None:
     config = changed_config(
         tmp_path, "decision.yaml", set_key("members", "case_reviewer", "enabled", value=True)
     )
-    with pytest.raises(ConfigError, match="case_reviewer is not built yet"):
+    assert load_settings(config, env={}).decision.members.case_reviewer.enabled
+
+
+def test_case_reviewer_is_off_in_the_repo_config() -> None:
+    assert not load_settings(REPO_CONFIG, env={}).decision.members.case_reviewer.enabled
+
+
+def test_case_reviewer_alone_is_not_a_council(tmp_path: Path) -> None:
+    def only_reviewer(data: Any) -> Any:
+        for member in data["members"].values():
+            member["enabled"] = False
+        data["members"]["case_reviewer"]["enabled"] = True
+        return data
+
+    with pytest.raises(ConfigError, match="at least one council member"):
+        load_settings(changed_config(tmp_path, "decision.yaml", only_reviewer), env={})
+
+
+def test_case_reviewer_golden_limits_must_be_ordered(tmp_path: Path) -> None:
+    config = changed_config(
+        tmp_path,
+        "decision.yaml",
+        set_key("members", "case_reviewer", "golden_bad_max_score", value=0.9),
+    )
+    with pytest.raises(ConfigError, match="golden_bad_max_score"):
         load_settings(config, env={})
 
 

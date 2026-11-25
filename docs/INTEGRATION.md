@@ -53,6 +53,7 @@ read without opening the photos.
 | `payout` | See below. Empty when there is no billing document. |
 | `decision` | See below. |
 | `review` | The human reviewer's decision, when there was one. |
+| `case_review` | What the AI case reviewer said (decision 010). Empty when it is switched off. `status` is `used`, `discarded` (the answer broke the schema or cited a value we did not read), `skipped` (no answer in time, an error, or the lane is not reviewed) or `benched` (switched off by its health checks); `problem` says why. `score`, `reason` and `cited_fields` are the model's answer; `changed_lane` is `true` when it sent a claim that would be auto approved to a person. It can never approve or reject a claim. |
 
 ### provider
 

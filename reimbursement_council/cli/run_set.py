@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 import time
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,7 @@ from reimbursement_council.core.models.claim import Claim
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.models.reference import ReferenceData
 from reimbursement_council.evaluation.timing import ReadClock, timing_metrics
+from reimbursement_council.pipeline.case_review import make_case_reviewer
 from reimbursement_council.pipeline.process_claim import process_claim
 from reimbursement_council.synthetic.apply_fix import claim_after_fix
 from reimbursement_council.synthetic.document_metrics import MISMATCH_DEFECTS, document_metrics
@@ -62,6 +64,7 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     )
     run.add_argument("--config-dir", type=Path, default=Path("config"))
     run.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
+    run.add_argument("--data-dir", type=Path, default=Path("data"), help="Reviewer health file.")
     run.add_argument(
         "--no-ocr-cache",
         action="store_true",
@@ -198,6 +201,7 @@ def _row(
         first_lane=None if first is None else first.lane,
         fix_tried=first is not None,
         past_claims=past_claims,
+        reviewer_status=None if result.case_review is None else result.case_review.status,
     )
 
 
@@ -221,6 +225,10 @@ def run_set(args: argparse.Namespace) -> int:
     if not args.no_ocr_cache:
         engine = CachedOcrEngine(engine, args.ocr_cache)
     pick = ReadClock(make_reader_for(settings, engine))
+    reviewer = None
+    if decision.members.case_reviewer.enabled:  # golden check first when never checked
+        reviewer = make_case_reviewer(settings, args.data_dir)
+        logger.info("case reviewer: %s", reviewer.ensure_checked(datetime.now(UTC)).status)
     rows: list[RunRow] = []
     started = time.time()
     resumed = 0
@@ -243,13 +251,17 @@ def run_set(args: argparse.Namespace) -> int:
             now = datetime.now(UTC)
             pick.reset()
             claim_started = time.perf_counter()
-            result = process_claim(claim, reference, settings, store, now, reader_for=pick)
+            result = process_claim(
+                claim, reference, settings, store, now, reader_for=pick, case_reviewer=reviewer
+            )
             seconds = (time.perf_counter() - claim_started, pick.seconds)
             fix = truth.get("fix")
             if args.simulate_fix and result.lane == "self_fix" and fix:
                 first = result
                 fixed = claim_after_fix(claim, fix, args.folder, result.self_fix_request, now)
-                result = process_claim(fixed, reference, settings, store, now, reader_for=pick)
+                result = process_claim(
+                    fixed, reference, settings, store, now, reader_for=pick, case_reviewer=reviewer
+                )
                 logger.info("claim %s: after the fix, lane %s", claim.claim_id, result.lane)
         else:
             resumed += 1
@@ -283,6 +295,7 @@ def run_set(args: argparse.Namespace) -> int:
         "config_version": settings.config_version,
         "seconds": round(time.time() - started, 1),
         "lanes": lanes,
+        "reviewer_statuses": dict(Counter(r.reviewer_status for r in rows if r.reviewer_status)),
         "metrics": scores,
         "rows": [row.model_dump() for row in rows],
     }

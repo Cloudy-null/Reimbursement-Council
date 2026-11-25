@@ -1,0 +1,150 @@
+{
+ "name": "tricky_good_ocr_only",
+ "kind": "tricky",
+ "expected": "good",
+ "note": "No QR, but OCR read every value with high confidence and checks pass.",
+ "summary": {
+  "claim_id": "00000000-0000-4000-8000-000000000012",
+  "categories": [
+   "outpatient"
+  ],
+  "fields": [
+   {
+    "document_kind": "receipt",
+    "name": "provider_name",
+    "value": "Al Noor Medical Clinic",
+    "confidence": 0.93,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "vat_number",
+    "value": "300000000000003",
+    "confidence": 0.93,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "treatment_date",
+    "value": "2026-11-17",
+    "confidence": 0.93,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "subtotal",
+    "value": "150.00",
+    "confidence": 0.93,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "vat_total",
+    "value": "22.50",
+    "confidence": 0.93,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "total",
+    "value": "172.50",
+    "confidence": 0.93,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "patient_name",
+    "value": "Sara Ahmed",
+    "confidence": 0.9,
+    "source": "ocr"
+   }
+  ],
+  "line_items": [
+   {
+    "description": "General practitioner consultation",
+    "service_code": "CONS-GP",
+    "quantity": 1,
+    "amount_sar": "150.00",
+    "confidence": 0.95
+   }
+  ],
+  "checks": [
+   {
+    "name": "receipt: items_sum_to_subtotal",
+    "passed": true,
+    "details": "items add up to the subtotal"
+   },
+   {
+    "name": "receipt: vat_is_15_percent",
+    "passed": true,
+    "details": "VAT is 15 percent"
+   },
+   {
+    "name": "receipt: subtotal_plus_vat_is_total",
+    "passed": true,
+    "details": "subtotal plus VAT is the total"
+   },
+   {
+    "name": "patient_matches_account",
+    "passed": true,
+    "details": "the patient name matches the account"
+   },
+   {
+    "name": "dates_agree",
+    "passed": true,
+    "details": "dates agree"
+   }
+  ],
+  "rules": [
+   {
+    "rule": "late",
+    "outcome": "pass",
+    "reason": "inside the claim window"
+   },
+   {
+    "rule": "policy_inactive",
+    "outcome": "pass",
+    "reason": "policy active on the treatment date"
+   },
+   {
+    "rule": "person_not_covered",
+    "outcome": "pass",
+    "reason": "the patient is covered"
+   },
+   {
+    "rule": "excluded_service",
+    "outcome": "pass",
+    "reason": "no excluded service"
+   },
+   {
+    "rule": "duplicate",
+    "outcome": "pass",
+    "reason": "receipt not seen before"
+   }
+  ],
+  "payout_requested_sar": "172.50",
+  "payout_calculated_sar": "155.25",
+  "member_votes": [
+   {
+    "member": "document_checker",
+    "score": 1.0,
+    "reason": "Required fields read and checks pass."
+   },
+   {
+    "member": "coverage_checker",
+    "score": 1.0,
+    "reason": "Every item is covered."
+   },
+   {
+    "member": "price_checker",
+    "score": 1.0,
+    "reason": "Prices score 1.00."
+   },
+   {
+    "member": "history_member",
+    "score": 0.5,
+    "reason": "History neutral; provider trust 0.50."
+   }
+  ]
+ }
+}

@@ -24,3 +24,8 @@ def test_council_order_and_weights() -> None:
 def test_council_skips_disabled() -> None:
     votes = run_council(make_case(), with_member("history_member", enabled=False))
     assert [v.member for v in votes] == ["document_checker", "coverage_checker", "price_checker"]
+
+
+def test_council_leaves_the_case_reviewer_to_the_pipeline() -> None:
+    votes = run_council(make_case(), with_member("case_reviewer", enabled=True))
+    assert "case_reviewer" not in [v.member for v in votes]

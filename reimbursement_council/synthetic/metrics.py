@@ -43,6 +43,8 @@ class RunRow(Model):
     fix_tried: bool = False
     # The patient's past claims, for the fairness check (E9: new vs tenured members).
     past_claims: int | None = None
+    # The AI case reviewer's status on this claim (used, discarded, skipped, benched), if on.
+    reviewer_status: str | None = None
     # Seconds for the first try of this claim: all of it, and the part spent reading documents.
     seconds_total: float | None = None
     seconds_read: float | None = None
