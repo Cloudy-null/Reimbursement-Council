@@ -32,7 +32,9 @@ RTL_COLUMNS: dict[int, tuple[int, ...]] = {
     3: (RIGHT, 400, 160),
     2: (RIGHT, 300),
 }
-LTR_STEP = 130
+# Left edges of left to right table columns, by column count (first column first).
+LTR_COLUMNS: dict[int, tuple[int, ...]] = {4: (MARGIN, 430, 530, 630)}
+LTR_STEP = 130  # other left to right tables: one column every this many pixels
 _ARABIC = re.compile("[؀-ۿ]")  # left to right tables: one column every this many pixels
 
 
@@ -87,7 +89,8 @@ def _table(c: Canvas, row: SheetRow, rtl: bool) -> None:
             )
             _put(c, edges[index], cell, size, align="right", bold=head, field=row.field)
         else:
-            _put(c, MARGIN + index * LTR_STEP, cell, size, bold=head, field=row.field)
+            lefts = LTR_COLUMNS.get(count) or tuple(MARGIN + i * LTR_STEP for i in range(count))
+            _put(c, lefts[index], cell, size, bold=head, field=row.field)
     c.newline(size)
 
 

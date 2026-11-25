@@ -41,3 +41,31 @@ def test_long_small_print_wraps_and_slip_pages_are_short() -> None:
     drawn = draw_sheet(sheet)
     assert drawn.height < A4_HEIGHT
     assert drawn.height > 100  # several wrapped lines
+
+
+def test_the_font_draws_every_letter_of_every_sample() -> None:
+    from PIL import ImageFont
+
+    from reimbursement_council.adapters.drawing_canvas import FONT_DIR, shape_text
+    from reimbursement_council.synthetic.dental_claims import make_dental_set
+    from reimbursement_council.synthetic.language_content import (
+        LANGUAGES,
+        make_language_receipt,
+    )
+    from reimbursement_council.synthetic.optical_claims import make_optical_set
+
+    face = ImageFont.truetype(str(FONT_DIR / "IBMPlexSansArabic-Regular.ttf"), 40)
+    missing = bytes(face.getmask("￿"))  # the empty box drawn for a letter it lacks
+    settings = repo_settings()
+    sheets = [d.sheet for c in make_optical_set(1, settings).cases for d in c.documents]
+    sheets += [d.sheet for c in make_dental_set(1, settings).cases for d in c.documents]
+    for language in LANGUAGES:
+        for seed in range(6):
+            sheet = make_language_receipt(random.Random(seed), language, settings).sheet
+            if sheet is not None:
+                sheets.append(sheet)
+    letters = {c for sheet in sheets for line in sheet.text().split("\n") for c in shape_text(line)}
+    lacking = sorted(
+        hex(ord(c)) for c in letters if not c.isspace() and bytes(face.getmask(c)) == missing
+    )
+    assert lacking == []
