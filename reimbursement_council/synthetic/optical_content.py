@@ -170,6 +170,12 @@ def money(halalas: int) -> str:
     return f"{format_sar(halalas)} {SAR}"
 
 
+def make_eye_prescription(rng: random.Random, patient: PersonName) -> EyePrescription:
+    return EyePrescription(
+        patient=patient, right=_eye(rng), left=_eye(rng), ipd=rng.randint(56, 70)
+    )
+
+
 def _eye(rng: random.Random) -> EyeValues:
     return EyeValues(
         sph=rng.randrange(-32, 13) * 0.25,
@@ -198,9 +204,7 @@ def make_optical_invoice(
     vat_total = apply_rate(subtotal, options.vat_rate)
     prescription = None
     if options.with_prescription:
-        prescription = EyePrescription(
-            patient=options.patient, right=_eye(rng), left=_eye(rng), ipd=rng.randint(56, 70)
-        )
+        prescription = make_eye_prescription(rng, options.patient)
     number = "".join(str(rng.randrange(10)) for _ in range(13))
     return OpticalInvoice(
         shop=shop,

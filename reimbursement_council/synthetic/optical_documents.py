@@ -66,7 +66,7 @@ def make_eye_test(
 ) -> EyeTestDocument:
     return EyeTestDocument(
         clinic=clinic,
-        issued_at=invoice_time - timedelta(days=rng.randint(0, 6), minutes=rng.randint(10, 300)),
+        issued_at=invoice_time - timedelta(minutes=rng.randint(10, 300)),  # same day
         doctor=rng.choice(EYE_DOCTORS),
         eyes=eyes,
     )

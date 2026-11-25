@@ -28,6 +28,7 @@ from reimbursement_council.cli import (
     receipts,
     reviewer,
     run_set,
+    sheet_sets,
 )
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
@@ -60,6 +61,7 @@ def _parser() -> argparse.ArgumentParser:
     real.add_commands(commands)
     reviewer.add_commands(commands)
     live_test.add_commands(commands)
+    sheet_sets.add_commands(commands)
     serve = commands.add_parser("serve", help="Start the website on this computer.")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -150,6 +152,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         **run_set.COMMANDS,
         **real.COMMANDS,
         **reviewer.COMMANDS,
+        **sheet_sets.COMMANDS,
         "live-test": live_test.live_test,
     }
     if args.command in commands:

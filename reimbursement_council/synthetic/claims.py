@@ -10,7 +10,7 @@ import random
 from datetime import UTC, date, datetime, timedelta
 
 from reimbursement_council.config.models import Settings
-from reimbursement_council.core.models.claim import Claim, Document, ExtractionResult, LineItem
+from reimbursement_council.core.models.claim import Claim, Document, LineItem
 from reimbursement_council.core.models.reference import (
     Member,
     MemberHistory,
@@ -18,7 +18,6 @@ from reimbursement_council.core.models.reference import (
     Provider,
     ReferenceData,
 )
-from reimbursement_council.core.payout import calculate_payout
 from reimbursement_council.synthetic.cases import (
     PEOPLE,
     GroundTruth,
@@ -41,6 +40,7 @@ from reimbursement_council.synthetic.receipt_content import (
     ReceiptOptions,
     make_receipt_content,
 )
+from reimbursement_council.synthetic.sheet_cases import truth_payout
 
 __all__ = [
     "PEOPLE",
@@ -154,16 +154,6 @@ def _correct_payout(
     receipt: ReceiptContent, policy: Policy, history: MemberHistory, settings: Settings
 ) -> int:
     """Our policy applied to the receipt's true values: the oracle for 'paid right'."""
-    from reimbursement_council.core.models.claim import ExtractedField  # local: tiny helper
-
-    vat = ExtractedField(
-        document_id="truth",
-        name="vat_total",
-        value=str(receipt.vat_total),
-        original_text="",
-        source="qr",
-        confidence=1.0,
-    )
     items = [
         LineItem(
             description=i.description_en,
@@ -175,9 +165,7 @@ def _correct_payout(
         )
         for i in receipt.items
     ]
-    perfect = ExtractionResult(document_id="truth", fields=[vat], line_items=items, checks=[])
-    payout = calculate_payout(perfect, policy, history, settings)
-    return 0 if payout is None else payout.calculated
+    return truth_payout(items, receipt.vat_total, policy, history, settings)
 
 
 def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
