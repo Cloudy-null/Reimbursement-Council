@@ -152,10 +152,10 @@ def test_gemini_reader_not_built_yet(tmp_path: Path) -> None:
 
 def test_price_category_missing_from_tier_rejected(tmp_path: Path) -> None:
     def new_category(data: Any) -> Any:
-        data[0]["category"] = "optical"
+        data[0]["category"] = "vision_care"
         return data
 
-    with pytest.raises(ConfigError, match=r"optical.*silver"):
+    with pytest.raises(ConfigError, match=r"vision_care.*silver"):
         load_settings(changed_config(tmp_path, "prices.yaml", new_category), env={})
 
 

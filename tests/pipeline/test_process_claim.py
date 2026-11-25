@@ -51,11 +51,11 @@ def test_clean_details(tmp_path: Path) -> None:
     decision = run(load("clean"), ClaimStore(tmp_path / "claims.sqlite"))
     assert (decision.outcome, decision.payout_calculated, decision.payout_requested) == (
         "complete",
-        15525,
+        13500,  # VAT is not paid (core day 4b, Bupa FAQ)
         17250,
     )
     assert decision.expected_loss is not None and decision.expected_loss < 2500
-    assert decision.member_message.en == "Your claim is approved. We will send you 155.25 SAR."
+    assert decision.member_message.en == "Your claim is approved. We will send you 135.00 SAR."
 
 
 def test_late_details(tmp_path: Path) -> None:
@@ -73,7 +73,7 @@ def test_blurry_date_asks_to_confirm(tmp_path: Path) -> None:
 
 def test_overpriced_is_capped(tmp_path: Path) -> None:
     decision = run(load("overpriced"), ClaimStore(tmp_path / "claims.sqlite"))
-    assert (decision.payout_calculated, decision.payout_requested) == (15525, 46000)
+    assert (decision.payout_calculated, decision.payout_requested) == (13500, 46000)
     assert "disagreement" in decision.lane_reason
 
 

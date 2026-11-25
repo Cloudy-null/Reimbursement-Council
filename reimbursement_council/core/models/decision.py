@@ -61,6 +61,9 @@ class PayoutResult(Model):
     limit_cut: Halalas
     vat_paid: Halalas
     calculated: Halalas
+    # core day 4b: what a used-up benefit sub-limit took off, and which sub-limits applied
+    sub_limit_cut: Halalas = 0
+    sub_limits_used: dict[str, Halalas] = Field(default_factory=dict)
     unmatched_items: list[str]
     is_partial: bool
 

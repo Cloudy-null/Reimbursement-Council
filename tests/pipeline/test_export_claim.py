@@ -49,7 +49,7 @@ def test_clean_export_has_money_in_halalas_and_is_ready(tmp_path: Path) -> None:
     export = exported("clean", tmp_path)
     assert export is not None and export.ready_for_processing
     assert export.invoice is not None and export.invoice.total_halalas == 17250
-    assert export.payout is not None and export.payout.calculated_halalas == 15525
+    assert export.payout is not None and export.payout.calculated_halalas == 13500
     assert export.decision.lane == "auto_approve" and export.schema_version == "1.0"
     primary = [d for d in export.documents if d.is_primary]
     assert (
@@ -99,7 +99,7 @@ def test_a_claim_sent_back_to_draft_has_no_export(tmp_path: Path) -> None:
 
 def test_the_export_carries_the_decided_payout(tmp_path: Path) -> None:
     export = exported("clean", tmp_path)
-    assert export is not None and export.decision.payout_calculated_halalas == 15525
+    assert export is not None and export.decision.payout_calculated_halalas == 13500
 
 
 def test_an_approval_without_a_payout_now_is_not_ready(tmp_path: Path) -> None:

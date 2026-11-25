@@ -32,8 +32,8 @@ def test_run_clean_claim(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> 
     assert code == 0
     assert "lane: auto_approve" in out
     assert "outcome: complete" in out
-    assert "payout: 155.25 SAR" in out
-    assert "message (en): Your claim is approved. We will send you 155.25 SAR." in out
+    assert "payout: 135.00 SAR" in out
+    assert "message (en): Your claim is approved. We will send you 135.00 SAR." in out
     assert "message (ar): " in out
 
 

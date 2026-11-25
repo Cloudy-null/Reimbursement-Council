@@ -92,6 +92,11 @@ class ExportPayout(Model):
     calculated_halalas: Halalas
     unmatched_items: list[str]
     is_partial: bool
+    # core day 4b (Bupa FAQ rules): sub-limits, member share cap, VAT left out
+    sub_limit_cut_halalas: Halalas = 0
+    sub_limits_used_halalas: dict[str, Halalas] = Field(default_factory=dict)
+    member_share_cap_halalas: Halalas | None = None
+    vat_excluded: bool = False
 
 
 class ExportDecision(Model):
@@ -139,3 +144,5 @@ class ClaimExport(Model):
     review: ExportReview | None
     # The AI case reviewer's score, reason, cited fields and status. None when it is off.
     case_review: CaseReview | None = None
+    # Where each policy rule comes from, for example "source: Bupa Arabia claim confirmation FAQ".
+    rule_sources: dict[str, str] = Field(default_factory=dict)

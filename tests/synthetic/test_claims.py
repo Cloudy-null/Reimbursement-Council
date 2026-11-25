@@ -37,7 +37,7 @@ def test_clean_case_payout_follows_policy() -> None:
         and len(c.receipt.items) == 1
     )
     # 150.00 consultation: 10 percent co-pay, VAT on the paid part
-    assert clean.truth.correct_payout == 15525
+    assert clean.truth.correct_payout == 13500
 
 
 def test_duplicate_reuses_an_earlier_receipt() -> None:

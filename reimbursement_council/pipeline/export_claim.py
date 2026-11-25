@@ -73,4 +73,16 @@ def export_claim(
         review,
         settings.prices,
         now,
+        vat_excluded=not settings.policy.vat_covered,
+        share_cap=_share_cap(reference, claim, settings),
+        rule_sources=settings.policy.rule_sources,
     )
+
+
+def _share_cap(reference: ReferenceData, claim: Claim, settings: Settings) -> int | None:
+    """The member share cap of the claim's policy tier, if the policy is known."""
+    try:
+        tier = settings.policy.tiers.get(reference.policy(claim.policy_id).tier)
+    except LookupError:
+        return None
+    return None if tier is None else tier.copay_cap_halalas

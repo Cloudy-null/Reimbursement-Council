@@ -40,6 +40,14 @@ def calculate_payout(
     allowed_by_category: dict[str, int] = defaultdict(int)
     network_cap_cut = 0
     unmatched: list[str] = []
+    # Sub-limits (for example optical frames): what is left this policy year after the
+    # member's usage so far (source: Bupa Arabia claim confirmation FAQ).
+    sub_left = {
+        key: max(0, sub.limit_halalas - history.limits_used.get(key, 0))
+        for key, sub in tier.sub_limits.items()
+    }
+    sub_used: dict[str, int] = {}
+    sub_limit_cut = 0
     for item in extraction.line_items:
         price = settings.prices.get(item.service_code or "")
         if price is None:
@@ -47,13 +55,25 @@ def calculate_payout(
             continue
         allowed = min(item.amount, price.network_price * item.quantity)
         network_cap_cut += item.amount - allowed
+        for key, sub in tier.sub_limits.items():
+            if price.service_code in sub.services:
+                within = min(allowed, sub_left[key])
+                sub_left[key] -= within
+                sub_used[key] = sub_used.get(key, 0) + within
+                sub_limit_cut += allowed - within
+                allowed = within
         allowed_by_category[price.category] += allowed
 
     copay = 0
     limit_cut = 0
     paid_before_vat = 0
+    # The member share is capped per claim (source: Bupa FAQ, "20% up to 100 SAR").
+    share_left = tier.copay_cap_halalas
     for category, allowed in allowed_by_category.items():
         category_copay = apply_rate(allowed, tier.copay_rate[category])
+        if share_left is not None:
+            category_copay = min(category_copay, share_left)
+            share_left -= category_copay
         after_copay = allowed - category_copay
         remaining = max(0, tier.limits_halalas[category] - history.limits_used.get(category, 0))
         paid = min(after_copay, remaining)
@@ -62,10 +82,16 @@ def calculate_payout(
         paid_before_vat += paid
 
     receipt_vat = _receipt_vat(extraction)
-    vat_paid = min(apply_rate(paid_before_vat, settings.policy.vat_rate), receipt_vat)
+    # Bupa does not cover VAT (source: Bupa FAQ); vat_covered in policy.yaml.
+    vat_paid = (
+        min(apply_rate(paid_before_vat, settings.policy.vat_rate), receipt_vat)
+        if settings.policy.vat_covered
+        else 0
+    )
     requested = sum(item.amount for item in extraction.line_items) + receipt_vat
     is_partial = (
-        network_cap_cut + limit_cut > settings.decision.partial_payout_tolerance_halalas
+        network_cap_cut + limit_cut + sub_limit_cut
+        > settings.decision.partial_payout_tolerance_halalas
         or bool(unmatched)
     )
     return PayoutResult(
@@ -77,4 +103,6 @@ def calculate_payout(
         calculated=paid_before_vat + vat_paid,
         unmatched_items=unmatched,
         is_partial=is_partial,
+        sub_limit_cut=sub_limit_cut,
+        sub_limits_used=sub_used,
     )

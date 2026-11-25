@@ -56,3 +56,25 @@
   network_price: 120000
   category: outpatient
   aliases: [botox, بوتوكس]
+# Optical and dental services added on core day 4b (source: Bupa Arabia claim confirmation FAQ
+# names optical and dental claims; prices are made up).
+- service_code: OPT-FRAME
+  description: Eyeglass frame
+  network_price: 200000
+  category: optical
+  aliases: [eyeglass frame, frame, frames, اطار نظارة, اطار, برواز]
+- service_code: OPT-LENS
+  description: Prescription lenses
+  network_price: 60000
+  category: optical
+  aliases: [prescription lenses, lenses, lens, عدسات طبية, عدسات, عدسة]
+- service_code: OPT-EXAM
+  description: Eye test
+  network_price: 20000
+  category: optical
+  aliases: [eye test, eye exam, فحص نظر, فحص النظر]
+- service_code: DENT-FILL
+  description: Dental filling
+  network_price: 40000
+  category: dental
+  aliases: [dental filling, filling, حشوة سن, حشوة]

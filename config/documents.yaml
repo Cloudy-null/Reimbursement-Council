@@ -10,6 +10,8 @@ required_by_category:
   lab: [[invoice, receipt]]
   radiology: [[invoice, receipt], [medical_report]]
   dental: [[invoice, receipt]]
+  # An eye test is required; a prescription printed on the invoice counts (core day 4b).
+  optical: [[invoice, receipt], [prescription]]
 
 # Words that mark a document type, in English and Arabic. A ZATCA QR always means a billing
 # document (invoice or receipt).

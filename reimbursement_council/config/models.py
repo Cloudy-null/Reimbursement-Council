@@ -24,9 +24,16 @@ from reimbursement_council.core.models.common import (
 from reimbursement_council.core.models.reference import PriceListItem
 
 
+class SubLimitConfig(ConfigModel):
+    limit_halalas: Halalas
+    services: list[str] = Field(min_length=1)
+
+
 class TierConfig(ConfigModel):
     limits_halalas: dict[str, Halalas]
     copay_rate: dict[str, Score]
+    copay_cap_halalas: Halalas | None = None
+    sub_limits: dict[str, SubLimitConfig] = Field(default_factory=dict)
 
 
 class PolicyConfig(ConfigModel):
@@ -34,6 +41,8 @@ class PolicyConfig(ConfigModel):
     vat_rate: Score
     local_utc_offset_hours: int = Field(ge=-12, le=14)
     exclusions: list[str]
+    vat_covered: bool
+    rule_sources: dict[str, str] = Field(default_factory=dict)
     tiers: dict[str, TierConfig]
 
 
