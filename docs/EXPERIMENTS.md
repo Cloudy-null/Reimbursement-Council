@@ -471,3 +471,24 @@ Result: off: auto_approve 26, human_review 13, self_fix 11, auto_reject 10; auto
          (payable, overpriced: paid in part) from auto_approve to a person.
 Meaning: on this set the reviewer only costs: there was no wrong approval for it to stop.
 ```
+
+```
+Run: (e) Arabic and English reading on the synthetic receipts, EasyOCR vs the local model
+Date: 2026-11-25
+Commit: 9671aea (model answers cached from the first run at 1625c6a; the code change in
+         between only turns a name printed in both scripts into its Latin words)
+Command: read-accuracy data/receipts/eval_s1 --reader easyocr --results-name accuracy_core_easyocr.json
+         read-accuracy data/receipts/eval_s1 --reader ollama --two-readers on --results-name accuracy_core_ollama.json
+Test set: SYNTHETIC receipts, 60 (seed 1): 29 Arabic-first clinic invoices, 23 bilingual clinic
+         invoices, 8 bilingual pharmacy receipts, with light and heavy photo damage. Not real data.
+Result: EasyOCR: provider 0.900, VAT number 0.983, date 1.000, time 0.967, patient 0.800,
+         subtotal 0.983, VAT 0.867, total 0.967, item codes 0.622.
+         Model + EasyOCR: provider 0.950, VAT number 0.983, date 1.000, time 0.983,
+         patient 0.917, subtotal 0.983, VAT 0.933, total 1.000, item codes 0.803.
+         Made-up rate 0.05 (values not found in the OCR text or QR, dropped). QR mismatch rate
+         0.0 (0 of 78 compared). Readers agreed on 442 fields and disagreed on 7.
+         Arabic-first layout (29): provider 0.966, total 1.0. Bilingual clinic (23): provider
+         0.913, total 1.0. Pharmacy (8): provider 1.0, total 1.0.
+         First run at 1625c6a gave provider 0.683: the model wrote both names together
+         ("مركز الشفاء الطبي Al Shifa Medical Center"); fixed in core with a test.
+```
