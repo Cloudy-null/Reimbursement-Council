@@ -177,3 +177,17 @@ def test_providers_in_different_scripts_only_cannot_be_told() -> None:
         categories=["outpatient"],
     )
     assert result(checks, "providers_agree").passed is None
+
+
+def test_a_prescription_written_days_before_the_bill_agrees_but_a_later_one_does_not() -> None:
+    from datetime import date as day
+
+    settings = repo_settings()
+    bill = doc("b", "invoice", treatment_date="2026-11-04")
+    before = doc("p", "prescription", treatment_date="2026-11-01")
+    after = doc("p", "prescription", treatment_date="2026-11-09")
+    ok = cross_checks([bill, before], OMAR, ["pharmacy"], settings)
+    assert result(ok, "dates_agree").passed is True
+    late = cross_checks([bill, after], OMAR, ["pharmacy"], settings)
+    assert result(late, "dates_agree").passed is False
+    assert day(2026, 11, 4) > day(2026, 11, 1)

@@ -18,6 +18,7 @@ RATIO = 0.85
         ("Mohammed Saeed", "محمد سعيد"),  # English and Arabic spelling
         ("Khalid Saleh", "خالد صالح"),
         ("Abdullah bin Fahad", "Abdullah Fahad"),
+        ("بدرفهد", "بدر فهد"),  # OCR joined the words
     ],
 )
 def test_the_same_person_matches(read: str, account: str) -> None:

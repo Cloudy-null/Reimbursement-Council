@@ -64,6 +64,9 @@ def same_person(read: str, account: str, ratio: float) -> bool:
     left, right = _words(read), _words(account)
     if not left or not right:
         return False
+    joined_left, joined_right = "".join(left), "".join(right)
+    if joined_left == joined_right:  # OCR dropped or added a space: "بدرفهد"
+        return True
     short, long = (left, right) if len(left) <= len(right) else (right, left)
     free = list(long)
     for word in short:

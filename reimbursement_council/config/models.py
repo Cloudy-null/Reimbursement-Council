@@ -236,6 +236,7 @@ class DocumentsConfig(ConfigModel):
     max_pdf_pixels: int = Field(gt=0)
     max_files_per_upload: int = Field(gt=0)
     patient_name_min_confidence: Score = 0.8
+    prescription_before_days: int = Field(default=30, ge=0)
     bupa_rules: BupaRulesConfig
 
 
