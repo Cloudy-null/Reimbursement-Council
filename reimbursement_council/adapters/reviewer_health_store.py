@@ -40,10 +40,14 @@ class ReviewerHealthStore:
             )
 
     def _write(self, health: ReviewerHealth) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        """A failed write (full disk) is logged; the file keeps its last state, never a cut one."""
         temporary = self.path.with_suffix(".tmp")
-        temporary.write_text(health.model_dump_json(indent=1), encoding="utf-8")
-        temporary.replace(self.path)
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            temporary.write_text(health.model_dump_json(indent=1), encoding="utf-8")
+            temporary.replace(self.path)
+        except OSError as error:
+            logger.error("could not save the reviewer health file %s: %s", self.path, error)
 
     def load(self) -> ReviewerHealth:
         with self._lock:

@@ -35,8 +35,10 @@ def http_transport(url: str, body: dict[str, Any], timeout: float) -> dict[str, 
         headers={"Content-Type": "application/json"},
         method="POST",
     )
+    # No proxy, ever: a proxy from the environment or Windows settings must never see a claim.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        with opener.open(request, timeout=timeout) as response:
             reply: Any = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as error:
         raise LocalModelError(f"the local model did not answer: {error}") from error

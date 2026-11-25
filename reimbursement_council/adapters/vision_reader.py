@@ -8,6 +8,8 @@ image hash, model and prompt version), the checks, then the merge with EasyOCR's
 import hashlib
 import io
 import logging
+import os
+import threading
 from collections import Counter
 from pathlib import Path
 from typing import Protocol
@@ -89,6 +91,17 @@ class VisionReader:
         safe_model = "".join(c if c.isalnum() else "_" for c in local.model)
         return self._cache / f"{digest}-{safe_model}-p{local.prompt_version}.json"
 
+    def _save(self, path: Path, answer: VisionAnswer) -> None:
+        """Cache a valid answer. A temporary name per process and thread, so two requests for
+        the same photo never collide; a failed write (full disk) is logged, never fatal."""
+        partial = path.with_name(f"{path.name}.{os.getpid()}-{threading.get_ident()}.partial")
+        try:
+            self._cache.mkdir(parents=True, exist_ok=True)
+            partial.write_text(answer.model_dump_json(), encoding="utf-8")
+            partial.replace(path)
+        except OSError as error:
+            logger.warning("could not cache the model answer: %s", error)
+
     def _answer(self, image: bytes, counts: Counter[str]) -> VisionAnswer | None:
         path = self._cache_path(image)
         if path.is_file():
@@ -105,10 +118,7 @@ class VisionReader:
                 return None
             answer = parse_answer(text)
             if answer is not None:
-                self._cache.mkdir(parents=True, exist_ok=True)
-                temporary = path.with_suffix(".tmp")
-                temporary.write_text(answer.model_dump_json(), encoding="utf-8")
-                temporary.replace(path)
+                self._save(path, answer)
                 return answer
             counts["schema_failed"] += 1
             logger.warning("local model answer %d is not in the agreed shape", attempt)

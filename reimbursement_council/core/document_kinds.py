@@ -56,14 +56,3 @@ def detect_kind(
     if not ranked:
         return "other"
     return max(ranked, key=lambda kind: (scores[kind], -TIE_ORDER.index(kind)))
-
-
-def kind_with_hint(
-    detected: DocumentKind, hint: DocumentKind | None, has_text: bool
-) -> DocumentKind:
-    """The local model's type is used only when our keywords and QR found nothing ("other") and
-    the document has printed text: an Arabic report our keywords miss. A blank page stays
-    "other", and the model never overrules a keyword or QR match."""
-    if detected == "other" and hint is not None and has_text:
-        return hint
-    return detected

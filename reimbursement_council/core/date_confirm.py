@@ -3,11 +3,13 @@
 - Another document shows the same date: the date counts, no person needed.
 - Another document shows a different date: a person checks it.
 - Nothing else shows a date: the date counts, unless the claim is near the claim window limit
-  (within the margin from config, or past it, or the date is after the claim was sent). Then a
-  member's tap alone would decide a hard rule, so a person checks it.
+  (within the margin from config, or past it, or the date is after the claim was sent), or the
+  date is near the policy start or end. Then a member's tap alone would decide a hard rule, so
+  a person checks it.
+- Our two readers read different dates: a person checks it (data review, core day 4).
 """
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Literal
 
 from reimbursement_council.core.models.common import EditEvidence
@@ -21,8 +23,12 @@ def confirm_verdict(
     submitted: date,
     window_days: int,
     margin_days: int,
+    policy_dates: tuple[date, date],
+    readers_disagreed: bool = False,
 ) -> tuple[ConfirmVerdict, str]:
     """The verdict on a confirmed date, and a plain reason for the record."""
+    if readers_disagreed:
+        return "human_review", "our two readers read different dates on the document"
     if evidence == "contradicts":
         return "human_review", "another document shows a different date"
     if evidence == "supports":
@@ -35,5 +41,11 @@ def confirm_verdict(
             "human_review",
             f"the claim was sent {days} days after the treatment, within {margin_days} days of "
             f"the {window_days} day limit or past it",
+        )
+    start, end = policy_dates
+    if not start + timedelta(days=margin_days) <= treated <= end - timedelta(days=margin_days):
+        return (
+            "human_review",
+            f"the date is within {margin_days} days of the policy dates or outside them",
         )
     return "use_date", f"the claim was sent {days} days after the treatment, well inside the limit"

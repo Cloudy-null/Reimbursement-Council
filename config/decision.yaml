@@ -26,7 +26,8 @@ reader: ollama
 # The local model reader (reader: ollama; docs/MODEL_SAFETY.md). It only reads. Every value it
 # returns must pass the checks in core/vision_checks.py or it is dropped.
 vision:
-  field_confidence: 0.93      # a value the model read that passed every check
+  field_confidence: 0.85      # a value only the model read (checks passed): under the 0.90 floor,
+                              # so a rule field needs EasyOCR to agree, the QR or the arithmetic
   agree_confidence: 0.97      # the model and EasyOCR read the same value (two readers)
   disagree_confidence: 0.60   # they read different values: under the floor, the member is asked
   ground_ratio: 0.8           # how close a name must be to the OCR text to count as printed

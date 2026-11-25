@@ -45,6 +45,17 @@ def confirm_date_for(ctx: WebContext, claim: Claim, decision: Decision | None) -
     return read_date(ctx, claim) if asks_for_the_date(decision) else None
 
 
+def _readers_disagreed(ctx: WebContext, claim: Claim) -> bool:
+    """The date on the billing document came from the model at the disagree confidence: our
+    two readers read different dates, or the model only nearly matched the print."""
+    documents = preview(ctx, claim)
+    if documents.primary_id is None:
+        return False
+    best = documents.readings[documents.primary_id].best(DATE_FIELD)
+    low = ctx.settings.decision.vision.disagree_confidence
+    return best is not None and best.source == "vision" and best.confidence <= low
+
+
 def date_value(text: str) -> date:
     return date.fromisoformat(text[:10])
 
@@ -52,7 +63,8 @@ def date_value(text: str) -> date:
 def _with_confirmed_date(ctx: WebContext, claim: Claim, read: str) -> Claim:
     """The claim as sent, plus a one-tap confirm of the date we read on the billing document."""
     primary = preview(ctx, claim).primary_id
-    assert primary is not None  # read_date found a date on it
+    if primary is None:
+        raise HTTPException(status_code=409, detail="No billing document to confirm.")
     edit = FieldEdit(
         document_id=primary,
         field=DATE_FIELD,
@@ -79,14 +91,18 @@ def add_confirm_routes(app: FastAPI, ctx: WebContext) -> None:
         assert decision is not None  # checked by asks_for_the_date
         if answer == "yes":
             confirmed = _with_confirmed_date(ctx, claim, date)
-            judged = [e for e in preview(ctx, confirmed).edits if e.confirmed]
+            documents = preview(ctx, confirmed)
+            judged = [e for e in documents.edits if e.confirmed]
             evidence = judged[0].evidence if judged else "none"
+            policy = ctx.reference.policy(claim.policy_id)
             verdict, why = confirm_verdict(
                 evidence,
                 date_value(date),
                 claim.submitted_at.date(),
                 ctx.settings.policy.claim_window_days,
                 ctx.settings.decision.confirm_date_margin_days,
+                (policy.start_date, policy.end_date),
+                readers_disagreed=_readers_disagreed(ctx, claim),
             )
             if verdict == "use_date":
                 decide(ctx, confirmed)

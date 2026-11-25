@@ -105,11 +105,11 @@ class CaseReviewerService:
             )
         review = check_answer(text, summary, self.config, name, self.prompt_version)
         if review.status == "discarded":
-            logger.warning(
-                "claim %s: case reviewer answer discarded (%s): %s",
+            logger.warning(  # field names only: the answer quotes personal values
+                "claim %s: case reviewer answer discarded (%s), cited %s",
                 summary.claim_id,
                 review.problem,
-                text[:400],
+                [field.name for field in review.cited_fields],
             )
         return review
 
@@ -159,6 +159,15 @@ class CaseReviewerService:
             golden_result(c, self._ask(self.check_model, c.summary), self.config) for c in cases
         ]
         name = self.check_model.name
+        skipped = sum(r.status == "skipped" for r in results)
+        if skipped * 2 > len(results):  # the model is down or still loading: not a judgement
+            logger.warning(
+                "reviewer check: %d of %d golden answers skipped (model down or slow); "
+                "the check is not judged and the state stays as it was",
+                skipped,
+                len(results),
+            )
+            return self.health_store.load(), results
         health = self.health_store.update(
             lambda current: after_golden_check(
                 current, results, self.config, name, self.prompt_version, now

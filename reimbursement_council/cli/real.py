@@ -94,7 +94,9 @@ def read_sroie(args: argparse.Namespace) -> int:
     summary = summarize_real(rows) | reader_summary(counts, seconds)
     report = {
         "reader": settings.decision.reader,
-        "two_readers": settings.decision.two_readers_enabled,
+        "two_readers": (
+            settings.decision.two_readers_enabled if settings.decision.reader == "ollama" else None
+        ),
         "model": settings.local_model.model if settings.decision.reader == "ollama" else None,
         "seconds": round(time.time() - started, 1),
         "summary": summary,

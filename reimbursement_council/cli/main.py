@@ -125,10 +125,10 @@ def _serve(args: argparse.Namespace) -> int:
         from reimbursement_council.web.reviewer_check import start_reviewer_check
 
         start_reviewer_check(case_reviewer)  # golden check in the background
-    if settings.decision.reader == "easyocr":
+    if settings.decision.reader in ("easyocr", "ollama"):
         from reimbursement_council.web.demo import start_warm_up
 
-        start_warm_up(context)  # load the OCR model and read the demo files now
+        start_warm_up(context)  # load EasyOCR (and the local model) and read the demo files now
     uvicorn.run(create_app(context), host=args.host, port=args.port)
     return 0
 

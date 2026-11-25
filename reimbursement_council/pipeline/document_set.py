@@ -17,7 +17,7 @@ from reimbursement_council.adapters.readers import DocumentReader
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.claim_categories import claim_categories
 from reimbursement_council.core.cross_checks import cross_checks
-from reimbursement_council.core.document_kinds import detect_kind, kind_with_hint
+from reimbursement_council.core.document_kinds import detect_kind
 from reimbursement_council.core.document_needs import document_needs
 from reimbursement_council.core.edit_evidence import apply_edits, judge_edit
 from reimbursement_council.core.extraction import extract_document
@@ -96,11 +96,9 @@ def _with_kind(document: Document, reading: ReaderOutput, settings: Settings) ->
     """Detect the kind unless the member set it; the detected kind is always kept, so a member
     change can be compared with it. A reading with no text and no QR is "other": nothing on it
     says what it is."""
-    detected = kind_with_hint(
-        detect_kind(reading.text_lines, reading.qr_payloads, settings.documents),
-        reading.kind_hint,
-        any(line.strip() for line in reading.text_lines),
-    )
+    # The local model's kind_hint is stored for people only: a required document is never
+    # satisfied by what the model says the page is (code review, core day 4).
+    detected = detect_kind(reading.text_lines, reading.qr_payloads, settings.documents)
     if document.kind_source == "member":
         return document.model_copy(update={"detected_kind": detected})
     return document.model_copy(update={"kind": detected, "detected_kind": detected})

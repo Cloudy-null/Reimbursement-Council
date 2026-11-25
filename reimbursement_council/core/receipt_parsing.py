@@ -170,6 +170,7 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
     cfg = settings.decision.ocr
     items: list[LineItem] = []
     texts: list[list[str]] = []
+    word_confidence: list[float] = []
     for row in rows:
         money = [(m, line) for line in row for m in _money_in(line)]
         ints = [line for line in row if _LONE_INT.match(digits_to_ascii(line.text.strip()))]
@@ -204,15 +205,17 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
             )
         )
         texts.append([description])
+        word_confidence.append(min((w.confidence for w in words), default=confidence))
     matched = []
-    for item, item_texts in zip(items, texts, strict=True):
+    for item, item_texts, words_sure in zip(items, texts, word_confidence, strict=True):
         english = next((t for t in item_texts if LATIN_LETTERS.search(t)), item.description)
+        code = _match_service(item_texts, settings)
+        # A matched service code rests on the description words too (an excluded service is a
+        # hard rule): then the item is only as sure as its least sure part (data review).
+        sure = min(item.confidence, words_sure) if code else item.confidence
         matched.append(
             item.model_copy(
-                update={
-                    "service_code": _match_service(item_texts, settings),
-                    "description": english,
-                }
+                update={"service_code": code, "description": english, "confidence": sure}
             )
         )
     return matched

@@ -44,12 +44,3 @@ def test_no_text_is_other() -> None:
 def test_a_word_inside_another_word_does_not_count() -> None:
     # "rx" must be a word of its own, not part of "Marx"
     assert detect_kind(["Marx Street"], [], cfg()) == "other"
-
-
-def test_the_model_type_helps_only_when_keywords_found_nothing() -> None:
-    from reimbursement_council.core.document_kinds import kind_with_hint
-
-    assert kind_with_hint("other", "medical_report", has_text=True) == "medical_report"
-    assert kind_with_hint("other", "medical_report", has_text=False) == "other"  # blank page
-    assert kind_with_hint("receipt", "medical_report", has_text=True) == "receipt"
-    assert kind_with_hint("other", None, has_text=True) == "other"

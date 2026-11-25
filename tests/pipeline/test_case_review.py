@@ -315,3 +315,11 @@ def test_the_review_is_in_the_export_and_matches_the_schema(tmp_path: Path) -> N
     assert export.case_review.status == "used" and export.case_review.changed_lane
     assert export.case_review.cited_fields
     assert schema_errors(json.loads(export.model_dump_json())) == []
+
+
+def test_a_golden_check_with_the_model_down_is_not_judged(tmp_path: Path) -> None:
+    """Ollama down or still loading at startup must not bench the reviewer (code review)."""
+    down = FakeModel(LocalModelError("connection refused"))
+    reviewer = service(tmp_path, FakeModel(right), check=down, checked=False)
+    health, _ = reviewer.run_check(NOW)
+    assert health.status == "unchecked"

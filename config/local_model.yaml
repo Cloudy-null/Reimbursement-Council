@@ -4,7 +4,9 @@ url: "http://127.0.0.1:11434"
 model: "qwen3-vl:8b-instruct"
 temperature: 0.0
 seed: 7
-timeout_seconds: 180
+# Per reading during a live claim; the model answers in 3 to 9 seconds once loaded. On a
+# timeout the claim keeps EasyOCR's reading (adapters/vision_reader.py).
+timeout_seconds: 60
 # How long Ollama keeps the model in GPU memory after a call, so the next claim does not wait.
 keep_alive: "30m"
 # Room for the photo and the answer (the 4096 default cut answers to nothing), and a cap on

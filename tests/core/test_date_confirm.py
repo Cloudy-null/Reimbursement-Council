@@ -5,6 +5,7 @@ import pytest
 from reimbursement_council.core.date_confirm import confirm_verdict
 
 SENT = date(2026, 11, 25)
+POLICY = (date(2026, 1, 1), date(2026, 12, 31))
 
 
 @pytest.mark.parametrize(
@@ -20,6 +21,19 @@ SENT = date(2026, 11, 25)
     ],
 )
 def test_confirm_verdict(evidence: str, treated: date, verdict: str) -> None:
-    got, reason = confirm_verdict(evidence, treated, SENT, window_days=90, margin_days=7)  # type: ignore[arg-type]
+    got, reason = confirm_verdict(evidence, treated, SENT, 90, 7, POLICY)  # type: ignore[arg-type]
     assert got == verdict
     assert reason
+
+
+def test_a_reader_disagreement_always_goes_to_a_person() -> None:
+    got, _ = confirm_verdict(
+        "supports", date(2026, 11, 20), SENT, 90, 7, POLICY, readers_disagreed=True
+    )
+    assert got == "human_review"
+
+
+def test_a_date_near_the_policy_start_goes_to_a_person() -> None:
+    late_start = (date(2026, 11, 18), date(2027, 11, 17))
+    got, reason = confirm_verdict("none", date(2026, 11, 20), SENT, 90, 7, late_start)
+    assert got == "human_review" and "policy" in reason
