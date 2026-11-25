@@ -209,3 +209,12 @@ def test_a_name_in_both_scripts_keeps_the_latin_words() -> None:
     assert one_script("مركز الشفاء الطبي Al Shifa Medical Center") == "Al Shifa Medical Center"
     assert one_script("عيادة النور") == "عيادة النور"
     assert one_script("Al Noor Clinic") == "Al Noor Clinic"
+
+
+def test_the_salesperson_is_not_taken_for_the_patient() -> None:
+    rows = [*OCR_ROWS, "المرعي مجد البيع موظف", "الوصفة الطبية - سارة أحمد"]
+    rows = [r.replace("Patient: Sara Ahmed", "") for r in rows]
+    rows.append("موظف البيع مجد المرعي")
+    result = check(answer(patient_name="مجد المرعي"), rows=rows)
+    assert "patient_name" not in values(result)
+    assert values(check(answer(patient_name="سارة أحمد"), rows=rows))["patient_name"] == "سارة أحمد"

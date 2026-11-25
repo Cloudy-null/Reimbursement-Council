@@ -12,6 +12,7 @@ Arithmetic (items sum, VAT 15 percent) runs later on every reading in core/extra
 
 import re
 from collections import Counter
+from collections.abc import Sequence
 from datetime import date, timedelta
 from difflib import SequenceMatcher
 from typing import Literal
@@ -39,6 +40,7 @@ class Evidence(Model):
 
     text: str
     raw: str
+    rows: list[str] = []  # each OCR row, normalized
     money: set[int]
     dates: set[date]
     digits: str
@@ -58,6 +60,7 @@ def evidence_from(
     return Evidence(
         text=normalize_text(" ".join(rows)),
         raw=" ".join(rows),
+        rows=[normalize_text(row) for row in rows],
         money=money,
         dates=dates,
         digits="".join(c for c in "".join(rows) if c.isdigit()),
@@ -181,9 +184,20 @@ def _check(
     value = one_script(raw.strip())
     if not value:
         return "unparsed", None
+    if name == "patient_name" and _on_a_staff_row(value, evidence.rows, cfg.staff_words):
+        return "implausible", None  # the salesperson or cashier, not the patient (core day 4b)
     on_qr = qr is not None and name == "provider_name" and qr.seller_name.strip() == value
     printed = on_qr or name_is_printed(value, evidence.text, cfg.ground_ratio)
     return ("kept" if printed else "made_up"), value
+
+
+def _on_a_staff_row(value: str, rows: Sequence[str], staff_words: Sequence[str]) -> bool:
+    """The name is printed on a row labeled as staff (salesperson, cashier, pharmacist)."""
+    target = normalize_text(value)
+    labels = [normalize_text(word) for word in staff_words]
+    return bool(target) and any(
+        target in row and any(label in row for label in labels) for row in rows
+    )
 
 
 def _qr_truth(qr: ZatcaInvoice | None, offset_hours: int) -> dict[FieldName, str]:

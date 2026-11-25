@@ -147,6 +147,7 @@ class VisionConfig(ConfigModel):
     vat_number_pattern: str
     future_days: int = Field(ge=0)
     parallel_ocr: bool
+    staff_words: list[str] = Field(default_factory=list)
     item_type_services: dict[str, str] = Field(default_factory=dict)
 
 
@@ -193,6 +194,8 @@ class DecisionConfig(ConfigModel):
 class UnsupportedLanguageConfig(ConfigModel):
     urdu_letters: list[str]
     min_urdu_letters: int = Field(ge=1)
+    urdu_words: list[str] = Field(default_factory=list)
+    min_urdu_words: int = Field(default=2, ge=1)
     french_words: list[str]
     min_french_words: int = Field(ge=1)
 

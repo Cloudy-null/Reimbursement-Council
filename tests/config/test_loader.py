@@ -104,8 +104,9 @@ def test_case_reviewer_can_be_turned_on(tmp_path: Path) -> None:
     assert load_settings(config, env={}).decision.members.case_reviewer.enabled
 
 
-def test_case_reviewer_is_off_in_the_repo_config() -> None:
-    assert not load_settings(REPO_CONFIG, env={}).decision.members.case_reviewer.enabled
+def test_case_reviewer_is_on_in_the_repo_config() -> None:
+    """On since core day 4b: held-out golden 0.95 and 0 wrong approvals (EXPERIMENTS)."""
+    assert load_settings(REPO_CONFIG, env={}).decision.members.case_reviewer.enabled
 
 
 def test_case_reviewer_alone_is_not_a_council(tmp_path: Path) -> None:

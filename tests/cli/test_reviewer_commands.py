@@ -52,7 +52,7 @@ def test_check_then_status(models: Models, capsys: pytest.CaptureFixture[str]) -
     assert "golden pass rate 1.00" in capsys.readouterr().out
     assert command("reviewer-status") == 0
     status: dict[str, Any] = json.loads(capsys.readouterr().out)
-    assert status["state"] == "off"  # switched off in the repo config, but checked
+    assert status["state"] == "healthy"  # on in the repo config and checked
     assert status["golden_pass_rate"] == 1.0
 
 
@@ -81,7 +81,7 @@ def test_run_set_can_turn_the_reviewer_on(models: Models, tmp_path: Path) -> Non
 def test_run_set_without_the_reviewer_records_nothing(models: Models, tmp_path: Path) -> None:
     out = tmp_path / "set"
     make_set(out, count=2)
-    assert run_set(out, tmp_path / "c") == 0
+    assert run_set(out, tmp_path / "c", "--set", "members.case_reviewer.enabled=false") == 0
     report = json.loads((out / "results.json").read_text(encoding="utf-8"))
     assert report["reviewer_statuses"] == {}
     assert all(row["reviewer_status"] is None for row in report["rows"])

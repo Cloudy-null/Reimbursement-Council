@@ -65,5 +65,8 @@ bupa_rules:
   unsupported_language:
     urdu_letters: ["ٹ", "ڈ", "ڑ", "ں", "ے", "ۓ", "ھ"]
     min_urdu_letters: 2
+    # Urdu words Arabic does not use ("number", "of", "count", "price", "details", "receipt").
+    urdu_words: ["نمبر", "كا", "کا", "تعداد", "قيمت", "قیمت", "تفصيل", "رسيد"]
+    min_urdu_words: 2
     french_words: [facture, montant, ttc, tva, ordonnance, merci, "réglé", regle, "numéro", numero, "payé", paye]
     min_french_words: 2

@@ -35,6 +35,9 @@ vision:
   # Read with the model and EasyOCR at the same time. Only when EasyOCR is on the CPU: on one
   # 12 GB GPU the two ran out of memory together (core day 4b).
   parallel_ocr: false
+  # A name on a row with one of these words is staff, not the patient (core day 4b: the model
+  # took the salesperson on optical invoices for the patient).
+  staff_words: ["موظف البيع", "البائع", "الكاشير", "الصيدلي", "salesperson", "sales person", "cashier", "pharmacist", "served by"]
   # The model's item type for a line whose name matches no service (a brand name on an optical
   # invoice). The item then gets the disagree confidence: under the floor, a person sees it.
   item_type_services: {frame: OPT-FRAME, lenses: OPT-LENS, eye_test: OPT-EXAM}
@@ -69,7 +72,9 @@ members:
   # The AI case reviewer: a local model reads a summary of the case and gives one score.
   # It can only send a claim that would be auto approved to a person (decision 010).
   case_reviewer:
-    enabled: false
+    # On (core day 4b): held-out golden score 0.95 (limit 0.90, tests/golden_v2/heldout) and
+    # 0 wrong approvals with it on, on the synthetic check set (EXPERIMENTS, Step 4d).
+    enabled: true
     weight: 1.0
     timeout_seconds: 10           # live path: a slower answer is skipped, the council decides alone
     check_timeout_seconds: 120    # golden check: the first call may load the model

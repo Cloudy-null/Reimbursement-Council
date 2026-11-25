@@ -98,3 +98,10 @@ def test_an_invoice_number_before_its_arabic_label_counts() -> None:
 def test_a_receipt_number_counts_as_the_invoice_number() -> None:
     lines = ["Receipt No. INV-20261106-1150 رقم الإيصال", "Tax No. 300765432100003"]
     assert rule_requests([invoice(lines)], ["pharmacy"], "inv", CONFIG) == []
+
+
+def test_urdu_read_with_arabic_letters_is_still_found_by_its_words() -> None:
+    lang = CONFIG.unsupported_language
+    rows = ["شفا كلينك", "20261113-8661 نمبر رسيد", "مريض كا نام احمد رضا", "تفصيل تعداد قيمت رقم"]
+    assert unsupported_language(rows, lang) == "urdu"
+    assert unsupported_language(INVOICE, lang) is None
