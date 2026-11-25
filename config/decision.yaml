@@ -50,6 +50,7 @@ ocr:
   alias_match_ratio: 0.8      # how close an OCR word must be to a service name word
   pattern_miss_factor: 0.5    # confidence multiplier when a value needed fixing or does not add up
   heuristic_factor: 0.9       # confidence multiplier for values found by position, not by label
+  use_gpu: true              # EasyOCR on the GPU when PyTorch has CUDA (falls back to the CPU)
   row_overlap: 0.5            # share of line height two boxes may differ by and still be one row
   min_date_year: 2000         # a date outside these years is not a treatment date (a Hijri
   max_date_year: 2099         # 1448 or an id like 8-12-1234 is left out; data review, day 4)

@@ -80,7 +80,9 @@ def read_accuracy(args: argparse.Namespace) -> int:
         changes["two_readers_enabled"] = args.two_readers == "on"
     decision = settings.decision.model_copy(update=changes)
     settings = settings.model_copy(update={"decision": decision})
-    pick = make_reader_for(settings, CachedOcrEngine(EasyOcrEngine(), args.ocr_cache))
+    pick = make_reader_for(
+        settings, CachedOcrEngine(EasyOcrEngine(settings.decision.ocr.use_gpu), args.ocr_cache)
+    )
     rows = []
     counts: list[dict[str, int]] = []
     seconds: list[float] = []

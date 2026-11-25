@@ -57,7 +57,9 @@ def export_set(args: argparse.Namespace) -> int:
     database = args.out / "export.sqlite"
     database.unlink(missing_ok=True)  # every export-set run starts fresh
     store = ClaimStore(database)
-    pick = make_reader_for(settings, CachedOcrEngine(EasyOcrEngine(), args.ocr_cache))
+    pick = make_reader_for(
+        settings, CachedOcrEngine(EasyOcrEngine(settings.decision.ocr.use_gpu), args.ocr_cache)
+    )
     lanes: Counter[str] = Counter()
     invalid: dict[str, list[str]] = {}
     ready = 0
