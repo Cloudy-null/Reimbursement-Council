@@ -121,7 +121,8 @@ def run_set(out: Path, cache: Path, *extra: str) -> int:
 
 def result_rows(out: Path, name: str = "results.json") -> list[dict[str, object]]:
     rows: list[dict[str, object]] = json.loads((out / name).read_text(encoding="utf-8"))["rows"]
-    return rows
+    # Seconds differ on every run (and a resumed row has none), so they are not compared.
+    return [{k: v for k, v in r.items() if not k.startswith("seconds_")} for r in rows]
 
 
 def test_resume_runs_only_the_claims_without_a_stored_result(
