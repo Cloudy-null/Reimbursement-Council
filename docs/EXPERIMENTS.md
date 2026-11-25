@@ -566,3 +566,21 @@ First try (12510f0, GPU and parallel): stopped after 20 minutes with 2 model tim
 EasyOCR alone, 3 documents, model unloaded: GPU 1.09, 0.99, 0.52 s (1556 MB); CPU 12.79, 9.96,
          5.97 s.
 ```
+
+```
+Run: Step 4, the real case study (one real Bupa optical claim, personal data kept out)
+Date: 2026-11-25
+Commit: a8dd032
+Command: add-member --name "Case Member" --tier silver --used optical_frames=600 --data-dir <tmp>
+         serve --port 8011 --data-dir <tmp>; live-test realtest/case --patient <id> --out realtest/out
+         then the same stored readings decided with submission 2026-07-30 (Bupa's received date)
+Test set: 1 real claim (realtest/, gitignored)
+Result: read in 6.3 s. Date, total, VAT, both items, invoice and VAT numbers and the eye test read
+         right. Check page before submit: estimated payout 450.00 SAR (1,200 over the frame
+         sub-limit, share 100). Bupa approved 450 SAR. Sent today: auto_reject, late (119 days).
+         Sent on 2026-07-30: payout 450.00 SAR, human_review (expected loss 98.78 SAR).
+First run (0f4b592): no date (2026/07/29 not read), invoice number not found (printed before
+         its label), frame item dropped (the model wrote Persian letters), so the estimate was
+         0.00 and the member was asked for a full tax invoice. Fixed with tests in a8dd032.
+The sub-limit usage came from Bupa's answer, not from a prediction.
+```
