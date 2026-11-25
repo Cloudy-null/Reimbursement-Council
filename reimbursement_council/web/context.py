@@ -18,6 +18,7 @@ from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Claim, Document
 from reimbursement_council.core.models.reference import Member, ReferenceData
 from reimbursement_council.core.payout import calculate_payout
+from reimbursement_council.pipeline.case_review import CaseReviewerService
 from reimbursement_council.pipeline.document_set import DocumentSet, read_document_set
 from reimbursement_council.pipeline.process_claim import process_claim
 from reimbursement_council.web.check_form import form_value
@@ -39,6 +40,7 @@ class WebContext:
     uploads: Path
     samples: Path
     results_root: Path
+    case_reviewer: CaseReviewerService | None = None  # only when switched on in config
 
 
 def asset_version(path: Path) -> str:
@@ -91,6 +93,7 @@ def decide(ctx: WebContext, claim: Claim) -> None:
         datetime.now(UTC),
         reader_for=ctx.reader_for,
         readings=ctx.store.load_readings(claim.claim_id),
+        case_reviewer=ctx.case_reviewer,
     )
     ctx.store.save_claim(claim)
 

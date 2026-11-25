@@ -20,10 +20,11 @@ from reimbursement_council.adapters.ocr_engine import (
 )
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
-from reimbursement_council.cli import claims_set, export, real, receipts, run_set
+from reimbursement_council.cli import claims_set, export, real, receipts, reviewer, run_set
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.money import format_sar
+from reimbursement_council.pipeline.case_review import make_case_reviewer
 from reimbursement_council.pipeline.process_claim import process_claim
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ def _parser() -> argparse.ArgumentParser:
     run_set.add_commands(commands)
     export.add_commands(commands)
     real.add_commands(commands)
+    reviewer.add_commands(commands)
     serve = commands.add_parser("serve", help="Start the website on this computer.")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -95,6 +97,11 @@ def _serve(args: argparse.Namespace) -> int:
         decision = settings.decision.model_copy(update={"reader": args.reader})
         settings = settings.model_copy(update={"decision": decision})
     engine = CachedOcrEngine(EasyOcrEngine(), args.data_dir / "cache" / "ocr")
+    case_reviewer = (
+        make_case_reviewer(settings, args.data_dir)
+        if settings.decision.members.case_reviewer.enabled
+        else None
+    )
     context = WebContext(
         settings=settings,
         reference=make_claim_set(7, 0, settings).reference,
@@ -103,7 +110,12 @@ def _serve(args: argparse.Namespace) -> int:
         uploads=args.data_dir / "web" / "uploads",
         samples=args.data_dir / "web" / "samples",
         results_root=args.data_dir,
+        case_reviewer=case_reviewer,
     )
+    if case_reviewer is not None:
+        from reimbursement_council.web.reviewer_check import start_reviewer_check
+
+        start_reviewer_check(case_reviewer)  # golden check in the background
     if settings.decision.reader == "easyocr":
         from reimbursement_council.web.demo import start_warm_up
 
@@ -126,6 +138,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         **export.COMMANDS,
         **run_set.COMMANDS,
         **real.COMMANDS,
+        **reviewer.COMMANDS,
     }
     if args.command in commands:
         command = commands[args.command]
@@ -147,6 +160,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             ClaimStore(args.db),
             datetime.now(UTC),
             reader_for=make_reader_for(settings, engine),
+            case_reviewer=make_case_reviewer(settings, args.db.parent)
+            if settings.decision.members.case_reviewer.enabled
+            else None,
         )
     except (ConfigError, LookupError, FileNotFoundError, ValueError, OcrNotInstalledError) as error:
         # pydantic's ValidationError is a ValueError, so bad files land here too.
