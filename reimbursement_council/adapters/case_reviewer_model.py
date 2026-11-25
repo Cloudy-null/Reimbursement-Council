@@ -33,7 +33,7 @@ class LocalCaseReviewer:
         self._client = LocalModelClient(
             config.model_copy(update={"timeout_seconds": timeout_seconds}), transport
         )
-        self.prompt_version = config.prompt_version
+        self.prompt_version = config.reviewer_prompt_version
 
     @property
     def name(self) -> str:

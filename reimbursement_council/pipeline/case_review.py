@@ -82,7 +82,7 @@ class CaseReviewerService:
         self.check_model = check
         self.health_store = health
         self.golden_dir = golden_dir
-        self.prompt_version = settings.local_model.prompt_version
+        self.prompt_version = settings.local_model.reviewer_prompt_version
 
     @property
     def config(self) -> CaseReviewerConfig:
@@ -225,7 +225,7 @@ def decide_with_reviewer(
             "skipped",
             "not_connected",
             settings.local_model.model,
-            settings.local_model.prompt_version,
+            settings.local_model.reviewer_prompt_version,
             "No reviewer model was connected for this run.",
         )
         return council, review

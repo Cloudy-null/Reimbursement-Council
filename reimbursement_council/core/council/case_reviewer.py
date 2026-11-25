@@ -38,7 +38,7 @@ def answer_schema(config: CaseReviewerConfig) -> dict[str, Any]:
         "type": "object",
         "properties": {
             "score": {"type": "number", "minimum": 0, "maximum": 1},
-            "reason": {"type": "string"},
+            "reason": {"type": "string", "maxLength": config.max_reason_characters},
             "cited_fields": {
                 "type": "array",
                 "minItems": config.min_cited_fields,

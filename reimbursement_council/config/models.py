@@ -300,6 +300,7 @@ class LocalModelConfig(ConfigModel):
     num_ctx: int = Field(gt=0)
     num_predict: int = Field(gt=0)
     prompt_version: str = Field(min_length=1)
+    reviewer_prompt_version: str = Field(min_length=1)
     max_image_side: int = Field(gt=0)
     cache_dir: str
 
