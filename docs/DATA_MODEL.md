@@ -30,6 +30,13 @@ MemberHistory
 PriceListItem
 - service_code, description, network_price, category (benefit category, for example outpatient, lab, pharmacy)
 
+NewMember (a person added by hand, so a real person can be tested; core/new_member.py)
+- members: the member first, then up to 5 dependants. Each is a Member with the same policy_id, date_joined today, name_ar only for the member.
+- policy: a new Policy, status active, start_date one year before today, end_date one year after, covered_people = every member above, tier from config/policy.yaml.
+- histories: one MemberHistory per person, past_claims 0. The member's limits_used comes from the form (SAR typed, stored in halalas); dependants start at nothing used.
+- Benefit keys allowed in limits_used: any category in a tier's limits_halalas, plus any key under a sub_limits section when policy.yaml has one.
+- Stored in SQLite, table added_members: policy_id (primary key), added_at (ISO 8601), json (the whole NewMember). The website's reference is the seeded demo people plus every added_members row, oldest first. A seeded person or policy is never replaced.
+
 ## A claim
 
 Claim (like FHIR Claim)
