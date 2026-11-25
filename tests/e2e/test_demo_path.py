@@ -39,8 +39,19 @@ def _free_port() -> int:
 def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[tuple[str, Path]]:
     data = tmp_path_factory.mktemp("data")
     port = _free_port()
-    command = [sys.executable, "-m", "reimbursement_council.cli.main", "serve",
-               "--port", str(port), "--data-dir", str(data)]  # fmt: skip
+    # The demo path with the reviewer off: a fresh data folder has an unchecked reviewer, and its
+    # first golden check would hold the one local model while the test waits. The reviewer has
+    # its own tests (tests/pipeline/test_case_review.py).
+    config = tmp_path_factory.mktemp("config")
+    for file in (REPO / "config").glob("*.yaml"):
+        text = file.read_text(encoding="utf-8")
+        if file.name == "decision.yaml":
+            on = "    enabled: true\n    weight: 1.0\n    timeout_seconds"
+            assert on in text, "the reviewer switch moved in decision.yaml"
+            text = text.replace(on, on.replace("true", "false"), 1)
+        (config / file.name).write_text(text, encoding="utf-8")
+    command = [sys.executable, "-m", "reimbursement_council.cli.main", "serve", "--port",
+               str(port), "--data-dir", str(data), "--config-dir", str(config)]  # fmt: skip
     # The log goes to a file: a pipe nobody reads fills up and then blocks the server.
     log = (data / "server.log").open("wb")
     process = subprocess.Popen(command, cwd=REPO, stdout=log, stderr=subprocess.STDOUT)
