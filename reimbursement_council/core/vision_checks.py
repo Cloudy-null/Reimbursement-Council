@@ -138,6 +138,7 @@ class Checked(Model):
     items: list[LineItem]
     kind: DocumentKind
     counts: dict[str, int]
+    item_types: list[str] = []  # the model's type for each kept item, in the same order
 
 
 def _check(
@@ -205,9 +206,10 @@ def _differs_from_qr(
 
 def _items(
     answer: VisionAnswer, evidence: Evidence, settings: Settings
-) -> tuple[list[LineItem], Counter[str]]:
+) -> tuple[list[LineItem], list[str], Counter[str]]:
     counts: Counter[str] = Counter()
     items: list[LineItem] = []
+    types: list[str] = []
     for item in answer.items:
         counts["items_returned"] += 1
         amount = None if item.amount is None else money_value(item.amount)
@@ -221,6 +223,7 @@ def _items(
         first_number = re.search(r"\d+", fix_digits(item.quantity or "1")[0])
         quantity = max(1, int(first_number.group(0))) if first_number else 1
         unit = amount // quantity if amount % quantity == 0 else amount
+        types.append(item.item_type)
         items.append(
             LineItem(
                 description=item.description.strip(),
@@ -231,7 +234,7 @@ def _items(
                 confidence=settings.decision.vision.field_confidence,
             )
         )
-    return items, counts
+    return items, types, counts
 
 
 def checked_answer(
@@ -290,6 +293,12 @@ def checked_answer(
                 confidence=settings.decision.vision.field_confidence,
             )
         )
-    items, item_counts = _items(answer, evidence, settings)
+    items, item_types, item_counts = _items(answer, evidence, settings)
     counts.update(item_counts)
-    return Checked(fields=fields, items=items, kind=answer.document_kind, counts=dict(counts))
+    return Checked(
+        fields=fields,
+        items=items,
+        kind=answer.document_kind,
+        counts=dict(counts),
+        item_types=item_types,
+    )

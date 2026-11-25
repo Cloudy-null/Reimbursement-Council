@@ -158,3 +158,30 @@ def test_the_real_model_gives_the_same_answer_twice() -> None:
     first = client.chat(PROMPT, images=[image], schema=ANSWER_SCHEMA, system=SYSTEM)
     second = client.chat(PROMPT, images=[image], schema=ANSWER_SCHEMA, system=SYSTEM)
     assert json.loads(first) == json.loads(second)
+
+
+def test_a_brand_name_item_gets_its_service_from_the_item_type_under_the_floor(
+    tmp_path: Path,
+) -> None:
+    global ROWS
+    saved = ROWS
+    ROWS = [*saved, "1,600.00 1600 توكاى 1237"]
+    try:
+        brand = GOOD | {
+            "items": [
+                {
+                    "description": "توکای",
+                    "quantity": "1",
+                    "amount": "1,600.00",
+                    "item_type": "frame",
+                }
+            ]
+        }
+        s = settings(tmp_path)
+        output = VisionReader(FakeModel(json.dumps(brand)), FakeEngine(), s).read(
+            document(tmp_path)
+        )
+    finally:
+        ROWS = saved
+    assert [i.service_code for i in output.line_items] == ["OPT-FRAME"]
+    assert output.line_items[0].confidence < s.decision.hard_rule_confidence_floor

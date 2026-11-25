@@ -4,7 +4,28 @@ vat_rate: 0.15
 # Dates are compared in local time. Saudi Arabia is UTC+3 with no daylight saving.
 local_utc_offset_hours: 3
 exclusions: [DENT-WHITEN, COSM-BOTOX]
+# Bupa does not cover VAT (source: Bupa Arabia claim confirmation FAQ, "Does Bupa cover VAT
+# charges?"). When false the payout leaves VAT out.
+vat_covered: false
+# Where each rule added on core day 4b comes from (shown in the claim export).
+rule_sources:
+  vat_excluded: "source: Bupa Arabia claim confirmation FAQ"
+  member_share_cap: "source: Bupa Arabia claim confirmation FAQ"
+  sub_limits: "source: Bupa Arabia claim confirmation FAQ"
+  eye_test_required: "source: Bupa Arabia claim confirmation FAQ"
+  tooth_number_required: "source: Bupa Arabia claim confirmation FAQ"
+  proof_of_payment: "source: Bupa Arabia claim confirmation FAQ"
+  invoice_validity: "source: Bupa Arabia claim confirmation FAQ"
+  translation_required: "source: Bupa Arabia claim form (documents in another language need a translation)"
 tiers:
   silver:
-    limits_halalas: {outpatient: 1500000, lab: 500000, pharmacy: 300000, radiology: 800000, dental: 400000}
-    copay_rate: {outpatient: 0.10, lab: 0.0, pharmacy: 0.20, radiology: 0.10, dental: 0.20}
+    limits_halalas: {outpatient: 1500000, lab: 500000, pharmacy: 300000, radiology: 800000, dental: 400000, optical: 300000}
+    copay_rate: {outpatient: 0.10, lab: 0.0, pharmacy: 0.20, radiology: 0.10, dental: 0.20, optical: 0.20}
+    # Member share per claim is capped (source: Bupa Arabia claim confirmation FAQ: "commonly
+    # 20% up to 100 SAR").
+    copay_cap_halalas: 10000
+    # A sub-limit inside a benefit, used up over the policy year (source: Bupa Arabia claim
+    # confirmation FAQ, "Member consumed Frame sub-limit"). Usage so far is in the member's
+    # history under the same key.
+    sub_limits:
+      optical_frames: {limit_halalas: 100000, services: [OPT-FRAME]}

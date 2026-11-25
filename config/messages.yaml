@@ -27,6 +27,10 @@ en:
     total: "total amount"
     vat_number: "VAT number"
     patient_name: "patient name"
+    translation: "translation of the document into Arabic or English"
+    full_tax_invoice: "full tax invoice with its invoice number, VAT number and each item"
+    tooth_number: "tooth number (on the invoice or a dental report)"
+    proof_of_payment: "proof of payment for this credit invoice"
     receipt: "receipt"
     itemized_invoice: "itemized invoice that lists each service"
     line_items: "list of services on the receipt"
@@ -38,6 +42,14 @@ en:
     medical_report: "a medical report"
     other: "another document"
   or_word: "or"
+  estimate:
+    total: "Estimated payout: {amount} SAR of the {requested} SAR you paid."
+    sub_limit: "{cut} SAR is over your {benefit} limit for this year ({left} SAR of {limit} SAR was left)."
+    share: "Your share: {share} SAR."
+    share_capped: "Your share: {share} SAR (20 percent, at most {cap} SAR)."
+    vat: "VAT ({vat} SAR) is not covered."
+    benefit_optical_frames: "eyeglass frames"
+
 ar:
   lanes:
     approved: "تمت الموافقة على مطالبتك. سنحول لك {amount} ريال."
@@ -66,6 +78,10 @@ ar:
     total: "المبلغ الإجمالي"
     vat_number: "الرقم الضريبي"
     patient_name: "اسم المريض"
+    translation: "ترجمة المستند إلى العربية أو الإنجليزية"
+    full_tax_invoice: "فاتورة ضريبية كاملة فيها رقم الفاتورة والرقم الضريبي وكل بند"
+    tooth_number: "رقم السن (في الفاتورة أو في تقرير الأسنان)"
+    proof_of_payment: "إثبات الدفع لهذه الفاتورة الآجلة"
     receipt: "الفاتورة"
     itemized_invoice: "فاتورة مفصلة تذكر كل خدمة"
     line_items: "قائمة الخدمات في الفاتورة"
@@ -77,3 +93,10 @@ ar:
     medical_report: "تقرير طبي"
     other: "مستند آخر"
   or_word: "أو"
+  estimate:
+    total: "المبلغ المتوقع: {amount} ريال من {requested} ريال دفعتها."
+    sub_limit: "{cut} ريال تتجاوز حد {benefit} لهذا العام (كان المتبقي {left} ريال من {limit} ريال)."
+    share: "حصتك: {share} ريال."
+    share_capped: "حصتك: {share} ريال (20 بالمئة، وبحد أقصى {cap} ريال)."
+    vat: "ضريبة القيمة المضافة ({vat} ريال) غير مغطاة."
+    benefit_optical_frames: "إطارات النظارات"

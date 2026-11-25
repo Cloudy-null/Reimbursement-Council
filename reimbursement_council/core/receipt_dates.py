@@ -8,7 +8,8 @@ from reimbursement_council.core.models.common import FieldName
 from reimbursement_council.core.receipt_rows import OcrLine
 from reimbursement_council.core.text import digits_to_ascii
 
-_DATE_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}):(\d{2}))?")
+# Year first: 2026-07-29, and also 2026/07/29 as printed on a real invoice (core day 4b).
+_DATE_ISO = re.compile(r"(\d{4})[-/](\d{2})[-/](\d{2})(?:\s+(\d{1,2}):(\d{2}))?")
 # Day first: 08/11/2026, 29-12-2017, 5.6.2018, and two digit years 12/03/18 (found on real
 # receipts, E1 failure review). A dot with a two digit year is left out: it looks like a time.
 _DATE_DMY = re.compile(

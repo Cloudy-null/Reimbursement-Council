@@ -34,8 +34,18 @@ from reimbursement_council.core.models.common import (
     DocumentKind,
     Model,
 )
-from reimbursement_council.core.models.decision import CrossCheckResult, DocumentNeed, RuleResult
+from reimbursement_council.core.models.decision import (
+    CrossCheckResult,
+    DocumentNeed,
+    RuleResult,
+    SelfFixRequest,
+)
 from reimbursement_council.core.models.reference import Member
+from reimbursement_council.pipeline.claim_rules import (
+    claim_rule_requests,
+    kinds_with_eye_test,
+    rule_documents,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +65,8 @@ class DocumentSet(Model):
     # What each reader returned, before anything was changed: stored so an export or a later
     # check can be rebuilt without reading the photos again.
     raw_readings: dict[str, ReaderOutput] = Field(default_factory=dict)
+    # Bupa FAQ document rules not met yet (core/bupa_rules.py): requests to the member.
+    rule_requests: list[SelfFixRequest] = Field(default_factory=list)
 
     @property
     def missing(self) -> list[DocumentNeed]:
@@ -222,8 +234,11 @@ def read_document_set(
     items = [] if primary_id is None else final[primary_id].line_items
     detected_categories = claim_categories(items, settings.prices)
     categories = list(claim.claim_categories) or detected_categories
-    kinds = [d.kind for d in documents]
-    detected_kinds = [d.detected_kind or d.kind for d in documents]
+    rule_docs = rule_documents(documents, raw, final)
+    kinds = kinds_with_eye_test([d.kind for d in documents], rule_docs, settings)
+    detected_kinds = kinds_with_eye_test(
+        [d.detected_kind or d.kind for d in documents], rule_docs, settings
+    )
     needs = document_needs(categories, kinds, settings)
     detected_needs = document_needs(detected_categories, detected_kinds, settings)
     checks = (
@@ -246,4 +261,5 @@ def read_document_set(
         billing_documents_differ=_billing_documents_differ(documents, final),
         notes=notes + edit_notes,
         raw_readings=as_read,
+        rule_requests=claim_rule_requests(rule_docs, categories, primary_id, settings),
     )

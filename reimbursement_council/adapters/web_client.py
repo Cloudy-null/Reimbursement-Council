@@ -4,6 +4,7 @@ It does what a member's browser does: upload files with consent, send the claim 
 step, and fetch the claim's export. Standard library only.
 """
 
+import html
 import json
 import re
 import urllib.error
@@ -79,6 +80,16 @@ class WebClient:
         if status not in (200, 303) or found is None:
             raise WebClientError(f"upload refused (status {status}): {body[:200]!r}")
         return found.group(1)
+
+    def check_notes(self, claim_id: str, lang: str) -> list[str]:
+        """What the check page tells the member before sending: the estimate and the requests."""
+        url = f"{self.base_url}/claims/{claim_id}/check?lang={lang}"
+        status, _, body = self._send(urllib.request.Request(url))
+        if status != 200:
+            raise WebClientError(f"no check page (status {status})")
+        page = body.decode("utf-8", "replace")
+        items = re.findall(r'<li dir="auto">(.*?)</li>', page, re.S)
+        return [html.unescape(re.sub(r"<[^>]+>", "", item)).strip() for item in items]
 
     def submit(self, claim_id: str, lang: str) -> None:
         """POST the check step as it is, without edits (the member accepts what was read)."""

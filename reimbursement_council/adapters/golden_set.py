@@ -10,7 +10,9 @@ from pydantic import ValidationError
 
 from reimbursement_council.core.models.case_review import GoldenCase
 
-GOLDEN_DIR = Path(__file__).resolve().parents[2] / "tests" / "golden"
+# Core day 4b: the held-out set of tests/golden_v2 is the startup golden set (the old
+# tests/golden set was tuned on twice and is kept only as history).
+GOLDEN_DIR = Path(__file__).resolve().parents[2] / "tests" / "golden_v2" / "heldout"
 
 
 def load_golden_set(folder: Path = GOLDEN_DIR) -> list[GoldenCase]:

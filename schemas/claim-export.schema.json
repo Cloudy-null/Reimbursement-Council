@@ -626,6 +626,38 @@
         "is_partial": {
           "title": "Is Partial",
           "type": "boolean"
+        },
+        "sub_limit_cut_halalas": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Sub Limit Cut Halalas",
+          "type": "integer"
+        },
+        "sub_limits_used_halalas": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Sub Limits Used Halalas",
+          "type": "object"
+        },
+        "member_share_cap_halalas": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Member Share Cap Halalas"
+        },
+        "vat_excluded": {
+          "default": false,
+          "title": "Vat Excluded",
+          "type": "boolean"
         }
       },
       "required": [
@@ -1058,6 +1090,13 @@
         }
       ],
       "default": null
+    },
+    "rule_sources": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Rule Sources",
+      "type": "object"
     }
   },
   "required": [

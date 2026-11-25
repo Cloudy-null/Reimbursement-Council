@@ -13,19 +13,31 @@ from pathlib import Path
 
 from PIL import Image
 
+from reimbursement_council.adapters.damage_suite import apply_damage
 from reimbursement_council.adapters.document_drawing import draw_clinical_document
+from reimbursement_council.adapters.optical_drawing import draw_optical_invoice
 from reimbursement_council.adapters.receipt_drawing import draw_receipt
+from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Document
 from reimbursement_council.synthetic.demo_claims import DemoFile, demo_claims, demo_fixes
 from reimbursement_council.web.context import WebContext
 
 logger = logging.getLogger(__name__)
 
-DEMO_NAMES = ("approve", "missing", "mismatch", "edit", "pdf")
+DEMO_NAMES = ("approve", "missing", "mismatch", "edit", "pdf", "optical", "blurry")
 WARM_UP_DONE = threading.Event()  # GET /api/ready says when the demo files are read
 
 
-def _png(file: DemoFile) -> bytes:
+def _png(file: DemoFile, settings: Settings) -> bytes:
+    if file.optical is not None:
+        return draw_optical_invoice(file.optical).png
+    if file.receipt is not None and file.blur_level:
+        strengths = settings.synthetic.damage_suite["blur"]
+        image = Image.open(io.BytesIO(draw_receipt(file.receipt).png)).convert("RGB")
+        blurred = apply_damage(image, "blur", file.blur_level, strengths, seed=908)
+        out = io.BytesIO()
+        blurred.save(out, format="PNG")
+        return out.getvalue()
     if file.receipt is not None:
         return draw_receipt(file.receipt).png
     if file.clinical is not None:
@@ -48,7 +60,9 @@ def _issued(folder: Path) -> datetime:
     return (datetime.fromisoformat(folder.name) - timedelta(days=3)).replace(hour=10, minute=30)
 
 
-def _write(folder: Path, files: dict[str, list[DemoFile]]) -> dict[str, list[Path]]:
+def _write(
+    folder: Path, files: dict[str, list[DemoFile]], settings: Settings
+) -> dict[str, list[Path]]:
     paths: dict[str, list[Path]] = {}
     for name, demo_files in files.items():
         paths[name] = []
@@ -56,7 +70,7 @@ def _write(folder: Path, files: dict[str, list[DemoFile]]) -> dict[str, list[Pat
             path = folder / name / file.file_name
             if not path.is_file():
                 path.parent.mkdir(parents=True, exist_ok=True)
-                png = _png(file)
+                png = _png(file, settings)
                 path.write_bytes(_pdf(png) if file.as_pdf else png)
             paths[name].append(path)
     return paths
@@ -66,14 +80,14 @@ def ensure_demo_files(ctx: WebContext) -> dict[str, list[Path]]:
     """Every demo claim's files, drawn if today's are not there yet."""
     folder = demo_folder(ctx)
     claims = demo_claims(_issued(folder), ctx.settings.prices, ctx.settings.policy.vat_rate)
-    return _write(folder, {name: claims[name] for name in DEMO_NAMES})
+    return _write(folder, {name: claims[name] for name in DEMO_NAMES}, ctx.settings)
 
 
 def ensure_demo_fix_files(ctx: WebContext) -> dict[str, list[Path]]:
     """Files to send in the fix step of a demo (in <claim>/fix/)."""
     folder = demo_folder(ctx)
     fixes = demo_fixes(_issued(folder), ctx.settings.prices)
-    return _write(folder, {f"{name}/fix": files for name, files in fixes.items()})
+    return _write(folder, {f"{name}/fix": files for name, files in fixes.items()}, ctx.settings)
 
 
 def warm_up(ctx: WebContext) -> None:

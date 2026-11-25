@@ -2,8 +2,9 @@
 deciding a claim, and the claim view used by the member result page and the reviewer card."""
 
 import hashlib
+import threading
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,10 +18,12 @@ from reimbursement_council.adapters.storage import ClaimStore
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Claim, Document
 from reimbursement_council.core.models.reference import Member, ReferenceData
+from reimbursement_council.core.new_member import NewMember
 from reimbursement_council.core.payout import calculate_payout
 from reimbursement_council.pipeline.case_review import CaseReviewerService
 from reimbursement_council.pipeline.document_set import DocumentSet, read_document_set
 from reimbursement_council.pipeline.process_claim import process_claim
+from reimbursement_council.pipeline.reference import load_reference
 from reimbursement_council.web.check_form import form_value
 from reimbursement_council.web.i18n import text_for
 from reimbursement_council.web.views import field_rows, payout_lines
@@ -41,6 +44,20 @@ class WebContext:
     samples: Path
     results_root: Path
     case_reviewer: CaseReviewerService | None = None  # only when switched on in config
+    _seed: ReferenceData = field(init=False, repr=False)
+    _adding: threading.Lock = field(init=False, repr=False, default_factory=threading.Lock)
+
+    def __post_init__(self) -> None:
+        """`reference` is given as the seeded people; members added earlier join it here."""
+        self._seed = self.reference
+        self.reference = load_reference(self._seed, self.store)
+
+    def add_member(self, added: NewMember, added_at: datetime) -> None:
+        """Save, then swap in a fresh reference. The lock keeps two adds from losing one;
+        readers see the old or the new reference, never half of one."""
+        with self._adding:
+            self.store.save_new_member(added, added_at)
+            self.reference = load_reference(self._seed, self.store)
 
 
 def asset_version(path: Path) -> str:

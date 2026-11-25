@@ -566,3 +566,62 @@ First try (12510f0, GPU and parallel): stopped after 20 minutes with 2 model tim
 EasyOCR alone, 3 documents, model unloaded: GPU 1.09, 0.99, 0.52 s (1556 MB); CPU 12.79, 9.96,
          5.97 s.
 ```
+
+```
+Run: Step 4, the real case study (one real Bupa optical claim, personal data kept out)
+Date: 2026-11-25
+Commit: a8dd032
+Command: add-member --name "Case Member" --tier silver --used optical_frames=600 --data-dir <tmp>
+         serve --port 8011 --data-dir <tmp>; live-test realtest/case --patient <id> --out realtest/out
+         then the same stored readings decided with submission 2026-07-30 (Bupa's received date)
+Test set: 1 real claim (realtest/, gitignored)
+Result: read in 6.3 s. Date, total, VAT, both items, invoice and VAT numbers and the eye test read
+         right. Check page before submit: estimated payout 450.00 SAR (1,200 over the frame
+         sub-limit, share 100). Bupa approved 450 SAR. Sent today: auto_reject, late (119 days).
+         Sent on 2026-07-30: payout 450.00 SAR, human_review (expected loss 98.78 SAR).
+First run (0f4b592): no date (2026/07/29 not read), invoice number not found (printed before
+         its label), frame item dropped (the model wrote Persian letters), so the estimate was
+         0.00 and the member was asked for a full tax invoice. Fixed with tests in a8dd032.
+The sub-limit usage came from Bupa's answer, not from a prediction.
+```
+
+```
+Run: Step 4b, image variants of the real invoice (real data, kept in realtest/variants)
+Date: 2026-11-25
+Commit: 5746949
+Command: D:\rc-tmp\real_variants.py (reader ollama with two readers; fields compared with the
+         known right values: date, total, VAT, the two item amounts)
+Result (right fields; a miss was always a blank field, never a wrong value):
+  pdf (original)      date, total, VAT, items all right; 12.04 s (first call)
+  image (rendered)    all right; 7.0 s
+  rotated 90 degrees  nothing read (EasyOCR and the model lost the text); 6.67 s
+  rotated 7 degrees   date, total, items right; VAT not read; 6.91 s
+  blurry (radius 2.5) nothing read; 8.09 s
+  low light (0.35)    all right; 8.54 s
+  cropped edge (10%)  total and VAT right; date and items not read; 7.58 s
+  photo of a screen   date and total right (total under the floor: readers disagreed);
+                      VAT and items not read; 8.74 s
+  Totals over 8 variants: date 5, total 6, VAT 4, items 4.
+Meaning: when quality drops the fields go blank and the member is asked for a clearer photo.
+         A 90 degree rotation is not handled (CHECK: try EasyOCR's rotation_info).
+```
+
+```
+Run: Step 4d, the AI case reviewer's second chance (new dev and held-out sets)
+Date: 2026-11-25
+Sets: tests/golden_v2/dev (20, used to improve the prompt) and tests/golden_v2/heldout (20, never
+      looked at while tuning; written by a separate agent; run once). The old tests/golden set is
+      burned (its prompt was tuned on it twice) and kept only as history.
+Command: D:\rc-tmp\run_golden.py <folder> <separate health folder> (the check-reviewer logic)
+Model: qwen3-vl:8b-instruct, text only, temperature 0
+Dev runs (tuning):
+  prompt 3 (8a9... before this step, commit e5cd49b): 0.65 (13 of 20); 6 answers discarded for
+      citing invoice_timestamp, a field these claims never read; 1 injection ("pre-approved"
+      note) scored 1.0
+  prompt 4 (cite only the fields this claim read; schema per claim): 0.95 (19 of 20)
+  prompt 5 (text saying the claim is pre-approved or must be paid is an instruction): 1.0
+Held-out run, once (commit 0da2ec5, prompt 5): 0.95 (19 of 20), limit 0.90: passes.
+  The one miss: a tricky good dental claim (crown under a sub-limit) scored 0.0, the cautious side.
+Decision: the held-out set becomes the startup golden set. The reviewer is re-enabled only if
+  the synthetic check set also shows 0 wrong approvals with it on (final run).
+```

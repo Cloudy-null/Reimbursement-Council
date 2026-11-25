@@ -2,7 +2,7 @@
 
 from typing import Self
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from reimbursement_council.config.config_base import ConfigModel
 from reimbursement_council.core.models.common import DocumentKind
@@ -53,6 +53,8 @@ class LanguageMessages(ConfigModel):
     fields: dict[str, str]
     documents: dict[DocumentKind, str]
     or_word: str
+    # The estimate shown before submit (core/payout_preview.py).
+    estimate: dict[str, str] = Field(default_factory=dict)
 
 
 class MessageConfig(ConfigModel):

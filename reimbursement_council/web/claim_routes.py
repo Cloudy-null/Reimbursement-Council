@@ -63,12 +63,13 @@ def ensure_samples(ctx: WebContext) -> list[str]:
 
 def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
     @app.get("/", response_class=HTMLResponse)
-    def new_claim(request: Request, lang: str = "en") -> HTMLResponse:
+    def new_claim(request: Request, lang: str = "en", patient: str = "") -> HTMLResponse:
         return page(
             request,
             "new_claim.html",
             lang,
             people=ctx.reference.members,
+            selected=patient,
             demos=DEMO_NAMES,
             samples=ensure_samples(ctx),
         )

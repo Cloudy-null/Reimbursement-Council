@@ -37,7 +37,7 @@ def test_clean_case_payout_follows_policy() -> None:
         and len(c.receipt.items) == 1
     )
     # 150.00 consultation: 10 percent co-pay, VAT on the paid part
-    assert clean.truth.correct_payout == 15525
+    assert clean.truth.correct_payout == 13500
 
 
 def test_duplicate_reuses_an_earlier_receipt() -> None:
@@ -101,3 +101,50 @@ def test_the_repo_config_weights_name_every_known_defect() -> None:
     from reimbursement_council.synthetic.claims import KNOWN_DEFECTS
 
     assert set(repo_settings().synthetic.defect_weights) == set(KNOWN_DEFECTS)
+
+
+# sha256 of make_claim_set(seed, count).model_dump_json(), taken before the optical, dental,
+# damage and language generators were added (core day 4b gen). Same seed, same claims.
+SNAPSHOTS = {
+    (1, 200): "b5b7441a5dd9c84f73eaa5fd9387b60a74312efd6eb75eee17c7df618eb86b28",
+    (7, 60): "480a321f79215a81fab33f72469a6c17ab0dc5e2c4cdcf901899c4d2e1c52b51",
+}
+
+
+def test_make_claims_is_unchanged_for_the_same_seed() -> None:
+    import hashlib
+
+    for (seed, count), expected in SNAPSHOTS.items():
+        dump = make_claim_set(seed, count, repo_settings()).model_dump_json()
+        assert hashlib.sha256(dump.encode()).hexdigest() == expected, (seed, count)
+
+
+def test_set_only_defects_are_known_with_weight_zero() -> None:
+    from reimbursement_council.synthetic.claims import KNOWN_DEFECTS, SET_ONLY_DEFECTS
+
+    weights = repo_settings().synthetic.defect_weights
+    assert set(SET_ONLY_DEFECTS) == {
+        "missing_eye_test",
+        "missing_payment_proof",
+        "invalid_invoice",
+        "missing_tooth_number",
+    }
+    assert set(SET_ONLY_DEFECTS) <= set(KNOWN_DEFECTS)
+    assert not set(SET_ONLY_DEFECTS) & set(DEFECTS)
+    assert all(weights[name] == 0 for name in SET_ONLY_DEFECTS)
+
+
+def test_make_claims_refuses_a_weight_on_a_set_only_defect() -> None:
+    import pytest
+
+    from reimbursement_council.config.models import SyntheticConfig
+
+    settings = repo_settings().model_copy(
+        update={
+            "synthetic": SyntheticConfig(
+                qr_share=0.5, defect_weights={"clean": 1, "missing_eye_test": 1}
+            )
+        }
+    )
+    with pytest.raises(ValueError, match="missing_eye_test"):
+        make_claim_set(3, 5, settings)

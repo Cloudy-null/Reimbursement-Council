@@ -106,7 +106,9 @@ def _document(
     )
 
 
-def _payout(payout: PayoutResult | None) -> ExportPayout | None:
+def _payout(
+    payout: PayoutResult | None, vat_excluded: bool, share_cap: int | None
+) -> ExportPayout | None:
     if payout is None:
         return None
     return ExportPayout(
@@ -118,6 +120,10 @@ def _payout(payout: PayoutResult | None) -> ExportPayout | None:
         calculated_halalas=payout.calculated,
         unmatched_items=list(payout.unmatched_items),
         is_partial=payout.is_partial,
+        sub_limit_cut_halalas=payout.sub_limit_cut,
+        sub_limits_used_halalas=dict(payout.sub_limits_used),
+        member_share_cap_halalas=share_cap,
+        vat_excluded=vat_excluded,
     )
 
 
@@ -136,6 +142,9 @@ def build_claim_export(
     review: ExportReview | None,
     prices: Mapping[str, PriceListItem],
     now: datetime,
+    vat_excluded: bool = False,
+    share_cap: int | None = None,
+    rule_sources: Mapping[str, str] | None = None,
 ) -> ClaimExport:
     primary = None if primary_id is None else readings.get(primary_id)
     approved_by_person = review is not None and review.action in APPROVING_REVIEWS
@@ -160,7 +169,8 @@ def build_claim_export(
         missing_documents=[list(group) for group in missing],
         cross_checks=list(cross_checks),
         member_edits=list(edits),
-        payout=_payout(payout),
+        payout=_payout(payout, vat_excluded, share_cap),
+        rule_sources=dict(rule_sources or {}),
         decision=ExportDecision(
             lane=decision.lane,
             outcome=decision.outcome,

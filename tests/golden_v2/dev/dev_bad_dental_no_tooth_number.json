@@ -1,0 +1,184 @@
+{
+ "name": "dev_bad_dental_no_tooth_number",
+ "kind": "clear_bad",
+ "expected": "bad",
+ "note": "A dental root canal with no tooth number anywhere, and dental claims need one.",
+ "summary": {
+  "claim_id": "10000000-0000-4000-8000-000000000008",
+  "categories": [
+   "dental"
+  ],
+  "fields": [
+   {
+    "document_kind": "invoice",
+    "name": "provider_name",
+    "value": "Pearl Dental Clinic",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "vat_number",
+    "value": "398765432100003",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "treatment_date",
+    "value": "2026-11-05",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "subtotal",
+    "value": "900.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "vat_total",
+    "value": "135.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "total",
+    "value": "1035.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "patient_name",
+    "value": "Rana Aziz",
+    "confidence": 0.95,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "patient_name",
+    "value": "Rana Aziz",
+    "confidence": 0.9,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "treatment_date",
+    "value": "2026-11-05",
+    "confidence": 0.9,
+    "source": "ocr"
+   }
+  ],
+  "line_items": [
+   {
+    "description": "Root canal treatment",
+    "service_code": "DEN-RCT",
+    "quantity": 1,
+    "amount_sar": "900.00",
+    "confidence": 0.95
+   }
+  ],
+  "checks": [
+   {
+    "name": "invoice: items_sum_to_subtotal",
+    "passed": true,
+    "details": "items add up to the subtotal"
+   },
+   {
+    "name": "invoice: vat_is_15_percent",
+    "passed": true,
+    "details": "VAT is 15 percent"
+   },
+   {
+    "name": "invoice: subtotal_plus_vat_is_total",
+    "passed": true,
+    "details": "subtotal plus VAT is the total"
+   },
+   {
+    "name": "invoice: invoice_number_present",
+    "passed": true,
+    "details": "an invoice number is printed"
+   },
+   {
+    "name": "invoice: vat_number_present",
+    "passed": true,
+    "details": "a 15 digit VAT number is printed"
+   },
+   {
+    "name": "invoice: items_itemized",
+    "passed": true,
+    "details": "each service is on its own line with a price"
+   },
+   {
+    "name": "patient_matches_account",
+    "passed": true,
+    "details": "the patient name matches the account"
+   },
+   {
+    "name": "dates_agree",
+    "passed": true,
+    "details": "dates agree"
+   }
+  ],
+  "rules": [
+   {
+    "rule": "late",
+    "outcome": "pass",
+    "reason": "inside the 90 day claim window"
+   },
+   {
+    "rule": "policy_inactive",
+    "outcome": "pass",
+    "reason": "policy active on the treatment date"
+   },
+   {
+    "rule": "person_not_covered",
+    "outcome": "pass",
+    "reason": "the patient is covered"
+   },
+   {
+    "rule": "excluded_service",
+    "outcome": "pass",
+    "reason": "no excluded service"
+   },
+   {
+    "rule": "duplicate",
+    "outcome": "pass",
+    "reason": "invoice not seen before"
+   },
+   {
+    "rule": "tooth_number_present",
+    "outcome": "fail",
+    "reason": "no tooth number on the invoice or the report"
+   }
+  ],
+  "payout_requested_sar": "1035.00",
+  "payout_calculated_sar": "800.00",
+  "member_votes": [
+   {
+    "member": "document_checker",
+    "score": 0.4,
+    "reason": "The tooth number is missing."
+   },
+   {
+    "member": "coverage_checker",
+    "score": 1.0,
+    "reason": "Every item is covered."
+   },
+   {
+    "member": "price_checker",
+    "score": 0.9,
+    "reason": "Prices are close to the network price."
+   },
+   {
+    "member": "history_member",
+    "score": 0.5,
+    "reason": "History neutral; provider trust 0.50."
+   }
+  ]
+ }
+}

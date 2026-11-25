@@ -48,7 +48,12 @@ PHARMACY = ReaderOutput(
         )
     ],
     qr_payloads=[],
-    text_lines=["Green Leaf Pharmacy", "Simplified Tax Invoice", "فاتورة ضريبية مبسطة"],
+    text_lines=[
+        "Green Leaf Pharmacy",
+        "Simplified Tax Invoice",
+        "فاتورة ضريبية مبسطة",
+        "Invoice No. INV-20261123-5521",
+    ],
 )
 PRESCRIPTION = ReaderOutput(
     fields=[field("patient_name", "Sara Ahmed"), field("treatment_date", TREATED)],

@@ -23,7 +23,7 @@ from reimbursement_council.adapters.ocr_engine import OcrEngine, OcrNotInstalled
 from reimbursement_council.adapters.qr_image import find_qr_payloads
 from reimbursement_council.adapters.readers import document_image
 from reimbursement_council.config.models import Settings
-from reimbursement_council.core.models.claim import Document, ReaderOutput
+from reimbursement_council.core.models.claim import Document, LineItem, ReaderOutput
 from reimbursement_council.core.receipt_parsing import match_service, parse_receipt_lines
 from reimbursement_council.core.receipt_rows import OcrLine, group_rows, join_row
 from reimbursement_council.core.two_readers import merge_readers
@@ -52,7 +52,8 @@ PROMPT = (
     "seller's tax number. date: the invoice or visit date. time: the time next to it. "
     "patient_name: the patient, if printed. subtotal, vat_total, total: the amounts as printed, "
     "total is the final amount paid. items: each service or medicine line with its quantity "
-    "and line amount as printed."
+    "and line amount as printed, and item_type: what the line is (frame, lenses, "
+    "contact_lenses, eye_test, consultation, medicine, lab_test, dental or other)."
 )
 
 
@@ -93,6 +94,18 @@ class VisionReader:
         digest = hashlib.sha256(image).hexdigest()
         safe_model = "".join(c if c.isalnum() else "_" for c in local.model)
         return self._cache / f"{digest}-{safe_model}-p{local.prompt_version}.json"
+
+    def _with_service(self, item: LineItem, item_type: str) -> LineItem:
+        """The service from the item's name, else from the model's item type (a brand name on
+        an optical invoice): that guess stays under the confidence floor for a person to see."""
+        code = match_service([item.description], self._settings)
+        if code is not None:
+            return item.model_copy(update={"service_code": code})
+        hinted = self._settings.decision.vision.item_type_services.get(item_type)
+        if hinted is None:
+            return item
+        low = min(item.confidence, self._settings.decision.vision.disagree_confidence)
+        return item.model_copy(update={"service_code": hinted, "confidence": low})
 
     def _save(self, path: Path, answer: VisionAnswer) -> None:
         """Cache a valid answer. A temporary name per process and thread, so two requests for
@@ -162,10 +175,12 @@ class VisionReader:
             kind_hint = checked.kind
             if checked.items:
                 items = [
-                    item.model_copy(
-                        update={"service_code": match_service([item.description], self._settings)}
+                    self._with_service(item, item_type)
+                    for item, item_type in zip(
+                        checked.items,
+                        checked.item_types or ["other"] * len(checked.items),
+                        strict=True,
                     )
-                    for item in checked.items
                 ]
         if self._settings.decision.two_readers_enabled:
             fields, merged = merge_readers(fields, ocr_parse.fields, self._settings)

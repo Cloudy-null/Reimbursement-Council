@@ -22,12 +22,16 @@ from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
 from reimbursement_council.cli import (
     claims_set,
+    damage_set,
     export,
+    language_set,
     live_test,
+    members,
     real,
     receipts,
     reviewer,
     run_set,
+    sheet_sets,
 )
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
@@ -60,6 +64,10 @@ def _parser() -> argparse.ArgumentParser:
     real.add_commands(commands)
     reviewer.add_commands(commands)
     live_test.add_commands(commands)
+    members.add_commands(commands)
+    sheet_sets.add_commands(commands)
+    damage_set.add_commands(commands)
+    language_set.add_commands(commands)
     serve = commands.add_parser("serve", help="Start the website on this computer.")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -116,7 +124,7 @@ def _serve(args: argparse.Namespace) -> int:
     context = WebContext(
         settings=settings,
         reference=make_claim_set(7, 0, settings).reference,
-        store=ClaimStore(args.data_dir / "web" / "claims.sqlite"),
+        store=ClaimStore(members.web_database(args.data_dir)),
         reader_for=make_reader_for(settings, engine),
         uploads=args.data_dir / "web" / "uploads",
         samples=args.data_dir / "web" / "samples",
@@ -150,6 +158,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         **run_set.COMMANDS,
         **real.COMMANDS,
         **reviewer.COMMANDS,
+        **members.COMMANDS,
+        **sheet_sets.COMMANDS,
+        **damage_set.COMMANDS,
+        **language_set.COMMANDS,
         "live-test": live_test.live_test,
     }
     if args.command in commands:

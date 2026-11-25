@@ -2,6 +2,8 @@
 
 from typing import Literal
 
+from reimbursement_council.web.i18n_members import MEMBER_TEXT
+
 Language = Literal["en", "ar"]
 
 TEXT: dict[str, dict[str, str]] = {
@@ -91,6 +93,7 @@ TEXT: dict[str, dict[str, str]] = {
         "check_sub": "Fix anything we read wrong. A changed amount is checked by a reviewer.",
         "documents_title": "Your documents",
         "doc_type": "Type",
+        "estimate_title": "What we expect to pay",
         "missing_title": "Still needed",
         "add_files": "Add files",
         "mismatch_title": "These do not match",
@@ -110,6 +113,8 @@ TEXT: dict[str, dict[str, str]] = {
         "demo_mismatch": "Report for another patient",
         "demo_edit": "Change the total (a person decides)",
         "demo_pdf": "Invoice as a PDF",
+        "demo_optical": "Glasses over the frame limit (paid in part)",
+        "demo_blurry": "Blurry Arabic receipt",
         "error_400": "Something in what you sent is not right.",
         "error_404": "We could not find that page or claim.",
         "error_409": "This step is not open for this claim right now.",
@@ -227,6 +232,7 @@ TEXT: dict[str, dict[str, str]] = {
         "check_sub": "صحح أي قيمة قرأناها خطأ. المبلغ المعدل يراجعه موظف.",
         "documents_title": "مستنداتك",
         "doc_type": "النوع",
+        "estimate_title": "المبلغ المتوقع",
         "missing_title": "ما زال مطلوبا",
         "add_files": "أضف ملفات",
         "mismatch_title": "هذه القيم غير متطابقة",
@@ -243,6 +249,8 @@ TEXT: dict[str, dict[str, str]] = {
         "demo_mismatch": "تقرير باسم مريض آخر",
         "demo_edit": "تغيير المبلغ (يقرر موظف)",
         "demo_pdf": "فاتورة بصيغة PDF",
+        "demo_optical": "نظارة تتجاوز حد الإطارات (دفع جزئي)",
+        "demo_blurry": "إيصال عربي غير واضح",
         "error_400": "في ما أرسلته شيء غير صحيح.",
         "error_404": "لم نجد هذه الصفحة أو المطالبة.",
         "error_409": "هذه الخطوة غير متاحة لهذه المطالبة الآن.",
@@ -278,6 +286,9 @@ TEXT: dict[str, dict[str, str]] = {
         "cat_dental": "أسنان",
     },
 }
+
+for _language, _strings in MEMBER_TEXT.items():
+    TEXT[_language].update(_strings)
 
 
 def text_for(language: str) -> dict[str, str]:

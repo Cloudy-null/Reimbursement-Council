@@ -138,3 +138,14 @@ def test_a_whole_number_score_is_accepted_but_a_text_score_is_not() -> None:
     parsed = _parse(good, config)
     assert parsed is not None and parsed.score == 0.0
     assert _parse(text, config) is None
+
+
+def test_the_schema_only_lets_the_model_cite_fields_that_were_read() -> None:
+    from reimbursement_council.core.council.case_reviewer import answer_schema
+    from tests.factories import repo_settings
+
+    config = repo_settings().decision.members.case_reviewer
+    schema = answer_schema(config, ["total", "patient_name", "total"])
+    item = schema["properties"]["cited_fields"]["items"]["properties"]["name"]
+    assert item["enum"] == ["patient_name", "total"]
+    assert schema["properties"]["cited_fields"]["maxItems"] == 2

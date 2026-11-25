@@ -24,9 +24,16 @@ from reimbursement_council.core.models.common import (
 from reimbursement_council.core.models.reference import PriceListItem
 
 
+class SubLimitConfig(ConfigModel):
+    limit_halalas: Halalas
+    services: list[str] = Field(min_length=1)
+
+
 class TierConfig(ConfigModel):
     limits_halalas: dict[str, Halalas]
     copay_rate: dict[str, Score]
+    copay_cap_halalas: Halalas | None = None
+    sub_limits: dict[str, SubLimitConfig] = Field(default_factory=dict)
 
 
 class PolicyConfig(ConfigModel):
@@ -34,6 +41,8 @@ class PolicyConfig(ConfigModel):
     vat_rate: Score
     local_utc_offset_hours: int = Field(ge=-12, le=14)
     exclusions: list[str]
+    vat_covered: bool
+    rule_sources: dict[str, str] = Field(default_factory=dict)
     tiers: dict[str, TierConfig]
 
 
@@ -138,6 +147,7 @@ class VisionConfig(ConfigModel):
     vat_number_pattern: str
     future_days: int = Field(ge=0)
     parallel_ocr: bool
+    item_type_services: dict[str, str] = Field(default_factory=dict)
 
 
 class DecisionConfig(ConfigModel):
@@ -180,6 +190,29 @@ class DecisionConfig(ConfigModel):
         return self
 
 
+class UnsupportedLanguageConfig(ConfigModel):
+    urdu_letters: list[str]
+    min_urdu_letters: int = Field(ge=1)
+    french_words: list[str]
+    min_french_words: int = Field(ge=1)
+
+
+class BupaRulesConfig(ConfigModel):
+    """Document rules from Bupa's claim confirmation FAQ (documents.yaml, bupa_rules)."""
+
+    enabled: bool
+    eye_test_on_invoice: bool
+    tooth_number: bool
+    proof_of_payment: bool
+    invoice_validity: bool
+    translation: bool
+    eye_test_markers: list[str] = Field(min_length=1)
+    tooth_number_pattern: str
+    invoice_number_pattern: str
+    credit_words: list[str]
+    unsupported_language: UnsupportedLanguageConfig
+
+
 class DocumentsConfig(ConfigModel):
     """Which documents each benefit category needs, how a document type is recognized, and
     how strict the cross-document checks are (config/documents.yaml)."""
@@ -197,6 +230,7 @@ class DocumentsConfig(ConfigModel):
     pdf_render_scale: float = Field(gt=0)
     max_pdf_pixels: int = Field(gt=0)
     max_files_per_upload: int = Field(gt=0)
+    bupa_rules: BupaRulesConfig
 
 
 class SyntheticConfig(ConfigModel):
@@ -204,6 +238,17 @@ class SyntheticConfig(ConfigModel):
 
     qr_share: Score
     defect_weights: dict[str, int]
+    # make-damage-set: for each damage kind, its strength at levels 1 to 5 (level 0 is no
+    # damage). Units differ per kind; see config/synthetic.yaml.
+    damage_suite: dict[str, list[float]] = Field(default_factory=dict)
+
+    @field_validator("damage_suite")
+    @classmethod
+    def five_levels_each(cls, suite: dict[str, list[float]]) -> dict[str, list[float]]:
+        for kind, strengths in suite.items():
+            if len(strengths) != 5 or any(value <= 0 for value in strengths):
+                raise ValueError(f"damage_suite.{kind} needs 5 strengths above 0 (levels 1 to 5)")
+        return suite
 
     @field_validator("defect_weights")
     @classmethod

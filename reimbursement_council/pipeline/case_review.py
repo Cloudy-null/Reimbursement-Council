@@ -92,7 +92,8 @@ class CaseReviewerService:
         """One answer, checked. Timeouts and errors give a skipped review."""
         name = model.name
         try:
-            text = model.review(render_prompt(summary), SYSTEM_PROMPT, answer_schema(self.config))
+            schema = answer_schema(self.config, [f.name for f in summary.fields])
+            text = model.review(render_prompt(summary), SYSTEM_PROMPT, schema)
         except ReviewerTimeoutError as error:
             logger.warning("claim %s: case reviewer timed out: %s", summary.claim_id, error)
             return not_used(

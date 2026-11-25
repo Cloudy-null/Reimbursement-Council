@@ -21,11 +21,11 @@ class CountingReader:
         return ReaderOutput(fields=[], line_items=[], qr_payloads=[])
 
 
-def test_five_demo_claims_with_their_documents(web: tuple[TestClient, WebContext]) -> None:
+def test_seven_demo_claims_with_their_documents(web: tuple[TestClient, WebContext]) -> None:
     _, ctx = web
     files = ensure_demo_files(ctx)
     assert tuple(files) == DEMO_NAMES
-    assert [len(files[n]) for n in DEMO_NAMES] == [1, 1, 2, 2, 1]
+    assert [len(files[n]) for n in DEMO_NAMES] == [1, 1, 2, 2, 1, 1, 1]
     assert files["pdf"][0].read_bytes()[:5] == b"%PDF-"
     assert all(p.read_bytes()[:4] == b"\x89PNG" for n in DEMO_NAMES[:4] for p in files[n])
     assert ensure_demo_files(ctx) == files  # drawn once a day, then reused
@@ -67,7 +67,7 @@ def test_warm_up_reads_every_demo_file_once(web: tuple[TestClient, WebContext]) 
     _, ctx = web
     seen: list[str] = []
     warm_up(dataclasses.replace(ctx, reader_for=lambda d: CountingReader(seen)))
-    assert len(seen) == sum(len(p) for p in ensure_demo_files(ctx).values()) + 1 == 8
+    assert len(seen) == sum(len(p) for p in ensure_demo_files(ctx).values()) + 1 == 10
 
 
 def test_the_mismatch_demo_has_a_right_report_to_send_in_the_fix_step(
@@ -91,3 +91,16 @@ def test_ready_says_when_the_warm_up_is_done(web: tuple[TestClient, WebContext])
     demo.WARM_UP_DONE.set()
     assert client.get("/api/ready").json() == {"ready": True}
     demo._started.clear()
+
+
+def test_the_optical_demo_is_paid_in_part_and_says_why_before_submit(
+    web: tuple[TestClient, WebContext],
+) -> None:
+    """Frames over the yearly frame sub-limit: the check page names the cut before submit."""
+    from reimbursement_council.synthetic.demo_claims import demo_claims
+
+    claims = demo_claims(datetime(2026, 11, 20, 10, 0), web[1].settings.prices, 0.15)
+    invoice = claims["optical"][0].optical
+    assert invoice is not None
+    assert [i.service_code for i in invoice.items] == ["OPT-FRAME", "OPT-LENS"]
+    assert claims["blurry"][0].blur_level > 0

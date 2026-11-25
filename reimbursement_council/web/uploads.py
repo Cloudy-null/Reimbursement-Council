@@ -15,6 +15,7 @@ from uuid import uuid4
 
 from fastapi import UploadFile
 
+from reimbursement_council.adapters.heic import HEIC_SUFFIXES, heic_to_jpeg
 from reimbursement_council.core.models.claim import Document, ReaderOutput
 from reimbursement_council.web.context import WebContext
 
@@ -54,10 +55,15 @@ def accept(
         suffix = Path(name).suffix.lower()
         if len(kept) >= max_files:
             refused.append(Refusal(name, "refused_count"))
-        elif suffix not in IMAGE_SUFFIXES:
+        elif suffix not in IMAGE_SUFFIXES and suffix not in HEIC_SUFFIXES:
             refused.append(Refusal(name, "refused_type"))
         elif not data or len(data) > max_megabytes * 1024 * 1024:
             refused.append(Refusal(name, "refused_size"))
+        elif suffix in HEIC_SUFFIXES:  # an iPhone photo: turned into JPEG on upload
+            try:
+                kept.append(Upload(name=name, data=heic_to_jpeg(data), suffix=".jpg"))
+            except ValueError:
+                refused.append(Refusal(name, "refused_type"))
         else:
             kept.append(Upload(name=name, data=data, suffix=suffix))
     return kept, refused

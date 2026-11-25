@@ -16,6 +16,7 @@ from typing import Any
 
 from reimbursement_council.adapters.export_schema import load_schema, schema_errors
 from reimbursement_council.adapters.web_client import WebClient, WebClientError
+from reimbursement_council.core.privacy import mask_personal_data
 from reimbursement_council.evaluation.live_report import claim_record, failed_record, live_summary
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,7 @@ def _one_claim(
     try:
         claim_id = client.upload(patient, [(p.name, p.read_bytes()) for p in paths], lang)
         seconds["upload_and_read"] = time.perf_counter() - started
+        notes = client.check_notes(claim_id, lang)
         step = time.perf_counter()
         client.submit(claim_id, lang)
         seconds["send_and_decide"] = time.perf_counter() - step
@@ -80,7 +82,8 @@ def _one_claim(
     if keep_export:
         (out / f"{name}.export.json").write_text(json.dumps(export, indent=1), encoding="utf-8")
     errors = schema_errors(export, load_schema())
-    return claim_record(name, files, export, seconds, errors)
+    record = claim_record(name, files, export, seconds, errors)
+    return record | {"check_page": [mask_personal_data(note) for note in notes]}
 
 
 def live_test(args: argparse.Namespace) -> int:

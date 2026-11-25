@@ -7,6 +7,7 @@ a claim to a person (core/decision/reviewer_guard.py).
 """
 
 import json
+from collections.abc import Sequence
 from typing import Any, Literal, get_args
 
 from pydantic import Field, ValidationError
@@ -33,8 +34,13 @@ class ReviewerAnswer(Model):
     cited_fields: list[CitedField]
 
 
-def answer_schema(config: CaseReviewerConfig) -> dict[str, Any]:
-    """The JSON Schema the model must follow (sent to Ollama as the format)."""
+def answer_schema(
+    config: CaseReviewerConfig, read_fields: Sequence[str] | None = None
+) -> dict[str, Any]:
+    """The JSON Schema the model must follow (sent to Ollama as the format). With read_fields,
+    only the fields this claim actually has can be cited (core day 4b: the model cited fields
+    that were never read, so the vote was thrown out)."""
+    names = sorted(set(read_fields)) if read_fields else list(FIELD_NAMES)
     return {
         "type": "object",
         "properties": {
@@ -43,11 +49,11 @@ def answer_schema(config: CaseReviewerConfig) -> dict[str, Any]:
             "cited_fields": {
                 "type": "array",
                 "minItems": config.min_cited_fields,
-                "maxItems": len(FIELD_NAMES),
+                "maxItems": max(config.min_cited_fields, len(names)),
                 "items": {
                     "type": "object",
                     "properties": {
-                        "name": {"type": "string", "enum": list(FIELD_NAMES)},
+                        "name": {"type": "string", "enum": names},
                         "value": {"type": "string"},
                     },
                     "required": ["name", "value"],
