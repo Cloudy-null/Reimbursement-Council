@@ -330,3 +330,41 @@ Data review note on E8: in base+fix, 24 of 60 claims are still in self_fix at th
           review and no cost. So "10 reviews against 37" leaves those 24 waiting for the member.
 ```
 
+
+## Core day 4 night (branch core/day4)
+
+```
+Run: confidence per field (date and item numbers, not the row minimum), then E6 again
+Date: 2026-11-25
+Commit: 296002e (confidence per field), 522713c (calibration refitted and on)
+Command: run-set data/sets/docs/tune --reader easyocr --calibration off --results-name results_core_fit.json
+         fit-calibration data/sets/docs/tune/results_core_fit.json  (a=18.988158, b=-13.597297;
+           107 claims, 13 hard rule rejects left out)
+         run-set data/sets/abl/check --reader easyocr --calibration off --results-name results_core_caloff.json
+         run-set data/sets/abl/check --reader easyocr --calibration on --results-name results_core_calon.json
+Test set: synthetic check, 60 claims (seed 12); fit on synthetic tune, 120 claims (seed 11)
+Result, check set, calibration off (296002e): lanes auto_reject 7, auto_approve 18,
+         human_review 14, self_fix 21; automation 0.4167; precision 1.0; false rejects 0.0;
+         reviews 233.3 per 1000; ECE 0.2023; cost 350 SAR.
+         Before confidence per field (base.json, 95745da): auto_approve 16, self_fix 29,
+         human_review 8, automation 0.3833, reviews 133.3. 8 claims left self_fix: 2 to
+         auto_approve, 6 to human_review (expected loss above the review cost, no payout priced,
+         or a possible duplicate). The date no longer stops them, so the council sees them.
+Result, check set, calibration on (522713c): lanes auto_reject 7, auto_approve 20,
+         self_fix 26, human_review 7; automation 0.45; precision 1.0; false rejects 0.0;
+         reviews 116.7 per 1000; ECE 0.0602; cost 175 SAR.
+Decision: calibration on by default (the owner's rule: only if precision stays 1.0 and false
+         rejects stay 0; both hold).
+```
+
+```
+Run: new real baseline after part (b)
+Date: 2026-11-25
+Commit: 522713c
+Command: read-sroie data/real/sroie --reader easyocr --results-name accuracy_core_base.json
+         run-set data/sets/real_e2e --reader easyocr --results-name results_core_base.json
+Test set: real_extraction, 60 SROIE scans; real_e2e, 50 SROIE scans in a synthetic claim context
+Result: SROIE provider 0.35, date 0.5333, total 0.3333 (unchanged: field accuracy does not use
+         confidence). Real e2e: 50 of 50 self_fix, automation 0.0, 0 wrong approvals, 0 false
+         rejects. Seconds per claim 0.153 mean with the OCR cache (not a live timing).
+```
