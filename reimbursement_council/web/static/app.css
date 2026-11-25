@@ -134,4 +134,4 @@ dl.fields div.typed { background: var(--tint-selffix); border-inline-start: 4px 
 .typed-tag { display: inline-block; margin-inline-start: 6px; font-size: 12px; font-weight: 600; color: var(--lane-selffix); border: 1px solid currentColor; border-radius: 999px; padding: 0 8px; }
 .we-read { display: block; color: var(--ink-muted); font-size: 13px; }
 @media (max-width: 560px) { dl.fields div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
-
+.notice.reject { --lane: var(--lane-reject); --tint: var(--tint-reject); }

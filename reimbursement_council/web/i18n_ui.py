@@ -22,6 +22,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "view_documents": "View documents",
         "export_field": "Field",
         "export_value": "Value",
+        "rule_warning_title": "This claim will be rejected if you send it",
     },
     "ar": {
         "read_title": "ما قرأناه",
@@ -44,5 +45,6 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "view_documents": "عرض المستندات",
         "export_field": "الحقل",
         "export_value": "القيمة",
+        "rule_warning_title": "ستُرفض هذه المطالبة إذا أرسلتها",
     },
 }

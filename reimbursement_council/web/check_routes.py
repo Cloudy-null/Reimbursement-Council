@@ -23,6 +23,7 @@ from reimbursement_council.core.models.claim import Claim, ExtractionResult
 from reimbursement_council.core.models.common import FieldName
 from reimbursement_council.core.payout import calculate_payout
 from reimbursement_council.core.payout_preview import estimate_lines
+from reimbursement_council.core.rules import date_reading, run_hard_rules
 from reimbursement_council.pipeline.document_set import DocumentSet
 from reimbursement_council.web.check_form import (
     DOCUMENT_KINDS,
@@ -63,6 +64,28 @@ def _estimate(
     payout = calculate_payout(reading, policy, history, ctx.settings)
     vat = reading.money("vat_total") or 0
     return estimate_lines(payout, tier, history, vat, language)
+
+
+def _rule_warnings(ctx: WebContext, claim: Claim, documents: DocumentSet) -> list[str]:
+    """Hard rules that already fail on confident data: the member is warned before sending,
+    because the claim will be rejected whatever they choose (fix/final)."""
+    try:
+        policy = ctx.reference.policy(claim.policy_id)
+    except LookupError:
+        return []
+    primary = None if documents.primary_id is None else documents.readings[documents.primary_id]
+    others = [r for d, r in documents.readings.items() if d != documents.primary_id]
+    floor = ctx.settings.decision.hard_rule_confidence_floor
+    results = run_hard_rules(
+        claim,
+        policy,
+        primary,
+        None,
+        ctx.store.seen_receipts(claim.claim_id),
+        ctx.settings,
+        date_reading(primary, others, floor),
+    )
+    return [r.reason for r in results if r.outcome == "fail"]
 
 
 def check_values(
@@ -109,6 +132,7 @@ def check_values(
             for r in documents.rule_requests
         ],
         "estimate": _estimate(ctx, claim, reading, language),
+        "rule_warnings": _rule_warnings(ctx, claim, documents),
         "mismatches": mismatches,
         "unread": unread,
         "categories": list(ctx.settings.documents.required_by_category),

@@ -151,6 +151,11 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         decision = ctx.store.load_decision(claim_id)
         if decision is None:
             raise HTTPException(status_code=404, detail="No such claim.")
+        if decision.lane == "auto_reject" or any(
+            r.outcome == "fail" for r in decision.rule_results
+        ):
+            # A failed hard rule on confident data stays rejected whatever the member chooses.
+            return RedirectResponse(f"/claims/{claim_id}?lang={lang}", status_code=303)
         ctx.store.save_decision(
             decision.model_copy(
                 update={

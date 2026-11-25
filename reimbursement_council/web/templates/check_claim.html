@@ -5,6 +5,12 @@
   <input type="hidden" name="lang" value="{{ lang }}">
 </form>
 
+{% if rule_warnings %}
+<div class="notice reject" id="rule-warnings" role="alert">
+  <h3>{{ t.rule_warning_title }}</h3>
+  <ul class="plain">{% for text in rule_warnings %}<li dir="auto">{{ text }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
 <section class="card" id="read-fields">
   <h2>{{ t.check_title }}</h2>
   {% include "_refused.html" %}
