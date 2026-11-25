@@ -1,5 +1,9 @@
 # Handover
 
+## fix/final note (read first)
+Done (tag demo-ready-final-7): hard rules apply on every path (a confident date on another document can fail the 90-day and policy rules when the bill has no date; send-to-reviewer never moves a rejected claim; the check page warns before submit). Precision and recall on the synthetic check set at 120febe: approvals 1.0 (21/21), payable recall 0.42 (21/50), problem precision 0.6923 (27/39), problem recall 0.9 (27/30); not computable on real e2e (no defect labels, payout unknown). Numbers page rebuilt for judges: four plain tiles, real reading, the real Bupa claim, damage chart, reviewer status, plain-named ablations; synthetic and real marked. 893 unit tests and e2e 4 of 4 pass.
+CHECK: the AI reviewer shows "benched" again (its live monitor); run check-reviewer and reviewer-enable before the demo. Tile numbers live in reimbursement_council/web/headline.json: update them with each new measured commit.
+
 ## Website pass note (read first)
 Done (tag demo-ready-final-6): check page shows the read values first; a missing document offers "Add it now" (highlighted) or "Send without it"; the reviewer queue is colored and labeled by p_good band (review_bands in config/decision.yaml), riskiest first; the reviewer card opens with "Why this needs you", lists the claim data from the export with "Typed by member" tags and the value we read, and keeps passed checks and the documents behind toggles. Arabic and English; checked on a phone in Arabic. 890 unit tests and the e2e test (4 of 4) pass.
 Not done: no Playwright screenshot set or Impeccable audit of the new screens.
