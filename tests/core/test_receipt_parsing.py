@@ -284,3 +284,9 @@ def test_a_matched_service_rests_on_its_description_confidence_too() -> None:
     items = parse_receipt_lines(DOC_ID, rows, settings).line_items
     assert items and items[0].service_code is not None
     assert items[0].confidence == pytest.approx(0.40)
+
+
+def test_a_year_first_date_with_slashes_is_read() -> None:
+    rows = [line("2026/07/29 06:35 PM التاريخ", 100, width=300)]
+    reading = parse_receipt_lines(DOC_ID, rows, repo_settings())
+    assert {f.name: f.value for f in reading.fields}["treatment_date"] == "2026-07-29"

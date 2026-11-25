@@ -22,6 +22,10 @@ _LETTERS = {
     ord("ة"): "ه",
     ord("ؤ"): "و",
     ord("ئ"): "ي",
+    # Persian letters a reader may write for Arabic ones (core day 4b: the model wrote the
+    # Persian kaf and yeh for a brand name printed with Arabic letters).
+    ord("ک"): "ك",
+    ord("ی"): "ي",
     ord("ـ"): None,  # tatweel
 }
 _DIACRITICS = re.compile("[ً-ْٰ]")

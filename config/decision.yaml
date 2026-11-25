@@ -35,6 +35,9 @@ vision:
   # Read with the model and EasyOCR at the same time. Only when EasyOCR is on the CPU: on one
   # 12 GB GPU the two ran out of memory together (core day 4b).
   parallel_ocr: false
+  # The model's item type for a line whose name matches no service (a brand name on an optical
+  # invoice). The item then gets the disagree confidence: under the floor, a person sees it.
+  item_type_services: {frame: OPT-FRAME, lenses: OPT-LENS, eye_test: OPT-EXAM}
   future_days: 1              # a date more than this many days after the upload is implausible
 # E (two readers): EasyOCR and the model agreeing raises a field's confidence, disagreeing
 # lowers it and asks the member. Only used with reader: ollama.

@@ -147,6 +147,7 @@ class VisionConfig(ConfigModel):
     vat_number_pattern: str
     future_days: int = Field(ge=0)
     parallel_ocr: bool
+    item_type_services: dict[str, str] = Field(default_factory=dict)
 
 
 class DecisionConfig(ConfigModel):

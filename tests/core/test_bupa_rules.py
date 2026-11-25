@@ -85,3 +85,11 @@ def test_rules_can_be_switched_off() -> None:
 def test_a_document_without_text_is_not_judged_on_text() -> None:
     blank = invoice([], has_vat_number=False, has_line_items=False)
     assert rule_requests([blank], ["dental"], "inv", CONFIG) == []
+
+
+def test_an_invoice_number_before_its_arabic_label_counts() -> None:
+    lines = [
+        "2026/07/29 06:35 PM التاريخ 7900000000001 رقم الفاتورة",
+        "الرقم الضريبي 300000000000003",
+    ]
+    assert rule_requests([invoice(lines)], ["optical"], "inv", CONFIG) == []

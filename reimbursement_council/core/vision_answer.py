@@ -7,11 +7,25 @@ from pydantic import ValidationError
 
 from reimbursement_council.core.models.common import DocumentKind, Model
 
+ITEM_TYPES = (
+    "frame",
+    "lenses",
+    "contact_lenses",
+    "eye_test",
+    "consultation",
+    "medicine",
+    "lab_test",
+    "dental",
+    "other",
+)
+
 
 class VisionItem(Model):
     description: str
     quantity: str | None
     amount: str | None
+    # What the line is, as the model sees it: a hint for brand names no alias matches.
+    item_type: str = "other"
 
 
 class VisionAnswer(Model):
@@ -53,8 +67,9 @@ ANSWER_SCHEMA: dict[str, object] = {
                     "description": {"type": "string"},
                     "quantity": _nullable(),
                     "amount": _nullable(),
+                    "item_type": {"type": "string", "enum": list(ITEM_TYPES)},
                 },
-                "required": ["description", "quantity", "amount"],
+                "required": ["description", "quantity", "amount", "item_type"],
             },
         },
     },

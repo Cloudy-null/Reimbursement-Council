@@ -14,7 +14,8 @@ keep_alive: "30m"
 num_ctx: 8192
 num_predict: 1200
 # Raise when a prompt changes, so cached answers and logged checks name the prompt they came from.
-prompt_version: "1"
+# 2 (core day 4b): items also carry an item_type.
+prompt_version: "2"
 # The AI case reviewer's own prompt version (2: one short reason; 3: what the calculated payout
 # means, each cited field once).
 reviewer_prompt_version: "3"
