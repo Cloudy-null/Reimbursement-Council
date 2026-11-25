@@ -492,3 +492,56 @@ Result: EasyOCR: provider 0.900, VAT number 0.983, date 1.000, time 0.967, patie
          First run at 1625c6a gave provider 0.683: the model wrote both names together
          ("مركز الشفاء الطبي Al Shifa Medical Center"); fixed in core with a test.
 ```
+
+```
+Run: FINAL CHECK, every headline number from one commit (core day 4)
+Date: 2026-11-25
+Commit: 38cc89d (after the code and data reviews; calibration refitted on the tune set with
+         the model reader: a=12.744003, b=-9.393948, 105 claims, 15 hard rule rejects left out)
+Script: D:\rc-tmp\final\run_all.sh (each command below; results named f_*.json)
+Defaults: reader ollama (qwen3-vl:8b-instruct) with two readers on, calibration on, AI case
+         reviewer off.
+
+Synthetic check set, 60 claims (seed 12): run-set data/sets/abl/check [switch]
+  default          auto_approve 24, human_review 18, self_fix 8, auto_reject 10; automation 0.5667,
+                   precision 1.0, false rejects 0.0, reviews 300.0/1000, ECE 0.0991, cost 450 SAR
+  --calibration off   automation 0.6, precision 1.0, false rejects 0.0, reviews 266.7, ECE 0.1059
+  E2 arithmetic off   automation 0.55, precision 0.8889, false rejects 0.0, ECE 0.1952, cost 892.5
+  E3 one member       automation 0.6667, precision 1.0, false rejects 0.0, reviews 200.0
+  E5 routing off      automation 0.5833, precision 1.0, false rejects 0.0, reviews 283.3
+  E7 cost lanes off   automation 0.55, precision 1.0, false rejects 0.0, reviews 316.7
+  E9 history off      automation 0.6167, precision 1.0, false rejects 0.0, reviews 250.0
+  two readers off     automation 0.3667, precision 1.0, false rejects 0.0, self_fix 466.7
+  --reader easyocr    automation 0.3833, precision 1.0, false rejects 0.0, self_fix 433.3
+  E8 --simulate-fix   auto_approve 27, human_review 23, none left waiting; automation 0.6167,
+                      precision 1.0, 8 fixes tried, 5 then paid right (0.625), cost 575 SAR
+  E8 self-fix off + fix  human_review 26, automation 0.5667, cost 650 SAR
+  E3 AI reviewer on (golden limit 0.85 for this run only)  automation 0.55, precision 1.0,
+                      false rejects 0.0, reviews 316.7, 2.745 s per claim
+E12 cross checks: run-set data/sets/docs/check|tune --cross-checks on|off
+  check (60): on: 3 of 3 caught, false alarms 0 of 57, automation 0.5667; off: 0 caught,
+              automation 0.6 (precision 1.0 both)
+  tune (120): on: 7 of 7 caught, false alarm rate 0.0177 (2 of 113), automation 0.4;
+              off: 0 caught, automation 0.4167 (precision 1.0 both)
+Real SROIE, 60 scans: read-sroie data/real/sroie --reader ollama|easyocr [--two-readers on|off]
+  EasyOCR: provider 0.35, date 0.5333, total 0.3333
+  model + EasyOCR: provider 0.5167, date 0.6, total 0.6167; made-up rate 0.2865 (104 of 363
+              returned values not found in the OCR text; 15 more only one digit away, kept under
+              the floor); readers agreed 87, disagreed 27
+  model alone: provider 0.5167, date 0.5167, total 0.6167
+Real e2e, 50: run-set data/sets/real_e2e: model reader self_fix 48, human_review 2; EasyOCR
+              self_fix 50. Automation 0.0, precision n/a (no approvals), false rejects 0.0.
+Synthetic receipts, 60 (Arabic-first and bilingual): read-accuracy data/receipts/eval_s1
+  EasyOCR: provider 0.900, date 1.000, patient 0.800, VAT 0.867, total 0.967, item codes 0.622
+  model + EasyOCR: provider 0.950, date 1.000, patient 0.917, VAT 0.933, total 1.000,
+              item codes 0.803
+Export: export-set data/sets/docs/check|tune: 60 of 60 and 120 of 120 valid; 24 and 33 ready
+              for processing.
+Live, through the website: live-test data/live_standin_final --url http://127.0.0.1:8011
+  (STAND-IN set, not the owner's photos: 4 real SROIE scans, 4 synthetic Arabic-first receipts
+  of which 2 heavily damaged, 1 receipt with its report; re-saved so no answer was cached):
+  9 of 9 finished, 0 errors, 9 schema valid; seconds per claim mean 13.855, median 13.31,
+  max 23.193 (upload and read 13.802, send and decide 0.054). Before the model and EasyOCR
+  read at the same time (1cdb625): mean 20.766 (8 claims re-saved once, 0e8b746).
+Browser e2e demo test: uv run pytest -m e2e: 2 passed in 81.37 s.
+```
