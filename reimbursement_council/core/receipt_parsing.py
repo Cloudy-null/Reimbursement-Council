@@ -47,13 +47,16 @@ RAW_LABELS: dict[str, tuple[str, ...]] = {
     ),
     "total": ("total", "total sar", "grand total", "الإجمالي", "الإجمالي المستحق", "المجموع الكلي"),
     "date": ("date", "التاريخ"),
-    "patient": ("patient", "customer", "المريض", "اسم المريض", "العميل"),
+    "patient": ("patient", "customer", "المريض", "اسم المريض", "العميل", "الوصفة الطبية"),
 }
 HEADER_WORDS = ("service", "qty", "price", "amount", "الخدمة", "الكمية", "السعر", "المبلغ")
 LABELS = {
     field: tuple(tuple(normalize_text(label).split()) for label in labels)
     for field, labels in RAW_LABELS.items()
 }
+CITY_WORDS = frozenset(
+    normalize_text(w) for w in ("الرياض", "جدة", "الدمام", "مكة", "المدينة", "الخبر", "riyadh")
+)
 MONEY_ROWS = ("subtotal", "vat_total", "total")
 # A row with "total" that is not the amount paid: a count, a saving, the cash given, or the
 # tax alone ("Total GST"). Found on real receipts (E1 failure review). Words like "excluding"
@@ -83,6 +86,8 @@ def _label_match(words: list[str], field: str, ratio: float) -> tuple[int, float
         size = len(label)
         target = " ".join(label)
         for start in range(0, len(words) - size + 1):
+            if CITY_WORDS & set(words[start : start + size]):
+                continue  # "الرياض" looks like "المريض" but is a city (core day 4b)
             window = " ".join(words[start : start + size])
             score = 1.0 if window == target else SequenceMatcher(None, window, target).ratio()
             if score >= ratio:
@@ -270,17 +275,12 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
                 for x in row
                 if not _label_size(normalize_text(x.text).split(), "patient", cfg.label_match_ratio)
             ]
-            name = _without_label_words(join_row(label_free)) if label_free else ""
+            # Label and name in one box ("الوصفة الطبية - name"): cut the label words out.
+            source = label_free or row
+            name = _without_label_words(join_row(source)).strip(" -:")
             if name:
-                fields.append(
-                    _field(
-                        document_id,
-                        "patient_name",
-                        name,
-                        name,
-                        min(x.confidence for x in label_free),
-                    )
-                )
+                confidence = min(x.confidence for x in source)
+                fields.append(_field(document_id, "patient_name", name, name, confidence))
                 found.add("patient_name")
 
     anchor = next((i for i, kind in enumerate(kinds) if kind), len(rows))
