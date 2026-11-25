@@ -45,8 +45,9 @@ uv sync --extra ocr
 uv run reimbursement-council serve
 ```
 
-Then open `http://127.0.0.1:8000`. In config/decision.yaml the reader must be `easyocr` and
-the local model switches must be off (they are listed in docs/MODEL_SAFETY.md).
+Then open `http://127.0.0.1:8000` and start the site with `--reader easyocr` (the laptop has
+no model). On a machine without a GPU, set `vision.parallel_ocr: true` in config/decision.yaml
+only when the model also runs there; it lets the model and EasyOCR read at the same time.
 
 ## Plan C: demo mode only
 
