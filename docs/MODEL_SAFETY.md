@@ -96,3 +96,17 @@ The reader logs the error and falls back to EasyOCR's own reading after at most 
 (config). The website keeps working (docs/DEMO.md, plan B and plan C). The reviewer is skipped
 and the council decides alone; a golden check run while the model is down is not judged, so it
 does not bench the reviewer. Model calls never use a proxy.
+
+## The real claim used for testing (privacy and consent)
+
+- One real Bupa Arabia claim (an optical invoice and Bupa's decision on it) is used to test the
+  system and as a case study in the pitch. The member gave the project owner permission to use
+  this claim for testing and for the pitch. His name is not recorded anywhere in the project.
+- The files stay in realtest/, which is in .gitignore and was confirmed never committed
+  (git log over every branch, 2026-11-25). They are never copied into docs, tests, fixtures,
+  demo claims or screenshots.
+- Logs mask Arabic text, emails, phone numbers, IBANs, card numbers and every number of 7 or
+  more digits (membership, claim and invoice numbers). live-test reports replace patient names
+  with [name] and mask long numbers; full exports are only written with --keep-exports.
+- The case study (docs/pitch/real_claim_case.md) gives amounts and rule results only: no names,
+  no membership, claim, invoice or VAT numbers, no provider name.

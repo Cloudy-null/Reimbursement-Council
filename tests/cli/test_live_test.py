@@ -73,7 +73,7 @@ def test_live_test_runs_the_whole_member_path_and_writes_a_report(
     Image.new("RGB", (40, 40), "white").save(photos / "one.png")
     out = tmp_path / "out"
     args = argparse.Namespace(
-        folder=photos, url=site, lang="ar", patient=None, out=out, timeout=60.0
+        folder=photos, url=site, lang="ar", patient=None, out=out, timeout=60.0, keep_exports=True
     )
     assert live_test(args) == 0
     report = json.loads((out / "report.json").read_text(encoding="utf-8"))
@@ -97,3 +97,24 @@ def test_summary_counts_errors_apart() -> None:
     summary = live_summary([done, failed])
     assert summary["errors"] == 1 and summary["finished"] == 1
     assert summary["seconds_per_claim_mean"] == 2.0
+
+
+def test_live_report_masks_names_and_long_numbers() -> None:
+    from reimbursement_council.evaluation.live_report import claim_record
+
+    export = {
+        "decision": {},
+        "documents": [
+            {
+                "document_id": "d",
+                "fields": [
+                    {"name": "patient_name", "value": "Sara Ahmed"},
+                    {"name": "vat_number", "value": "310000000000003"},
+                    {"name": "total", "value": "175000"},
+                ],
+            }
+        ],
+    }
+    fields = claim_record("c", ["x.jpg"], export, {"total": 1.0}, [])["fields"]["d"]
+    values = {f["name"]: f["value"] for f in fields}
+    assert values == {"patient_name": "[name]", "vat_number": "[number]", "total": "175000"}

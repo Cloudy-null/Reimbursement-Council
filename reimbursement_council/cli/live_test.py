@@ -33,6 +33,11 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     live.add_argument("--patient", default=None, help="Member id; default: first on the page.")
     live.add_argument("--out", type=Path, default=Path("outputs/live_test"))
     live.add_argument("--timeout", type=float, default=600.0)
+    live.add_argument(
+        "--keep-exports",
+        action="store_true",
+        help="Also write each claim's full export (holds personal data; keep it out of git).",
+    )
 
 
 def claims_in(folder: Path) -> list[tuple[str, list[Path]]]:
@@ -49,7 +54,13 @@ def claims_in(folder: Path) -> list[tuple[str, list[Path]]]:
 
 
 def _one_claim(
-    client: WebClient, patient: str, name: str, paths: list[Path], lang: str, out: Path
+    client: WebClient,
+    patient: str,
+    name: str,
+    paths: list[Path],
+    lang: str,
+    out: Path,
+    keep_export: bool,
 ) -> dict[str, Any]:
     files = [p.name for p in paths]
     seconds: dict[str, float] = {}
@@ -66,7 +77,8 @@ def _one_claim(
         seconds["total"] = time.perf_counter() - started
         logger.warning("live claim %s failed: %s", name, error)
         return failed_record(name, files, seconds, str(error))
-    (out / f"{name}.export.json").write_text(json.dumps(export, indent=1), encoding="utf-8")
+    if keep_export:
+        (out / f"{name}.export.json").write_text(json.dumps(export, indent=1), encoding="utf-8")
     errors = schema_errors(export, load_schema())
     return claim_record(name, files, export, seconds, errors)
 
@@ -81,7 +93,9 @@ def live_test(args: argparse.Namespace) -> int:
     records = []
     for number, (name, paths) in enumerate(claims, start=1):
         logger.info("live claim %d/%d %s: %d file(s)", number, len(claims), name, len(paths))
-        records.append(_one_claim(client, patient, name, paths, args.lang, args.out))
+        records.append(
+            _one_claim(client, patient, name, paths, args.lang, args.out, args.keep_exports)
+        )
     report = {
         "url": args.url,
         "lang": args.lang,

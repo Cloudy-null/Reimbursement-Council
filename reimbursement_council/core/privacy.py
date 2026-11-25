@@ -8,7 +8,8 @@ our documents that is mostly names). Kept: claim and member ids (UUIDs), amounts
 import re
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
-_LONG_NUMBER = re.compile(r"(?<![\w-])\+?\d{9,}(?![\w-])")
+# 7 digits and more: membership numbers are 8 digits, claim and invoice numbers longer.
+_LONG_NUMBER = re.compile(r"(?<![\w.-])\+?\d{7,}(?![\w-])(?!\.\d)")
 _ARABIC_TEXT = re.compile(r"[\u0600-\u06ff]+(?:\s+[\u0600-\u06ff]+)*")
 _SAUDI_MOBILE = re.compile(r"(?<![\w-])(?:\+966|00966|0)\s?5\d(?:[ -]?\d){7}(?![\w-])")
 _IBAN = re.compile(r"\bSA\d{2}(?:\s?[0-9A-Z]{4}){5}\b")

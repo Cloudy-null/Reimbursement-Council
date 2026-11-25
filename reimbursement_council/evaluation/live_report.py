@@ -10,6 +10,19 @@ from collections.abc import Sequence
 from statistics import median
 from typing import Any
 
+from reimbursement_council.core.privacy import mask_personal_data
+
+PERSON_FIELDS = frozenset({"patient_name"})
+
+
+def _masked(name: object, value: object) -> object:
+    """Live reports may hold real people's documents: names and long numbers are masked."""
+    if not isinstance(value, str):
+        return value
+    if name in PERSON_FIELDS:
+        return "[name]"
+    return mask_personal_data(value)
+
 
 def claim_record(
     name: str,
@@ -38,7 +51,7 @@ def claim_record(
             d.get("document_id", "?"): [
                 {
                     "name": f.get("name"),
-                    "value": f.get("value"),
+                    "value": _masked(f.get("name"), f.get("value")),
                     "source": f.get("source"),
                     "confidence": f.get("confidence"),
                 }
