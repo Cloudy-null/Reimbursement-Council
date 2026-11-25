@@ -26,3 +26,17 @@ defect_weights:
   missing_payment_proof: 0
   invalid_invoice: 0
   missing_tooth_number: 0
+
+# make-damage-set: how strong each kind of photo damage is at levels 1 to 5 (level 0 leaves the
+# image as it is). Made-up starting values, chosen by eye so level 5 is very hard to read.
+damage_suite:
+  blur: [0.6, 1.2, 1.8, 2.6, 3.5]  # Gaussian blur sigma, pixels
+  motion_blur: [5, 9, 13, 19, 27]  # length of the shake streak, pixels
+  noise: [6, 12, 20, 30, 45]  # noise standard deviation (pixel values 0 to 255)
+  jpeg: [60, 40, 25, 15, 8]  # JPEG quality, lower is worse
+  low_resolution: [0.75, 0.55, 0.4, 0.3, 0.22]  # shrink to this share of the size, then back
+  shadow: [0.15, 0.3, 0.45, 0.6, 0.75]  # how much the darkest edge of the shadow loses
+  glare: [0.2, 0.35, 0.5, 0.65, 0.8]  # brightness added at the centre of the glare spot
+  perspective_tilt: [0.03, 0.06, 0.09, 0.12, 0.16]  # share of the width the top edge pulls in
+  rotation: [2, 4, 7, 11, 16]  # degrees
+  crumpled_paper: [2, 4, 6, 9, 12]  # how far folds move the paper, pixels
