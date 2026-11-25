@@ -2,39 +2,78 @@
 {% block content %}
 <section class="card">
   <h2>{{ t.metrics }}</h2>
-  <p class="note" id="reviewer-status">{{ reviewer_line }}</p>
+  <div class="tiles">
+    {% for tile in headline.tiles or [] %}
+    <div class="tile">
+      <b class="tile-value">{{ tile.value }}</b>
+      <h3>{{ tile[lang].title }}</h3>
+      <p dir="auto">{{ tile[lang].text }}</p>
+      <p class="note"><span class="kind kind-{{ tile.kind }}">{{ t['kind_' ~ tile.kind] }}</span> <span dir="ltr">{{ tile.n }}</span></p>
+      <p class="source" dir="ltr">{{ tile.source }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if headline.measures %}
+<section class="card">
+  <h2>{{ t.measures_title }} <span class="kind kind-synthetic">{{ t.kind_synthetic }}</span></h2>
+  <div class="table-wrap"><table class="numbers"><tbody>
+    {% for name, value, count in headline.measures.rows %}<tr><td dir="ltr">{{ name }}</td><td class="num">{{ value }}</td><td dir="ltr">{{ count }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="note" dir="ltr">{{ headline.measures.real_note }}</p>
+  <p class="source" dir="ltr">{{ headline.measures.source }}</p>
+</section>
+{% endif %}
+
+{% if headline.real_reading %}
+<section class="card">
+  <h2>{{ t.real_reading_title }} <span class="kind kind-real">{{ t.kind_real }}</span></h2>
+  <div class="table-wrap"><table class="numbers">
+    <thead><tr><th></th><th>{{ t.ocr_alone }}</th><th>{{ t.with_ai }}</th></tr></thead>
+    <tbody>{% for name, before, after in headline.real_reading.rows %}<tr><td dir="ltr">{{ name }}</td><td class="num">{{ before }}</td><td class="num">{{ after }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="source" dir="ltr">{{ headline.real_reading.source }}</p>
+</section>
+{% endif %}
+
+{% if headline.real_claim %}
+<section class="card">
+  <h2>{{ t.real_claim_title }} <span class="kind kind-real">{{ t.kind_real }}</span></h2>
+  <p class="message" dir="auto">{{ headline.real_claim[lang] }}</p>
+  <p class="source" dir="ltr">{{ headline.real_claim.source }}</p>
+</section>
+{% endif %}
+
+{% if headline.damage %}
+<section class="card">
+  <h2>{{ t.damage_title }} <span class="kind kind-synthetic">{{ t.kind_synthetic }}</span></h2>
+  <p dir="auto">{{ headline.damage[lang] }}</p>
+  <img class="chart" src="/static/damage_chart.svg" alt="{{ headline.damage[lang] }}">
+  <p class="source" dir="ltr">{{ headline.damage.source }}</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>{{ t.reviewer_title }}</h2>
+  <p id="reviewer-status">{{ reviewer_line }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t.ablation_title }} <span class="kind kind-synthetic">{{ t.kind_synthetic }}</span></h2>
   <p class="note">{{ t.metrics_note }}</p>
   {% if runs %}
   <div class="table-wrap">
     <table class="numbers">
-      <thead><tr><th>run</th><th>changed</th><th>reader</th><th>claims</th><th>automation</th><th>approve precision</th><th>payable recall</th><th>false reject</th><th>reviews / 1000</th><th>ECE</th><th>cost SAR</th></tr></thead>
+      <thead><tr><th>{{ t.ab_change }}</th><th>{{ t.ab_claims }}</th><th>{{ t.ab_no_person }}</th><th>{{ t.ab_right_approvals }}</th><th>{{ t.ab_wrong_rejects }}</th><th>{{ t.ab_reviews }}</th></tr></thead>
       <tbody>
       {% for run in runs %}{% set m = run.report.metrics %}
-      <tr><td dir="ltr">{{ run.name }}</td><td dir="ltr">{{ run.changed }}</td><td>{{ run.report.reader }}</td>
-        <td class="num">{{ m.claims }}</td><td class="num">{{ m.automation_rate }}</td><td class="num">{{ m.auto_approve_precision }}</td>
-        <td class="num">{{ m.payable_recall }}</td><td class="num">{{ m.false_reject_rate }}</td><td class="num">{{ m.reviews_per_1000 }}</td>
-        <td class="num">{{ m.ece }}</td><td class="num">{{ m.total_cost_sar }}</td></tr>
+      <tr><td>{{ run.name }}</td><td class="num">{{ m.claims }}</td><td class="num">{{ m.automation_rate }}</td><td class="num">{{ m.auto_approve_precision }}</td>
+        <td class="num">{{ m.false_reject_rate }}</td><td class="num">{{ m.reviews_per_1000 }}</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}<p class="note">{{ t.no_metrics }}</p>{% endif %}
 </section>
-{% if readers %}
-<section class="card">
-  <h2>{{ t.reader_accuracy }}</h2>
-  <div class="table-wrap">
-    <table class="numbers">
-      <thead><tr><th>set</th><th>reader</th><th>receipts</th><th>total</th><th>subtotal</th><th>VAT</th><th>VAT no.</th><th>date</th><th>time</th><th>patient</th><th>provider</th><th>item codes</th></tr></thead>
-      <tbody>
-      {% for r in readers %}{% set s = r.summary %}
-      <tr><td dir="ltr">{{ r.name }}</td><td>{{ r.reader }}</td><td class="num">{{ s.receipts }}</td><td class="num">{{ s.total }}</td><td class="num">{{ s.subtotal }}</td>
-        <td class="num">{{ s.vat_total }}</td><td class="num">{{ s.vat_number }}</td><td class="num">{{ s.treatment_date }}</td><td class="num">{{ s.invoice_time }}</td>
-        <td class="num">{{ s.patient_name }}</td><td class="num">{{ s.provider_name }}</td><td class="num">{{ s.item_codes }}</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-{% endif %}
 {% endblock %}

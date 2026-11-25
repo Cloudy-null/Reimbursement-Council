@@ -4,6 +4,7 @@ Below the floor the answer is not_sure, which sends the claim to the member to c
 instead of rejecting it on a guess.
 """
 
+from collections.abc import Sequence
 from datetime import date
 
 from reimbursement_council.config.models import Settings
@@ -192,6 +193,20 @@ def _multiple_patients(extraction: ExtractionResult | None, settings: Settings) 
     return _result(rule, "pass", "One patient.", fields)
 
 
+def date_reading(
+    primary: ExtractionResult | None, others: Sequence[ExtractionResult], floor: float
+) -> ExtractionResult | None:
+    """The reading the date rules use: the billing document, or, when it has no confident
+    date, the other document with the most confident one (fix/final: a claim with no receipt
+    but a report dated two years ago was sent to a person instead of rejected as late)."""
+    if primary is not None and _confident_date(primary, floor) is not None:
+        return primary
+    dated = [r for r in others if _confident_date(r, floor) is not None]
+    if not dated:
+        return primary
+    return max(dated, key=lambda r: r.best("treatment_date").confidence)  # type: ignore[union-attr]
+
+
 def run_hard_rules(
     claim: Claim,
     policy: Policy,
@@ -199,11 +214,26 @@ def run_hard_rules(
     image_hash: str | None,
     seen: SeenReceipts,
     settings: Settings,
+    dated: ExtractionResult | None = None,
 ) -> list[RuleResult]:
-    """Every hard rule, always in the same order."""
+    """Every hard rule, always in the same order. When the billing document cannot tell the
+    date, a confident date on another document (`dated`) may make a date rule fail, never pass:
+    the member is still asked about an unclear date, but a claim that is plainly late or
+    outside the policy is rejected (fix/final)."""
+    late = _late(claim, extraction, settings)
+    inactive = _policy_inactive(policy, extraction, settings)
+    if dated is not None and dated is not extraction:
+        if (
+            late.outcome == "not_sure"
+            and (other := _late(claim, dated, settings)).outcome == "fail"
+        ):
+            late = other
+        inactive_other = _policy_inactive(policy, dated, settings)
+        if inactive.outcome == "not_sure" and inactive_other.outcome == "fail":
+            inactive = inactive_other
     return [
-        _late(claim, extraction, settings),
-        _policy_inactive(policy, extraction, settings),
+        late,
+        inactive,
         _person_not_covered(claim, policy),
         _excluded_service(extraction, settings),
         _duplicate(extraction, image_hash, seen, settings),

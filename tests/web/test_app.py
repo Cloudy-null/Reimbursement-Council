@@ -152,7 +152,7 @@ def test_self_fix_resend_counts_a_retry(web: tuple[TestClient, WebContext]) -> N
 def test_numbers_page_reads_harness_results(web: tuple[TestClient, WebContext]) -> None:
     client, ctx = web
     assert "No runs found" in client.get("/metrics").text
-    folder = ctx.results_root / "sets" / "check"
+    folder = ctx.results_root / "sets" / "abl" / "check_v2"  # the ablation table's check set
     folder.mkdir(parents=True)
     metrics = {
         "claims": 60,
@@ -176,5 +176,9 @@ def test_numbers_page_reads_harness_results(web: tuple[TestClient, WebContext]) 
         encoding="utf-8",
     )
     page = client.get("/metrics").text
-    assert "0.97" in page and "easyocr" in page and "arithmetic_checks_enabled=false" in page
-    assert "sroie / accuracy_abc" in page and "0.61" in page
+    # Plain names (web/final numbers page): the switch name is not shown, its meaning is.
+    assert "0.97" in page and "Arithmetic checks off" in page and "OCR only" in page
+    assert "Bad claims caught before payment" in page and "Synthetic" in page and "Real" in page
+    assert "/static/damage_chart.svg" in page
+    arabic = client.get("/metrics?lang=ar").text
+    assert "مطالبات فيها مشكلة اكتشفت قبل الدفع" in arabic and "بيانات حقيقية" in arabic

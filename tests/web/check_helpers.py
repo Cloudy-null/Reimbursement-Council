@@ -70,7 +70,11 @@ OTHER_PATIENT = PHARMACY.model_copy(
         ]
     }
 )
+OLD_PRESCRIPTION = PRESCRIPTION.model_copy(  # fix/final: a prescription from 2024, no receipt
+    update={"fields": [field("patient_name", "Sara Ahmed"), field("treatment_date", "2024-03-06")]}
+)
 READINGS = {
+    b"old-prescription": OLD_PRESCRIPTION,
     b"pharmacy": PHARMACY,
     b"prescription": PRESCRIPTION,
     b"blank": UNREADABLE,

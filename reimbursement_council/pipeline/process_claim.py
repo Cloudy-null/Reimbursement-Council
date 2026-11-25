@@ -20,7 +20,7 @@ from reimbursement_council.core.models.claim import Claim, Document, ExtractionR
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.models.reference import Member, ReferenceData
 from reimbursement_council.core.payout import calculate_payout
-from reimbursement_council.core.rules import receipt_keys, run_hard_rules
+from reimbursement_council.core.rules import date_reading, receipt_keys, run_hard_rules
 from reimbursement_council.pipeline.case_review import CaseReviewerService, decide_with_reviewer
 from reimbursement_council.pipeline.document_set import read_document_set
 
@@ -70,8 +70,10 @@ def process_claim(
     provider = reference.provider_by_vat(_vat_number(extraction))
     image_hash = None if primary is None else primary.image_hash
 
+    others = [r for doc_id, r in documents.readings.items() if doc_id != documents.primary_id]
+    dated = date_reading(extraction, others, settings.decision.hard_rule_confidence_floor)
     rule_results = run_hard_rules(
-        claim, policy, extraction, image_hash, store.seen_receipts(claim.claim_id), settings
+        claim, policy, extraction, image_hash, store.seen_receipts(claim.claim_id), settings, dated
     ) + list(documents.edit_rule_results)
     payout = None if extraction is None else calculate_payout(extraction, policy, history, settings)
     case = ClaimCase(
