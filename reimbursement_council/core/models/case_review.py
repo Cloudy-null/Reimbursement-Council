@@ -21,7 +21,14 @@ or cited a value we did not read. skipped: no answer (timeout, error, lane not r
 not connected). benched: the reviewer is switched off by its health checks."""
 
 ReviewProblem = Literal[
-    "schema", "citation", "timeout", "error", "not_connected", "lane_not_reviewed", "benched"
+    "schema",
+    "citation",
+    "timeout",
+    "error",
+    "not_connected",
+    "unchecked",
+    "lane_not_reviewed",
+    "benched",
 ]
 
 

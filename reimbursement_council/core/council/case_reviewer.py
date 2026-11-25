@@ -11,6 +11,7 @@ from typing import Any, Literal, get_args
 from pydantic import Field, ValidationError
 
 from reimbursement_council.config.models import CaseReviewerConfig
+from reimbursement_council.core.council.case_reviewer_summary import without_fence_words
 from reimbursement_council.core.models.case_review import (
     CaseReview,
     CitedField,
@@ -55,8 +56,13 @@ def answer_schema(config: CaseReviewerConfig) -> dict[str, Any]:
     }
 
 
+def _plain(text: str) -> str:
+    return " ".join(without_fence_words(text).split()).casefold()
+
+
 def _same_text(a: str, b: str) -> bool:
-    return " ".join(a.split()).casefold() == " ".join(b.split()).casefold()
+    """Equal ignoring spaces and case, and fence words the prompt replaced."""
+    return _plain(a) == _plain(b)
 
 
 def cited_value_matches(name: str, cited: str, read: str) -> bool:

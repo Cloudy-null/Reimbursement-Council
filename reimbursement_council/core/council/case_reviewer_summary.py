@@ -110,10 +110,15 @@ def build_summary(case: ClaimCase, votes: Sequence[Vote]) -> ReviewSummary:
     )
 
 
+def without_fence_words(text: str) -> str:
+    """The text as the model sees it: fence words inside the data are replaced."""
+    return _FENCE_WORDS.sub("[removed]", text)
+
+
 def render_prompt(summary: ReviewSummary) -> str:
     """The user message: the summary as JSON inside the data fence."""
     data = json.dumps(summary.model_dump(mode="json"), ensure_ascii=False, indent=1)
-    data = _FENCE_WORDS.sub("[removed]", data)
+    data = without_fence_words(data)
     return (
         "Review this claim.\n"
         f"{DATA_START}\n{data}\n{DATA_END}\n"
