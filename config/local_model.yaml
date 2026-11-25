@@ -1,12 +1,16 @@
 # The local model (Ollama on this machine). No document or claim leaves the computer.
 # The model only reads and gives one opinion. It never decides (docs/MODEL_SAFETY.md).
 url: "http://127.0.0.1:11434"
-model: "qwen3-vl:8b"
+model: "qwen3-vl:8b-instruct"
 temperature: 0.0
 seed: 7
 timeout_seconds: 180
 # How long Ollama keeps the model in GPU memory after a call, so the next claim does not wait.
 keep_alive: "30m"
+# Room for the photo and the answer (the 4096 default cut answers to nothing), and a cap on
+# the answer length so a model that repeats itself stops.
+num_ctx: 8192
+num_predict: 1200
 # Raise when a prompt changes, so cached answers and logged checks name the prompt they came from.
 prompt_version: "1"
 # Photos are scaled down to this longest side before the model sees them (speed; phone photos

@@ -173,3 +173,10 @@ def test_two_readers_agreeing_raise_confidence_and_disagreeing_lower_it() -> Non
     assert by_name["treatment_date"].value == "2026-11-17"
     assert by_name["subtotal"].confidence == 0.5  # only EasyOCR read it
     assert counts == {"readers_agree": 1, "readers_disagree": 1}
+
+
+def test_a_printed_quantity_like_2_point_0_is_two() -> None:
+    rows = [*OCR_ROWS, "Bandage 2.0 30.00"]
+    item = {"description": "Bandage", "quantity": "2.0", "amount": "30.00"}
+    result = check(answer(items=[item]), rows=rows)
+    assert [(i.quantity, i.unit_price) for i in result.items] == [(2, 1500)]

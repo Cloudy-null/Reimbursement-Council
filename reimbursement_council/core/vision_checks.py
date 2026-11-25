@@ -238,8 +238,8 @@ def _items(
         if amount is None or amount <= 0 or amount not in evidence.money or not described:
             counts["items_made_up"] += 1
             continue
-        quantity_text = "".join(c for c in (item.quantity or "1") if c.isdigit()) or "1"
-        quantity = max(1, int(quantity_text))
+        first_number = re.search(r"\d+", fix_digits(item.quantity or "1")[0])
+        quantity = max(1, int(first_number.group(0))) if first_number else 1
         unit = amount // quantity if amount % quantity == 0 else amount
         items.append(
             LineItem(

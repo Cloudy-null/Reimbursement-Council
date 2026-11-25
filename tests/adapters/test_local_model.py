@@ -37,7 +37,9 @@ def test_chat_sends_temperature_seed_schema_and_images() -> None:
     assert text == '{"a": 1}'
     url, body, _ = fake.calls[0]
     assert url == "http://127.0.0.1:11434/api/chat"
-    assert body["options"] == {"temperature": 0.0, "seed": config().seed}
+    assert body["options"]["temperature"] == 0.0
+    assert body["options"]["seed"] == config().seed
+    assert body["options"]["num_ctx"] == config().num_ctx
     assert body["format"] == {"type": "object"}
     assert body["stream"] is False
     assert body["messages"][-1]["images"] == ["iVBORw=="]

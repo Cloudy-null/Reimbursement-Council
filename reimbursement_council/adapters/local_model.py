@@ -80,7 +80,12 @@ class LocalModelClient:
             "stream": False,
             "think": False,
             "keep_alive": self.config.keep_alive,
-            "options": {"temperature": self.config.temperature, "seed": self.config.seed},
+            "options": {
+                "temperature": self.config.temperature,
+                "seed": self.config.seed,
+                "num_ctx": self.config.num_ctx,
+                "num_predict": self.config.num_predict,
+            },
         }
         if schema is not None:
             body["format"] = schema
