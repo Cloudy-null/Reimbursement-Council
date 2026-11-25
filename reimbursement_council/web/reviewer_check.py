@@ -29,3 +29,18 @@ def start_reviewer_check(reviewer: CaseReviewerService) -> threading.Thread:
 def reviewer_health(ctx: WebContext) -> HealthReport | None:
     """The reviewer's health for a screen, or None when no reviewer is connected."""
     return None if ctx.case_reviewer is None else ctx.case_reviewer.health()
+
+
+def reviewer_status_line(health: HealthReport | None, text: dict[str, str]) -> str:
+    """One line for the numbers page: healthy or benched, last check, golden score, reason."""
+    if health is None or health.state == "off":
+        return text["reviewer_state_off"]
+    parts = [text[f"reviewer_state_{health.state}"]]
+    if health.last_check_at is not None:
+        stamp = health.last_check_at.strftime("%Y-%m-%d %H:%M UTC")
+        parts.append(f"{text['reviewer_last_check']} {stamp}")
+    if health.golden_pass_rate is not None:
+        parts.append(f"{text['reviewer_golden']} {health.golden_pass_rate:.2f}")
+    if health.state == "benched" and health.bench_reason:
+        parts.append(f"{text['reviewer_reason']}: {health.bench_reason}")
+    return " | ".join(parts)

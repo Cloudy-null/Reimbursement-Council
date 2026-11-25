@@ -2,6 +2,7 @@
 {% block content %}
 <section class="card">
   <h2>{{ t.metrics }}</h2>
+  <p class="note" id="reviewer-status">{{ reviewer_line }}</p>
   <p class="note">{{ t.metrics_note }}</p>
   {% if runs %}
   <div class="table-wrap">
