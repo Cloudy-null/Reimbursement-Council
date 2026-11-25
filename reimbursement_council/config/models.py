@@ -137,6 +137,7 @@ class VisionConfig(ConfigModel):
     ground_ratio: Score
     vat_number_pattern: str
     future_days: int = Field(ge=0)
+    parallel_ocr: bool
 
 
 class DecisionConfig(ConfigModel):

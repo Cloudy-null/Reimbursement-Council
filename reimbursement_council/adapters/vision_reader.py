@@ -11,9 +11,10 @@ import logging
 import os
 import threading
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 from PIL import Image
 
@@ -36,6 +37,7 @@ from reimbursement_council.core.vision_checks import (
 from reimbursement_council.core.zatca import ZatcaInvoice, decode_zatca_tlv
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 SYSTEM = (
     "You read photos of medical invoices, receipts, prescriptions and medical reports for a "
@@ -129,9 +131,10 @@ class VisionReader:
         image = document_image(document, self._settings)
         payloads = find_qr_payloads(image)
         counts: Counter[str] = Counter()
-        # The model (GPU) and EasyOCR run at the same time: a new photo waits for the slower
-        # of the two, not for both one after the other.
-        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="vision") as pool:
+        # With EasyOCR on the CPU, the model (GPU) and EasyOCR run at the same time. With both on
+        # one GPU they take turns: together they ran out of GPU memory and slowed to a crawl.
+        workers = 1 if self._settings.decision.vision.parallel_ocr else 0
+        with _Pool(workers) as pool:
             asked = pool.submit(self._answer, image, counts)
             try:
                 lines: list[OcrLine] = self._engine.read(image)
@@ -178,6 +181,27 @@ class VisionReader:
             reader_counts=dict(counts),
             kind_hint=kind_hint,
         )
+
+
+class _Pool:
+    """A one-thread pool, or (workers 0) one that runs the job at once in this thread."""
+
+    def __init__(self, workers: int) -> None:
+        self._pool = ThreadPoolExecutor(max_workers=workers) if workers else None
+
+    def __enter__(self) -> "_Pool":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        if self._pool is not None:
+            self._pool.shutdown(wait=True)
+
+    def submit(self, job: Callable[..., T], *args: object) -> "Future[T]":
+        if self._pool is not None:
+            return self._pool.submit(job, *args)
+        done: Future[T] = Future()
+        done.set_result(job(*args))
+        return done
 
 
 def _first_invoice(payloads: list[str]) -> ZatcaInvoice | None:
