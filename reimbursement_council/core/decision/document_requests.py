@@ -62,10 +62,21 @@ def member_requests(
     asked_fields: Sequence[str],
     settings: Settings,
     kinds: Mapping[str, str] | None = None,
+    rule_requests: Sequence[SelfFixRequest] = (),
 ) -> list[SelfFixRequest]:
-    """kinds: document id to its kind, so a mismatch request can name the documents."""
+    """kinds: document id to its kind, so a mismatch request can name the documents.
+    rule_requests: Bupa FAQ document rules not met yet (they come first: the member must fix
+    the document before anything else is judged)."""
     english = settings.messages.en
     requests = [
+        request.model_copy(
+            update={
+                "text": english.requests.add_document.format(field=_label(request.field, settings))
+            }
+        )
+        for request in rule_requests
+        if request.field not in asked_fields
+    ] + [
         SelfFixRequest(kind="add_document", field=need.group[0], text=need.request.en)
         for need in needs
         if not need.satisfied and need.group

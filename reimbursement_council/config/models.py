@@ -189,6 +189,29 @@ class DecisionConfig(ConfigModel):
         return self
 
 
+class UnsupportedLanguageConfig(ConfigModel):
+    urdu_letters: list[str]
+    min_urdu_letters: int = Field(ge=1)
+    french_words: list[str]
+    min_french_words: int = Field(ge=1)
+
+
+class BupaRulesConfig(ConfigModel):
+    """Document rules from Bupa's claim confirmation FAQ (documents.yaml, bupa_rules)."""
+
+    enabled: bool
+    eye_test_on_invoice: bool
+    tooth_number: bool
+    proof_of_payment: bool
+    invoice_validity: bool
+    translation: bool
+    eye_test_markers: list[str] = Field(min_length=1)
+    tooth_number_pattern: str
+    invoice_number_pattern: str
+    credit_words: list[str]
+    unsupported_language: UnsupportedLanguageConfig
+
+
 class DocumentsConfig(ConfigModel):
     """Which documents each benefit category needs, how a document type is recognized, and
     how strict the cross-document checks are (config/documents.yaml)."""
@@ -206,6 +229,7 @@ class DocumentsConfig(ConfigModel):
     pdf_render_scale: float = Field(gt=0)
     max_pdf_pixels: int = Field(gt=0)
     max_files_per_upload: int = Field(gt=0)
+    bupa_rules: BupaRulesConfig
 
 
 class SyntheticConfig(ConfigModel):

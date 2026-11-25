@@ -45,3 +45,24 @@ pdf_render_scale: 2.0
 max_pdf_pixels: 20000000
 # At most this many files in one upload; the rest are refused with a message.
 max_files_per_upload: 10
+
+# Document rules from Bupa's real decision (source: Bupa Arabia claim confirmation FAQ;
+# translation: Bupa Arabia claim form). Each one not met is a request to the member.
+bupa_rules:
+  enabled: true
+  eye_test_on_invoice: true     # an eye prescription printed on the invoice counts as the eye test
+  tooth_number: true            # dental claims need the tooth number
+  proof_of_payment: true        # a credit (pay later) invoice needs a proof of payment
+  invoice_validity: true        # invoice number, VAT number and itemized lines on the billing document
+  translation: true             # documents in another language need a translation
+  eye_test_markers: [SPH, CYL]
+  tooth_number_pattern: '(tooth|teeth|رقم السن|السن رقم|سن رقم)\D{0,6}[1-8][1-8]\b'
+  invoice_number_pattern: '(invoice\s*(no|number|#)|inv[-\s]?no|رقم الفاتورة|فاتورة رقم)\D{0,6}[A-Z0-9-]*\d{3,}'
+  # CHECK: Tabby and Tamara (pay later services) are not listed: the real claim paid with Tabby
+  # was not held for a proof of payment.
+  credit_words: ["آجل", "credit invoice", "on credit", "pay later", "deferred payment"]
+  unsupported_language:
+    urdu_letters: ["ٹ", "ڈ", "ڑ", "ں", "ے", "ۓ", "ھ"]
+    min_urdu_letters: 2
+    french_words: [facture, montant, ttc, tva, ordonnance, merci, "réglé", regle, "numéro", numero, "payé", paye]
+    min_french_words: 2

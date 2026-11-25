@@ -73,7 +73,12 @@ def receipt(
             }
         ],
         "qr_payloads": [] if qr_timestamp is None else [qr(qr_timestamp, total, vat)],
-        "text_lines": ["Al Noor Clinic", "Receipt", "Patient: Sara Ahmed"],
+        "text_lines": [
+            "Al Noor Clinic",
+            "Receipt",
+            "Invoice No. INV-20261117-1234",
+            "Patient: Sara Ahmed",
+        ],
     }
 
 

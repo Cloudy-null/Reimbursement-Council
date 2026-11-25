@@ -104,6 +104,7 @@ def process_claim(
         claim.retake_fields,
         settings,
         {d.document_id: d.kind for d in documents.documents},
+        documents.rule_requests,
     )
     human_only = human_reasons(
         rule_results, documents.edits, documents.cross_checks, claim.retake_fields, settings
