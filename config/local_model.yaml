@@ -9,3 +9,8 @@ timeout_seconds: 180
 keep_alive: "30m"
 # Raise when a prompt changes, so cached answers and logged checks name the prompt they came from.
 prompt_version: "1"
+# Photos are scaled down to this longest side before the model sees them (speed; phone photos
+# are 4000 px and more).
+max_image_side: 1600
+# Valid model answers are kept here, keyed by image hash, model and prompt version.
+cache_dir: "data/cache/vision"

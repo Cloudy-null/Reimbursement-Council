@@ -363,3 +363,10 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
         end = next((i for i in range(header + 1, len(rows)) if kinds[i] in MONEY_ROWS), len(rows))
         items = _items(rows[header + 1 : end], document_id, settings)
     return ReaderOutput(fields=fields, line_items=items, qr_payloads=[])
+
+
+# Shared with the model reader's checks (core/vision_checks.py).
+first_date = _first_date
+fix_digits = _fix_digits
+MONEY_PATTERN = _MONEY
+match_service = _match_service

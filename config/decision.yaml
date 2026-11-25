@@ -23,6 +23,18 @@ paid_right_tolerance_halalas: 100
 gemini_reader_enabled: false
 # reader for images: easyocr (QR plus OCR text) or qr_only (QR codes only, no OCR install needed)
 reader: easyocr
+# The local model reader (reader: ollama; docs/MODEL_SAFETY.md). It only reads. Every value it
+# returns must pass the checks in core/vision_checks.py or it is dropped.
+vision:
+  field_confidence: 0.93      # a value the model read that passed every check
+  agree_confidence: 0.97      # the model and EasyOCR read the same value (two readers)
+  disagree_confidence: 0.60   # they read different values: under the floor, the member is asked
+  ground_ratio: 0.8           # how close a name must be to the OCR text to count as printed
+  vat_number_pattern: "^3[0-9]{13}3$"  # 15 digits, first and last 3 (CHECK in HANDOVER)
+  future_days: 1              # a date more than this many days after the upload is implausible
+# E (two readers): EasyOCR and the model agreeing raises a field's confidence, disagreeing
+# lowers it and asks the member. Only used with reader: ollama.
+two_readers_enabled: true
 # E12: compare patient, date and provider across the documents of a claim.
 cross_checks_enabled: true
 # when every arithmetic check passes, the money fields and items involved are corroborated

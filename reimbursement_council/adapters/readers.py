@@ -105,11 +105,20 @@ class QrOcrReader:
 
 
 def make_reader_for(settings: Settings, engine: OcrEngine) -> Callable[[Document], DocumentReader]:
-    """Reader picker for the configured image reader (easyocr or qr_only)."""
+    """Reader picker for the configured image reader (easyocr, qr_only or ollama)."""
+    vision: DocumentReader | None = None
+    if settings.decision.reader == "ollama":
+        # Imported here: the vision reader imports this module (document_image).
+        from reimbursement_council.adapters.local_model import LocalModelClient
+        from reimbursement_council.adapters.vision_reader import VisionReader
+
+        vision = VisionReader(LocalModelClient(settings.local_model), engine, settings)
 
     def pick(document: Document) -> DocumentReader:
         reader = reader_for(document)
         if isinstance(reader, QrImageReader):
+            if vision is not None:
+                return vision
             if settings.decision.reader == "easyocr":
                 return QrOcrReader(engine, settings)
             return QrImageReader(settings)
