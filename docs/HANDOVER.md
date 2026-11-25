@@ -70,21 +70,23 @@ sign in on both machines, then on the PC
 6. The review items not fixed are listed in section 5.
 
 ## 1. Current status
-main and core/day4 are the same and tagged demo-ready-final (core day 4 report above). All
-numbers are from 38cc89d. Defaults: reader ollama (qwen3-vl:8b-instruct through Ollama on this
-PC) with two readers on, calibration on, AI case reviewer off (benched by its golden set).
-
-Where tonight's pieces are: adapters/local_model.py (Ollama client, this machine only, no
-proxy), adapters/vision_reader.py (QR, EasyOCR and the model at the same time, checks, cache),
-core/vision_checks.py and core/vision_answer.py (the checks), core/two_readers.py,
-core/date_confirm.py, core/receipt_dates.py; the AI case reviewer in core/council/case_reviewer*.py,
-core/decision/reviewer_guard.py, core/reviewer_health.py, pipeline/case_review.py and
-cli/reviewer.py; the harness in evaluation/ (timing, reader_counts, run_rows, live_report) and
-cli/live_test.py.
-
-Machine notes: data/ is a junction to D:\rc-data\data (C: was full). Ollama models are in
-D:\ollama-models. EasyOCR runs on the CPU. Set TMP and TEMP to a folder on D: while C: is full.
-Tailscale is not installed on this PC.
+Core day 4b in progress on branch core/day4b (main at 541f75d, tag demo-ready-final-2: Steps 0
+and 1). Done on the branch so far, each with tests:
+- Step 0: realtest/ ignored and never committed; logs mask 7+ digit numbers; live-test reports
+  mask names and long numbers; consent recorded in MODEL_SAFETY.md.
+- Step 1: EasyOCR on the GPU (CUDA 13.0 PyTorch on Windows, decision 012); the model and EasyOCR
+  take turns on the one GPU. Live seconds per claim 13.855 to 8.057 (stand-in set).
+- Step 2: add-member (CLI and website form), merged from core/day4b-member.
+- Step 3: Bupa FAQ rules: VAT not paid, member share 20 percent capped at 100 SAR, benefit
+  sub-limits (optical frames), optical and dental services, eye test (on the invoice counts),
+  tooth number, proof of payment for credit invoices, invoice validity, translation; the check
+  page shows the expected payout and why before submit; export carries the new fields.
+- Step 4: real case study (docs/pitch/real_claim_case.md): estimate 450 SAR before submit, Bupa
+  paid 450 SAR. Four reading bugs found and fixed. Model prompt version 2 (item types).
+- Step 4b part: 8 image variants of the real invoice measured.
+- Step 5 part: HEIC uploads (decision 013).
+Running: Track B generators (worktree D:\rc-worktrees\gen, branch core/day4b-gen) and the new
+reviewer dev and held-out sets (tests/golden_v2).
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -191,10 +193,9 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   uv pip install torch --index-url https://download.pytorch.org/whl/cu124 (check the version).
 
 ## 6. Next 3 tasks
-1. Owner: real photos into data/live_test, then live-test; install Tailscale (docs/DEMO.md).
-2. Free space on C:, install the CUDA build of torch, rerun live-test for seconds per claim.
-3. Make a fresh held-out synthetic set and confirm the defaults on it; website pass for the
-   reviewer card (decision.case_review is in the decision and the export).
+1. Merge Track B, generate the optical, dental, damage and language sets, measure (4b, 4c).
+2. Step 4d: tune the reviewer prompt on tests/golden_v2/dev only, run heldout once.
+3. Step 5 demo claims and e2e; Step 6 rerun, docs, merge, tag demo-ready-final-3.
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
