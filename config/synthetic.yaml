@@ -20,3 +20,9 @@ defect_weights:
   date_mismatch: 4
   member_edit_supported: 3
   member_edit_contradicts: 3
+  # Made only by make-optical-claims and make-dental-claims. Weight 0: make-claims refuses
+  # any other value, so sets made with make-claims stay the same for a seed.
+  missing_eye_test: 0
+  missing_payment_proof: 0
+  invalid_invoice: 0
+  missing_tooth_number: 0

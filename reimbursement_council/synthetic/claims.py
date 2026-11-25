@@ -42,8 +42,24 @@ from reimbursement_council.synthetic.receipt_content import (
     make_receipt_content,
 )
 
-__all__ = ["PEOPLE", "GroundTruth", "SyntheticCase", "SyntheticSet", "make_claim_set", "member_id"]
+__all__ = [
+    "PEOPLE",
+    "SET_ONLY_DEFECTS",
+    "GroundTruth",
+    "SyntheticCase",
+    "SyntheticSet",
+    "make_claim_set",
+    "member_id",
+]
 
+# Made only by the optical and dental sets (make-optical-claims, make-dental-claims). They are
+# listed so config/synthetic.yaml can name them, always with weight 0 for make-claims.
+SET_ONLY_DEFECTS: tuple[str, ...] = (
+    "missing_eye_test",
+    "missing_payment_proof",
+    "invalid_invoice",
+    "missing_tooth_number",
+)
 # The defects this generator knows how to make. How often each appears is in
 # config/synthetic.yaml (defect_weights), which may name only these.
 KNOWN_DEFECTS: tuple[str, ...] = (
@@ -59,8 +75,10 @@ KNOWN_DEFECTS: tuple[str, ...] = (
     "unreadable",
     "tampered_total",
     *DOCUMENT_DEFECTS,
+    *SET_ONLY_DEFECTS,
 )
-DEFECTS = tuple(name for name in KNOWN_DEFECTS if name != "clean")
+# The defects make-claims mixes in. The set-only ones keep weight 0 here.
+DEFECTS = tuple(name for name in KNOWN_DEFECTS if name not in {"clean", *SET_ONLY_DEFECTS})
 HARD_RULE_DEFECTS = frozenset({"late", "inactive", "not_covered", "excluded", "duplicate"})
 
 REGULAR = range(len(PATIENTS))
@@ -169,6 +187,12 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
     if unknown:
         raise ValueError(
             f"synthetic.yaml names defects the generator cannot make: {sorted(unknown)}"
+        )
+    set_only = sorted(n for n in SET_ONLY_DEFECTS if settings.synthetic.defect_weights.get(n))
+    if set_only:
+        raise ValueError(
+            f"synthetic.yaml gives make-claims a weight for set-only defects: {set_only}. "
+            "Use make-optical-claims or make-dental-claims for them, and keep their weight 0."
         )
     names, weights = zip(*settings.synthetic.defect_weights.items(), strict=True)
     for index in range(count):
