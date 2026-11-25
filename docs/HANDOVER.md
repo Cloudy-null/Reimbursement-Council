@@ -8,7 +8,9 @@ section 1. The previous report (overnight day 4, merged to main as PR 8) is in S
 ## 1. Current status
 main is at 6c73980 (PRs 6, 7 and 8 merged: document set and overnight day 4). Tonight's work is
 on branch core/day4 (track 1) and core/day4-reviewer (track 2, the AI case reviewer, built in the
-worktree D:c-worktreeseviewer). Not merged yet.
+worktree D:
+c-worktrees
+eviewer). Not merged yet.
 
 Done tonight on core/day4:
 - Local model client (adapters/local_model.py, config/local_model.yaml): Ollama on this machine
@@ -22,7 +24,8 @@ Done tonight on core/day4:
 - docs/DEMO.md: Tailscale plan, laptop EasyOCR fallback, demo mode last resort.
 
 Machine notes: drive C: has about 30 MB free. Every command tonight sets TMP and TEMP to
-D:c-tmp. Tailscale is not installed on this PC.
+D:
+c-tmp. Tailscale is not installed on this PC.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -60,7 +63,8 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
 - CHECK (Task 14): screenshots were checked in the built-in browser only. Saved Playwright screenshots and an Impeccable audit are still to do (neither is installed here).
 - CHECK (E12): the check set has only 3 mismatch claims and no missing-document claims. The tune set run (120 claims, recorded in EXPERIMENTS) agrees: 7 of 7 mismatches caught, 2 false alarms in 113 from OCR misreading the Arabic patient name on a medical report, and 1 missing prescription not found because no line items were read.
 - CHECK (E12): a cross check on a low-confidence OCR name still counts as a mismatch. After the fixes no false alarms were left, but a heavy-damage name could still trip it. Consider "cannot tell" below the confidence floor.
-- CHECK (day 4): NPHIES was not verified to use FHIR. docs/INTEGRATION.md maps the export to base HL7 FHIR R4 Claim and ClaimResponse only, and says so. Only a third-party page claims NPHIES is on FHIR R4.
+- (Closed on core day 4: docs/INTEGRATION.md now says the national eClaims system is built on FHIR R4, from the simplifier.net Saudi Arabia jurisdiction page. The 2026 State of FHIR survey report itself was not found.)
+- CHECK (core day 4): Saudi VAT number format in config (decision.yaml vision.vat_number_pattern) is 15 digits, first and last digit 3. Several guides say so and one cites ZATCA e-invoicing rule BR-KSA-40; the official ZATCA document was not opened.
 - CHECK (day 4): one-tap date confirm sends a "yes" to a person instead of letting the tap clear the late and policy_inactive rules. Safer, but it does not raise automation. Owner to decide if a confirmed date that another document also shows may count.
 - CHECK (day 4): TIFF scans are refused; PDFs read only up to max_pdf_pages (3) pages and through OCR, not their text layer.
 - CHECK (day 4): log masking hides Arabic text, long numbers and emails in our log lines; uvicorn's own access log is not filtered (it holds only paths with claim ids).

@@ -139,9 +139,13 @@ guide for building an adapter, not a tested conversion.
 What does not map one to one: our confidence per value, the cross checks and the member edits
 with their evidence. In FHIR they would go in extensions.
 
-**NPHIES:** we did not verify which standard Saudi Arabia's NPHIES platform uses. One
-third-party page says it is built on FHIR R4, but no official NPHIES or CHI source was checked.
-Do not present the export as NPHIES ready without that check (CHECK in HANDOVER).
+**Saudi Arabia:** the national eClaims system is built on FHIR R4. Source: the Saudi Arabia
+jurisdiction page of the FHIR registry (simplifier.net, https://api.simplifier.net/jurisdictions/SA,
+mirrored at https://packages.fhir.org/jurisdictions/SA), which says the active FHIR version in
+the country is R4 and that the national eClaims system is built on it. Those pages are filled in
+from the HL7 State of FHIR survey; we did not find the 2026 survey report itself. Our mapping above
+uses base FHIR R4 only: the national profiles add their own required fields and code systems, so
+an adapter would still have to follow those profiles.
 
 ## Where the numbers come from
 
