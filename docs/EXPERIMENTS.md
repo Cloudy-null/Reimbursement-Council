@@ -368,3 +368,43 @@ Result: SROIE provider 0.35, date 0.5333, total 0.3333 (unchanged: field accurac
          confidence). Real e2e: 50 of 50 self_fix, automation 0.0, 0 wrong approvals, 0 false
          rejects. Seconds per claim 0.153 mean with the OCR cache (not a live timing).
 ```
+
+```
+Run: local model reader on real receipts (E1, E11 with the model)
+Date: 2026-11-25
+Model: qwen3-vl:8b-instruct through Ollama, temperature 0, seed 7, prompt version 1
+Commit: dcecc4d (first run, model answers not cached yet), 5cff017 (after grounding allows one
+         digit of OCR noise; model answers from the cache, same answers)
+Command: read-sroie data/real/sroie --reader ollama --two-readers off|on --results-name accuracy_core_ollama_<off|on>.json
+Test set: real_extraction, 60 SROIE scans (Malaysia, English, no QR)
+Result (5cff017):
+         EasyOCR alone (522713c): provider 0.35, date 0.5333, total 0.3333
+         model alone (two readers off): provider 0.5167, date 0.5167, total 0.6167
+         model + EasyOCR (two readers on): provider 0.5167, date 0.6, total 0.6167;
+           readers agreed on 87 fields and disagreed on 27 (those go under the floor)
+         made-up rate 0.2865: values the model returned that were found neither in the OCR
+           text nor in a QR code, out of 363 returned (dropped). Most are real values EasyOCR
+           misread (receipt 000: EasyOCR read 2013 for 2018), so this is "not confirmed", an
+           upper bound on invention. Implausible 70 of 363 (Malaysian GST numbers do not match
+           the Saudi VAT format, so every one is dropped). QR mismatch: no QR on SROIE.
+         Seconds per receipt with the model (dcecc4d, uncached): mean 4.232, median 4.061,
+           max 8.087 (EasyOCR from its cache).
+First try (dcecc4d, grounding exact): model alone provider 0.5167, date 0.45, total 0.5333;
+         made-up rate 0.3278. Exact grounding dropped right dates when EasyOCR misread one digit.
+Earlier failure: the qwen3-vl:8b tag thinks before answering and ignored think=false: every
+         answer hit the 1200 token cap with no content. Fixed by the 8b-instruct tag (63ba4de).
+```
+
+```
+Run: real end to end with the local model reader
+Date: 2026-11-25
+Commit: 5cff017
+Command: run-set data/sets/real_e2e --reader ollama --set two_readers_enabled=true|false
+Test set: real_e2e, 50 SROIE scans in a synthetic claim context
+Result: two readers on: self_fix 48, human_review 2; off: self_fix 46, human_review 4.
+         Automation 0.0, wrong approvals 0, false rejects 0 in both.
+Why no automation: SROIE receipts are Malaysian shop receipts (glue, food). No item is on our
+         price list and no provider can match, so the coverage and price members score near 0
+         and the member is asked (15 about the provider, 14 to confirm the date). This set
+         measures safety only; it cannot show automation for any reader.
+```
