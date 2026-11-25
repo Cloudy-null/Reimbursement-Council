@@ -8,7 +8,7 @@ arithmetic_checks_enabled: true
 arithmetic_tolerance_halalas: 1
 failed_check_confidence_factor: 0.5
 partial_payout_tolerance_halalas: 100
-calibration_enabled: false
+calibration_enabled: true
 calibration_method: platt
 disagreement_routing_enabled: true
 cost_lanes_enabled: true

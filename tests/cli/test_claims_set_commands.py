@@ -200,7 +200,7 @@ def fit(tmp_path: Path, rows: list[dict[str, object]]) -> dict[str, Any]:
     results.write_text(json.dumps({"rows": rows, "metrics": {}}), encoding="utf-8")
     config = tmp_path / "config"
     config.mkdir()
-    for name in CONFIG_FILES:
+    for name in (*CONFIG_FILES, "calibration.yaml"):  # calibration is on in the repo config
         (config / name).write_bytes((REPO_CONFIG / name).read_bytes())
     assert run("fit-calibration", str(results), "--config-dir", str(config)) == 0
     params: dict[str, Any] = yaml.safe_load((config / "calibration.yaml").read_text("utf-8"))
