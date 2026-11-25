@@ -194,3 +194,11 @@ def test_one_digit_of_ocr_noise_in_a_date_or_amount_still_counts_as_printed() ->
 def test_two_digits_off_is_not_printed() -> None:
     noisy = [r.replace("Total 345.00", "Total 395.50") for r in OCR_ROWS]
     assert "total" not in values(check(answer(subtotal=None, vat_total=None), rows=noisy))
+
+
+def test_a_name_in_both_scripts_keeps_the_latin_words() -> None:
+    from reimbursement_council.core.vision_checks import one_script
+
+    assert one_script("مركز الشفاء الطبي Al Shifa Medical Center") == "Al Shifa Medical Center"
+    assert one_script("عيادة النور") == "عيادة النور"
+    assert one_script("Al Noor Clinic") == "Al Noor Clinic"

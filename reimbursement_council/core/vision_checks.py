@@ -10,14 +10,11 @@ keeps a value only when every check passes:
 Arithmetic (items sum, VAT 15 percent) runs later on every reading in core/extraction.py.
 """
 
-import json
 import re
 from collections import Counter
 from datetime import date, timedelta
 from difflib import SequenceMatcher
 from typing import Literal
-
-from pydantic import ValidationError
 
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import ExtractedField, LineItem
@@ -26,73 +23,14 @@ from reimbursement_council.core.money import parse_sar_to_halalas
 from reimbursement_council.core.receipt_dates import first_date, fix_digits
 from reimbursement_council.core.receipt_parsing import MONEY_PATTERN
 from reimbursement_council.core.text import normalize_text
+from reimbursement_council.core.vision_answer import ANSWER_SCHEMA, VisionAnswer, parse_answer
 from reimbursement_council.core.zatca import ZatcaInvoice
+
+__all__ = ["ANSWER_SCHEMA", "VisionAnswer", "parse_answer"]
 
 _TIME = re.compile(r"(\d{1,2}):(\d{2})")
 NAME_FIELDS: tuple[FieldName, ...] = ("provider_name", "patient_name")
 MONEY_NAMES: tuple[FieldName, ...] = ("subtotal", "vat_total", "total")
-
-
-class VisionItem(Model):
-    description: str
-    quantity: str | None
-    amount: str | None
-
-
-class VisionAnswer(Model):
-    """The model's answer, values as printed. Any other shape is refused."""
-
-    document_kind: DocumentKind
-    provider_name: str | None
-    vat_number: str | None
-    date: str | None
-    time: str | None
-    patient_name: str | None
-    subtotal: str | None
-    vat_total: str | None
-    total: str | None
-    items: list[VisionItem]
-
-
-def _nullable() -> dict[str, object]:
-    return {"type": ["string", "null"]}
-
-
-ANSWER_SCHEMA: dict[str, object] = {
-    "type": "object",
-    "properties": {
-        "document_kind": {
-            "type": "string",
-            "enum": ["invoice", "receipt", "prescription", "medical_report", "other"],
-        },
-        **{
-            name: _nullable()
-            for name in VisionAnswer.model_fields
-            if name not in {"document_kind", "items"}
-        },
-        "items": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "description": {"type": "string"},
-                    "quantity": _nullable(),
-                    "amount": _nullable(),
-                },
-                "required": ["description", "quantity", "amount"],
-            },
-        },
-    },
-    "required": list(VisionAnswer.model_fields),
-}
-
-
-def parse_answer(text: str) -> VisionAnswer | None:
-    """The answer, or None when it is not valid JSON in the agreed shape (check 1)."""
-    try:
-        return VisionAnswer.model_validate(json.loads(text))
-    except (ValueError, ValidationError):
-        return None
 
 
 class Evidence(Model):
@@ -177,6 +115,20 @@ def _date_printed(day: date, printed: set[date]) -> bool:
     )
 
 
+_ARABIC_WORD = re.compile(r"[؀-ۿ]")
+_LATIN_WORD = re.compile(r"[A-Za-z]")
+
+
+def one_script(name: str) -> str:
+    """A name printed in both scripts ("مركز الشفاء Al Shifa") keeps its Latin words, as the
+    OCR parser does; a name in one script is kept as it is."""
+    words = name.split()
+    latin = [w for w in words if _LATIN_WORD.search(w)]
+    if latin and any(_ARABIC_WORD.search(w) for w in words):
+        return " ".join(latin)
+    return name
+
+
 Verdict = Literal["kept", "made_up", "implausible", "unparsed"]
 
 
@@ -221,7 +173,7 @@ def _check(
             qr is not None and qr.vat_number == digits
         )
         return ("kept" if printed else "made_up"), digits
-    value = raw.strip()
+    value = one_script(raw.strip())
     if not value:
         return "unparsed", None
     on_qr = qr is not None and name == "provider_name" and qr.seller_name.strip() == value
