@@ -1,35 +1,42 @@
 # Handover
 
-## Core day 4b report (read this first)
+## Core day 4b final report (read this first)
 
-Merged to main and tagged demo-ready-final-3. Stopped early: the session hit its usage limit.
-Tests: 862 pass at 3924032; the e2e demo test passes (4 of 4) at a5c7cb3 (only a rule pattern
-in config changed after). Numbers are in docs/EXPERIMENTS.md "Core day 4b".
+Merged to main and tagged demo-ready-final-4. Numbers are from commit ac2a7e4 (docs/EXPERIMENTS.md
+"FINAL CHECK of core day 4b", docs/pitch/numbers.md). After it, only the startup reviewer check
+and the e2e test setup changed (081b983). Tests: 865 pass; ruff and mypy clean; the e2e demo
+test passes 4 of 4 (add-member and the partial payout path included).
 
 - Case study (docs/pitch/real_claim_case.md): our estimate before submit 450 SAR, Bupa paid 450
-  SAR. Sent today: rejected as late (119 days). Sent on Bupa's received date: 450 SAR, human_review.
-- Seconds per claim (stand-in live set): 13.855 s (EasyOCR on CPU) to 8.057 s (GPU, taking turns).
-- Real invoice variants (8): date right 5, total 6, VAT 4, items 4; misses are blanks, never
-  wrong values. 90 degree rotation not handled.
-- Reviewer: tuned on tests/golden_v2/dev (0.65 to 1.0), held-out run once: 0.95 (19 of 20).
-  The held-out set is the startup golden set. Reviewer left OFF: the E3 check of wrong approvals
-  with the final rules (run /d/rc-tmp/f3, reviewer.txt) was not read before the stop. At a5c7cb3
-  it changed no lane and precision stayed 1.0.
-- Synthetic check set with all new rules (a5c7cb3): precision 1.0, false rejects 0, automation
-  0.3833 (from 0.5667): 12 dental claims asked for a tooth number (synthetic receipts never print
-  one), 10 asked for a full tax invoice (fixed in 3924032: a receipt number now counts).
-- Languages (synthetic): French flagged for translation 6 of 6, Urdu 0 of 6 (EasyOCR turns Urdu
-  letters into Arabic ones; words like "نمبر", "كا", "تعداد" could catch it). Arabic-Indic
-  digits: date and total 0 of 6 (OCR garbles them; the model reads them but is not confirmed).
+  SAR. Sent today: rejected as late (119 days). Sent on Bupa's received date: 450 SAR, a person
+  checks it (brand-name items read under the floor).
+- Seconds per claim through the website (stand-in set): 13.855 s before, 8.057 s with EasyOCR on
+  the GPU (09b4717).
+- Real-derived and robustness (synthetic): 150 damaged optical claims (10 kinds x levels 1, 3, 5),
+  0 wrong approvals at every level; docs/pitch/damage_chart.svg. Real invoice variants (8): date
+  5, total 6, VAT 4, items 4 right; every miss was a blank, never a wrong value.
+- Languages: translation asked for French 6 of 6 and Urdu 6 of 6, none of the 30 Arabic, English,
+  mixed, Hijri or Arabic-Indic receipts. Arabic-Indic digits are not read (0 of 6 totals).
+- AI reviewer: dev set (tuning) 0.65 to 1.0; held-out set (never looked at, run once) 0.95. With
+  it on: precision 1.0, 0 wrong approvals, 1 claim moved to a person. It is ON (config) and the
+  health file in data/reviewer is healthy after check-reviewer and reviewer-enable. The held-out
+  set is the startup golden set; startup only checks an unchecked model and prompt.
+- Synthetic check set (60): automation 0.5 with the reviewer (0.5167 without), precision 1.0,
+  false rejects 0. Real SROIE: total 0.6167, date 0.6, shop 0.5167; real e2e 0 wrong approvals.
 - Live test on data/live_test: no photos were there.
 
-Not done (left on the branch or to do): read /d/rc-tmp/f3 results (claim-level reruns at
-3924032, 30 damage folders) into EXPERIMENTS, the damage chart, numbers.md and SUMMARY.md from
-one commit, the reviewer on/off decision, the Urdu word rule.
-
-CHECKs: Tabby treated as paid (not a credit invoice); synthetic dental receipts lack tooth
-numbers; Urdu not detected; Arabic-Indic digits not confirmed; 90 degree rotation; the uv cache
-is at D:V-cache (user setting UV_CACHE_DIR); torch pinned to 2.14.1+cu130 on Windows.
+CHECKs:
+1. Tabby is treated as paid, not as a credit invoice (the real claim was not held for it).
+2. Synthetic dental receipts print no tooth number, so those claims are asked for one.
+3. Optical set: 0.45 of claims still raise a false patient-name alarm (the member is asked).
+4. Arabic-Indic digits: OCR garbles them, the model's right value is not confirmed.
+5. A photo turned 90 degrees is not read (try EasyOCR rotation_info).
+6. core/vision_checks.py is 318 lines and core/receipt_parsing.py 302: split next time.
+7. The uv cache is on D:\uv-cache (user setting UV_CACHE_DIR); PyTorch 2.14.1+cu130 is pinned
+   for Windows; data/ is a junction to D:\rc-data\data.
+8. The e2e test runs the demo path with the reviewer off; the reviewer has its own tests.
+9. If the model or prompt changes, run check-reviewer and reviewer-enable before a demo, or
+   the first start runs a golden check that holds the model for a few minutes.
 
 ## Core day 4 report
 

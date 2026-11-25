@@ -73,3 +73,7 @@
 ## 2026-11-25: core day 4b (stopped at the usage limit)
 - Done: privacy for realtest/, EasyOCR on the GPU, add-member, Bupa FAQ rules, real case study (450 SAR matches Bupa), real variants, generators, reviewer dev and held-out sets (held-out 0.95), HEIC, two demo claims, e2e extended.
 - Left: final reruns in /d/rc-tmp/f3 not recorded, numbers and summary not updated, reviewer stays off.
+
+## 2026-11-25: core day 4b, finished after the pause
+- Done: final reruns at ac2a7e4, reviewer back on (held-out 0.95, 0 wrong approvals), staff names and cities no longer read as the patient, Urdu found by its words, damage chart, numbers, summary, model safety, startup check only for an unchecked reviewer, e2e 4 of 4.
+- Tag: demo-ready-final-4.

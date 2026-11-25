@@ -116,7 +116,8 @@ def fixture(name: str) -> Claim:
 
 
 def council_only(claim: Claim, tmp_path: Path) -> Decision:
-    return decide(claim, repo_settings(), tmp_path / "council.sqlite")
+    """The council with the reviewer switched off (the repo config has it on since day 4b)."""
+    return decide(claim, enabled_settings(enabled=False), tmp_path / "council.sqlite")
 
 
 def same_as_council(decision: Decision, council: Decision) -> bool:
@@ -135,7 +136,7 @@ def injected_clean(tmp_path: Path) -> Claim:
 
 
 def test_switched_off_changes_nothing(tmp_path: Path) -> None:
-    decision = decide(fixture("clean"), repo_settings(), tmp_path / "a.sqlite")
+    decision = decide(fixture("clean"), enabled_settings(enabled=False), tmp_path / "a.sqlite")
     assert decision.case_review is None and decision.lane == "auto_approve"
 
 

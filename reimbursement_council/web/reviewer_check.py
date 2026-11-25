@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 def _check(reviewer: CaseReviewerService) -> None:
     """Errors are only logged: a failed check leaves the reviewer unused, never the site down."""
     try:
-        reviewer.run_check(datetime.now(UTC))
+        # Only when this model and prompt were never checked: a full golden run at every start
+        # held the one model for minutes while members waited (core day 4b, e2e).
+        reviewer.ensure_checked(datetime.now(UTC))
     except Exception:  # the council decides without the reviewer until a check passes
         logger.exception("reviewer startup check stopped early")
 

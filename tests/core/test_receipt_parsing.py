@@ -290,3 +290,12 @@ def test_a_year_first_date_with_slashes_is_read() -> None:
     rows = [line("2026/07/29 06:35 PM التاريخ", 100, width=300)]
     reading = parse_receipt_lines(DOC_ID, rows, repo_settings())
     assert {f.name: f.value for f in reading.fields}["treatment_date"] == "2026-07-29"
+
+
+def test_a_city_is_not_a_patient_label_and_the_prescription_line_names_the_patient() -> None:
+    rows = [
+        line("الرياض حي النخيل - طريق الملك", 100, width=300),
+        line("الوصفة الطبية - تركي صالح", 140, width=300),
+    ]
+    fields = {f.name: f.value for f in parse_receipt_lines(DOC_ID, rows, repo_settings()).fields}
+    assert fields.get("patient_name") == "تركي صالح"
