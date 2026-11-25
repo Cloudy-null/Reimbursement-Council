@@ -27,6 +27,11 @@ reader: easyocr
 cross_checks_enabled: true
 # when every arithmetic check passes, the money fields and items involved are corroborated
 passed_check_confidence: 0.95
+# One-tap date confirm (core day 4): a confirmed date with no other evidence counts with this
+# confidence (just above the 0.90 floor), unless the claim is within confirm_date_margin_days of
+# the claim window limit or past it; then a person checks it.
+member_confirmed_confidence: 0.92
+confirm_date_margin_days: 7
 ocr:
   label_match_ratio: 0.8      # how close an OCR word must be to a label word (0 to 1)
   alias_match_ratio: 0.8      # how close an OCR word must be to a service name word

@@ -205,7 +205,8 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
             quantity = amount // unit
         else:
             quantity = 1
-        confidence = min(line.confidence for line in row)
+        # Confidence per field: the numbers this item is read from, not the description words.
+        confidence = min(line.confidence for line in [*(m[1] for m in money), *ints])
         if quantity < 1 or quantity * unit != amount:
             confidence *= cfg.pattern_miss_factor
             quantity = max(quantity, 1)
@@ -262,6 +263,18 @@ def _first_date(text: str, years: tuple[int, int]) -> tuple[date, str | None, st
     return None
 
 
+_DATE_PART = re.compile(r"\d{1,4}\s*[/.\-]\s*\d{1,2}|\d{1,2}:\d{2}")
+
+
+def _date_confidence(row: list[OcrLine]) -> float:
+    """Confidence per field: the boxes that hold the date (and its time), not a label such as
+    "Date:" beside it. A misread label used to pull a right date under the floor."""
+    fixed = [(_fix_digits(x.text)[0], x) for x in row]
+    parts = [x for text, x in fixed if _DATE_PART.search(text)]
+    digits = [x for text, x in fixed if any(c.isdigit() for c in text)]
+    return min(x.confidence for x in (parts or digits or row))
+
+
 def _date_fields(
     document_id: str, row_text: str, confidence: float, years: tuple[int, int]
 ) -> list[ExtractedField]:
@@ -313,7 +326,7 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
                 found.add(kind)
         if "treatment_date" not in found:
             years = (cfg.min_date_year, cfg.max_date_year)
-            dated = _date_fields(document_id, join_row(row), min(x.confidence for x in row), years)
+            dated = _date_fields(document_id, join_row(row), _date_confidence(row), years)
             if dated:
                 fields.extend(dated)
                 found.add("treatment_date")

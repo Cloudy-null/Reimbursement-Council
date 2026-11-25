@@ -105,6 +105,9 @@ def _usable_confidence(edit: FieldEdit, settings: Settings) -> float | None:
     """The confidence to use a typed value with, or None when it must not be used."""
     if edit.evidence == "supports":
         return settings.decision.passed_check_confidence
+    if edit.confirmed and edit.evidence == "none":
+        # Only made after core/date_confirm.py said the tap may count (far from the limit).
+        return settings.decision.member_confirmed_confidence
     if edit.evidence == "none" and edit.field not in RULE_FIELDS:
         return settings.documents.unbacked_edit_confidence
     return None
@@ -130,7 +133,7 @@ def apply_edits(
                 name=edit.field,
                 value=edit.typed_value,
                 original_text=edit.read_value or "",
-                source="member_typed",
+                source="member_confirmed" if edit.confirmed else "member_typed",
                 confidence=confidence,
             )
         )

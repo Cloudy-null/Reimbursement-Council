@@ -39,6 +39,8 @@ class FieldEdit(Model):
     typed_value: str
     evidence: EditEvidence = "none"
     evidence_note: str = ""
+    # True for a one-tap "yes, this is right" on a value we read (not a typed change).
+    confirmed: bool = False
 
 
 class Claim(Model):

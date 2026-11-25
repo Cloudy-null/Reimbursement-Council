@@ -115,6 +115,8 @@ class DecisionConfig(ConfigModel):
     gemini_reader_enabled: bool
     reader: Literal["easyocr", "qr_only"]
     passed_check_confidence: Score
+    member_confirmed_confidence: Score
+    confirm_date_margin_days: int = Field(ge=0)
     cross_checks_enabled: bool
     ocr: OcrConfig
     members: MembersConfig
