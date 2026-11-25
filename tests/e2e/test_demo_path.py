@@ -135,3 +135,17 @@ def test_changed_total_goes_to_a_person_who_decides_and_the_data_downloads(
     page.get_by_role("button", name="Reject").click()
     page.goto(f"{url}/review")
     assert page.locator(f"a[href*='{claim_id}']").count() == 0
+
+
+def test_a_new_member_is_added_and_can_file_a_claim(
+    page: "playwright.Page", server: tuple[str, Path]
+) -> None:
+    """Core day 4b: add a person with benefit usage, then they are in the claim list."""
+    url, _ = server
+    page.goto(f"{url}/members/new?lang=en")
+    page.fill("#name", "Layla Hassan")
+    page.fill("#used_optical_frames", "600")
+    page.get_by_role("button", name="Add member").click()
+    page.wait_for_url("**/?**")
+    selected = page.locator("#patient option:checked").inner_text()
+    assert selected == "Layla Hassan"

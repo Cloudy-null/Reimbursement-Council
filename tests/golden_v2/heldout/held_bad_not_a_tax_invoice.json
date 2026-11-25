@@ -1,0 +1,172 @@
+{
+ "name": "held_bad_not_a_tax_invoice",
+ "kind": "clear_bad",
+ "expected": "bad",
+ "note": "The paper has no invoice number and no VAT number, so it is not a valid tax invoice.",
+ "summary": {
+  "claim_id": "20000000-0000-4000-8000-000000000009",
+  "categories": [
+   "outpatient"
+  ],
+  "fields": [
+   {
+    "document_kind": "receipt",
+    "name": "provider_name",
+    "value": "Corner Health Point",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "treatment_date",
+    "value": "2026-11-12",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "subtotal",
+    "value": "140.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "vat_total",
+    "value": "21.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "total",
+    "value": "161.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "receipt",
+    "name": "patient_name",
+    "value": "Fadi Saleh",
+    "confidence": 0.95,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "patient_name",
+    "value": "Fadi Saleh",
+    "confidence": 0.9,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "treatment_date",
+    "value": "2026-11-12",
+    "confidence": 0.9,
+    "source": "ocr"
+   }
+  ],
+  "line_items": [
+   {
+    "description": "Wound dressing",
+    "service_code": "PROC-DRS",
+    "quantity": 1,
+    "amount_sar": "140.00",
+    "confidence": 0.95
+   }
+  ],
+  "checks": [
+   {
+    "name": "receipt: items_sum_to_subtotal",
+    "passed": true,
+    "details": "items add up to the subtotal"
+   },
+   {
+    "name": "receipt: vat_is_15_percent",
+    "passed": true,
+    "details": "VAT is 15 percent"
+   },
+   {
+    "name": "receipt: subtotal_plus_vat_is_total",
+    "passed": true,
+    "details": "subtotal plus VAT is the total"
+   },
+   {
+    "name": "receipt: invoice_number_present",
+    "passed": false,
+    "details": "no invoice number found"
+   },
+   {
+    "name": "receipt: vat_number_present",
+    "passed": false,
+    "details": "no VAT number found"
+   },
+   {
+    "name": "receipt: items_itemized",
+    "passed": true,
+    "details": "each service is on its own line with a price"
+   },
+   {
+    "name": "patient_matches_account",
+    "passed": true,
+    "details": "the patient name matches the account"
+   },
+   {
+    "name": "dates_agree",
+    "passed": true,
+    "details": "dates agree"
+   }
+  ],
+  "rules": [
+   {
+    "rule": "late",
+    "outcome": "pass",
+    "reason": "inside the 90 day claim window"
+   },
+   {
+    "rule": "policy_inactive",
+    "outcome": "pass",
+    "reason": "policy active on the treatment date"
+   },
+   {
+    "rule": "person_not_covered",
+    "outcome": "pass",
+    "reason": "the patient is covered"
+   },
+   {
+    "rule": "excluded_service",
+    "outcome": "pass",
+    "reason": "no excluded service"
+   },
+   {
+    "rule": "duplicate",
+    "outcome": "pass",
+    "reason": "invoice not seen before"
+   }
+  ],
+  "payout_requested_sar": "161.00",
+  "payout_calculated_sar": "112.00",
+  "member_votes": [
+   {
+    "member": "document_checker",
+    "score": 0.2,
+    "reason": "No invoice number and no VAT number."
+   },
+   {
+    "member": "coverage_checker",
+    "score": 1.0,
+    "reason": "Every item is covered."
+   },
+   {
+    "member": "price_checker",
+    "score": 0.9,
+    "reason": "Prices are close to the network price."
+   },
+   {
+    "member": "history_member",
+    "score": 0.4,
+    "reason": "Provider not seen before; trust 0.40."
+   }
+  ]
+ }
+}

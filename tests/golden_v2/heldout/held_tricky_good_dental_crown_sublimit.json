@@ -1,0 +1,194 @@
+{
+ "name": "held_tricky_good_dental_crown_sublimit",
+ "kind": "tricky",
+ "expected": "good",
+ "note": "Only 900.00 is paid because 1000.00 of the dental sub-limit was left and the member share is capped at 100; that is the correct partial payout.",
+ "summary": {
+  "claim_id": "20000000-0000-4000-8000-000000000014",
+  "categories": [
+   "dental"
+  ],
+  "fields": [
+   {
+    "document_kind": "invoice",
+    "name": "provider_name",
+    "value": "Pearl Gate Dental Studio",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "vat_number",
+    "value": "333444555666703",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "treatment_date",
+    "value": "2026-11-10",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "subtotal",
+    "value": "2400.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "vat_total",
+    "value": "360.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "total",
+    "value": "2760.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "patient_name",
+    "value": "Jumana Sabbagh",
+    "confidence": 0.95,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "patient_name",
+    "value": "Jumana Sabbagh",
+    "confidence": 0.9,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "treatment_date",
+    "value": "2026-11-10",
+    "confidence": 0.9,
+    "source": "ocr"
+   }
+  ],
+  "line_items": [
+   {
+    "description": "Porcelain crown, tooth 14",
+    "service_code": "DEN-CROWN",
+    "quantity": 1,
+    "amount_sar": "2400.00",
+    "confidence": 0.95
+   }
+  ],
+  "checks": [
+   {
+    "name": "invoice: items_sum_to_subtotal",
+    "passed": true,
+    "details": "items add up to the subtotal"
+   },
+   {
+    "name": "invoice: vat_is_15_percent",
+    "passed": true,
+    "details": "VAT is 15 percent"
+   },
+   {
+    "name": "invoice: subtotal_plus_vat_is_total",
+    "passed": true,
+    "details": "subtotal plus VAT is the total"
+   },
+   {
+    "name": "invoice: invoice_number_present",
+    "passed": true,
+    "details": "an invoice number is printed"
+   },
+   {
+    "name": "invoice: vat_number_present",
+    "passed": true,
+    "details": "a 15 digit VAT number is printed"
+   },
+   {
+    "name": "invoice: items_itemized",
+    "passed": true,
+    "details": "each service is on its own line with a price"
+   },
+   {
+    "name": "patient_matches_account",
+    "passed": true,
+    "details": "the patient name matches the account"
+   },
+   {
+    "name": "dates_agree",
+    "passed": true,
+    "details": "dates agree"
+   }
+  ],
+  "rules": [
+   {
+    "rule": "late",
+    "outcome": "pass",
+    "reason": "inside the 90 day claim window"
+   },
+   {
+    "rule": "policy_inactive",
+    "outcome": "pass",
+    "reason": "policy active on the treatment date"
+   },
+   {
+    "rule": "person_not_covered",
+    "outcome": "pass",
+    "reason": "the patient is covered"
+   },
+   {
+    "rule": "excluded_service",
+    "outcome": "pass",
+    "reason": "no excluded service"
+   },
+   {
+    "rule": "duplicate",
+    "outcome": "pass",
+    "reason": "invoice not seen before"
+   },
+   {
+    "rule": "tooth_number_present",
+    "outcome": "pass",
+    "reason": "the tooth number is written on the invoice"
+   },
+   {
+    "rule": "dental_sub_limit",
+    "outcome": "pass",
+    "reason": "dental sub-limit 3000.00, 2000.00 already used, 1000.00 paid, 1400.00 over the limit not paid"
+   },
+   {
+    "rule": "member_share",
+    "outcome": "pass",
+    "reason": "20 percent of 1000.00 is 200.00, capped at 100.00"
+   }
+  ],
+  "payout_requested_sar": "2760.00",
+  "payout_calculated_sar": "900.00",
+  "member_votes": [
+   {
+    "member": "document_checker",
+    "score": 1.0,
+    "reason": "Required fields read and checks pass."
+   },
+   {
+    "member": "coverage_checker",
+    "score": 0.75,
+    "reason": "The crown is above the remaining sub-limit."
+   },
+   {
+    "member": "price_checker",
+    "score": 0.85,
+    "reason": "Prices score 0.85."
+   },
+   {
+    "member": "history_member",
+    "score": 0.6,
+    "reason": "History clean; provider trust 0.60."
+   }
+  ]
+ }
+}

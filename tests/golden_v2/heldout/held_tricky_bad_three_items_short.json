@@ -1,0 +1,193 @@
+{
+ "name": "held_tricky_bad_three_items_short",
+ "kind": "tricky",
+ "expected": "bad",
+ "note": "Three items add up to 285.00 but the subtotal is 310.00; VAT and total are consistent with the wrong subtotal.",
+ "summary": {
+  "claim_id": "20000000-0000-4000-8000-000000000017",
+  "categories": [
+   "outpatient"
+  ],
+  "fields": [
+   {
+    "document_kind": "invoice",
+    "name": "provider_name",
+    "value": "Family Care Medical Complex",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "vat_number",
+    "value": "319191919191913",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "treatment_date",
+    "value": "2026-11-08",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "subtotal",
+    "value": "310.00",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "vat_total",
+    "value": "46.50",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "total",
+    "value": "356.50",
+    "confidence": 0.97,
+    "source": "qr"
+   },
+   {
+    "document_kind": "invoice",
+    "name": "patient_name",
+    "value": "Tamer Sweidan",
+    "confidence": 0.95,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "patient_name",
+    "value": "Tamer Sweidan",
+    "confidence": 0.9,
+    "source": "ocr"
+   },
+   {
+    "document_kind": "medical_report",
+    "name": "treatment_date",
+    "value": "2026-11-08",
+    "confidence": 0.9,
+    "source": "ocr"
+   }
+  ],
+  "line_items": [
+   {
+    "description": "Family medicine consultation",
+    "service_code": "CONS-GP",
+    "quantity": 1,
+    "amount_sar": "140.00",
+    "confidence": 0.95
+   },
+   {
+    "description": "Blood glucose test",
+    "service_code": "LAB-GLU",
+    "quantity": 1,
+    "amount_sar": "85.00",
+    "confidence": 0.95
+   },
+   {
+    "description": "Lipid profile",
+    "service_code": "LAB-LIPID",
+    "quantity": 1,
+    "amount_sar": "60.00",
+    "confidence": 0.95
+   }
+  ],
+  "checks": [
+   {
+    "name": "invoice: items_sum_to_subtotal",
+    "passed": false,
+    "details": "items add up to 285.00, the subtotal says 310.00"
+   },
+   {
+    "name": "invoice: vat_is_15_percent",
+    "passed": true,
+    "details": "VAT is 15 percent"
+   },
+   {
+    "name": "invoice: subtotal_plus_vat_is_total",
+    "passed": true,
+    "details": "subtotal plus VAT is the total"
+   },
+   {
+    "name": "invoice: invoice_number_present",
+    "passed": true,
+    "details": "an invoice number is printed"
+   },
+   {
+    "name": "invoice: vat_number_present",
+    "passed": true,
+    "details": "a 15 digit VAT number is printed"
+   },
+   {
+    "name": "invoice: items_itemized",
+    "passed": true,
+    "details": "each service is on its own line with a price"
+   },
+   {
+    "name": "patient_matches_account",
+    "passed": true,
+    "details": "the patient name matches the account"
+   },
+   {
+    "name": "dates_agree",
+    "passed": true,
+    "details": "dates agree"
+   }
+  ],
+  "rules": [
+   {
+    "rule": "late",
+    "outcome": "pass",
+    "reason": "inside the 90 day claim window"
+   },
+   {
+    "rule": "policy_inactive",
+    "outcome": "pass",
+    "reason": "policy active on the treatment date"
+   },
+   {
+    "rule": "person_not_covered",
+    "outcome": "pass",
+    "reason": "the patient is covered"
+   },
+   {
+    "rule": "excluded_service",
+    "outcome": "pass",
+    "reason": "no excluded service"
+   },
+   {
+    "rule": "duplicate",
+    "outcome": "pass",
+    "reason": "invoice not seen before"
+   }
+  ],
+  "payout_requested_sar": "356.50",
+  "payout_calculated_sar": "228.00",
+  "member_votes": [
+   {
+    "member": "document_checker",
+    "score": 0.6,
+    "reason": "Items do not add up to the subtotal."
+   },
+   {
+    "member": "coverage_checker",
+    "score": 1.0,
+    "reason": "Every item is covered."
+   },
+   {
+    "member": "price_checker",
+    "score": 0.9,
+    "reason": "Prices are close to the network price."
+   },
+   {
+    "member": "history_member",
+    "score": 0.6,
+    "reason": "History clean; provider trust 0.60."
+   }
+  ]
+ }
+}
