@@ -1,6 +1,6 @@
 # Platt calibration, fitted by: reimbursement-council fit-calibration
 method: platt
-a: 18.988158
-b: -13.597297
-fitted_on: data\sets\docs\tune\results_core_fit.json (107 claims; 13 rejected by a
-  hard rule left out)
+a: 12.744003
+b: -9.393948
+fitted_on: data\sets\docs\tune\results_core_fit_ollama.json (105 claims; 15 rejected
+  by a hard rule left out)
