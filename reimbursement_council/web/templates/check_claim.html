@@ -25,7 +25,7 @@
   <form class="stack" method="post" action="/claims/{{ claim.claim_id }}/documents" enctype="multipart/form-data">
     <input type="hidden" name="lang" value="{{ lang }}">
     <label for="more">{{ t.add_files }}
-      <input id="more" type="file" name="photos" accept="image/png,image/jpeg,application/pdf" multiple>
+      <input id="more" type="file" name="photos" accept="image/png,image/jpeg,image/heic,image/heif,.heic,.heif,application/pdf" multiple>
     </label>
     <div class="btns"><button class="btn" type="submit">{{ t.add_files }}</button></div>
   </form>
