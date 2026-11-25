@@ -6,26 +6,36 @@ The report for the owner goes here at the end of the night (hard stop 05:30). Un
 section 1. The previous report (overnight day 4, merged to main as PR 8) is in SESSION_LOG.
 
 ## 1. Current status
-main is at 6c73980 (PRs 6, 7 and 8 merged: document set and overnight day 4). Tonight's work is
-on branch core/day4 (track 1) and core/day4-reviewer (track 2, the AI case reviewer, built in the
-worktree D:
-c-worktrees
-eviewer). Not merged yet.
+main is at 6c73980. Tonight's work is on branch core/day4 (track 1) and core/day4-reviewer
+(track 2, the AI case reviewer, finished in the worktree D:\rc-worktrees\reviewer, 672 tests,
+off by default). Neither is merged yet.
 
-Done tonight on core/day4:
-- Local model client (adapters/local_model.py, config/local_model.yaml): Ollama on this machine
-  only (any other host is refused), qwen3-vl:8b, temperature 0, fixed seed. The model is pulled;
-  its files are in D:\ollama-models (OLLAMA_MODELS).
-- run-set records seconds per claim and per stage (read, decide) and has --no-ocr-cache for
-  honest timings (evaluation/timing.py).
-- live-test command: sends every photo (or subfolder of photos) in a folder through the running
-  website as a member would (upload with consent, send, export), checks each export against the
-  schema and writes outputs/live_test/report.json with seconds per claim.
-- docs/DEMO.md: Tailscale plan, laptop EasyOCR fallback, demo mode last resort.
+Done on core/day4 (each with tests; numbers in EXPERIMENTS "Core day 4 night"):
+- (a) run-set records seconds per claim and per stage, --no-ocr-cache for honest timings.
+  live-test command sends photos through the running website (upload with consent, send,
+  export) and times each claim. docs/DEMO.md: Tailscale plan, laptop fallback, demo mode.
+- (b) Confidence per field: a date and an item's amount get the confidence of their own text
+  boxes, not the row minimum. One-tap date confirm: counts when another document shows the same
+  date, or when nothing else shows a date and the claim is more than 7 days from the 90 day
+  limit; otherwise a person (core/date_confirm.py). Calibration refitted on the tune set and on
+  by default (check set: precision 1.0, false rejects 0, ECE 0.2023 to 0.0602). New real
+  baseline at 522713c: SROIE provider 0.35, date 0.5333, total 0.3333; real e2e 50 of 50 self_fix.
+- (c) Local model reader (reader: ollama; adapters/vision_reader.py, core/vision_checks.py,
+  core/two_readers.py, decision 011): qwen3-vl:8b-instruct through Ollama on this machine only,
+  temperature 0, seed 7. Checks: strict schema with one retry, grounding in OCR text or QR (else
+  "made up"), QR as truth, plausibility, two readers (switch two_readers_enabled). Answers cached
+  by image hash, model and prompt version (data/cache/vision). read-sroie and read-accuracy take
+  --reader ollama and --two-readers and report made-up rate, QR mismatch rate and seconds.
+  The model's document type is used when keywords and QR find nothing.
+- docs/INTEGRATION.md: the national eClaims system is built on FHIR R4 (simplifier.net source).
 
-Machine notes: drive C: has about 30 MB free. Every command tonight sets TMP and TEMP to
-D:
-c-tmp. Tailscale is not installed on this PC.
+Running now: read-sroie with the model reader, two readers off and on (results in
+data/real/sroie/accuracy_core_ollama*.json).
+
+Machine notes: drive C: had 7 MB free. The data folder was moved to D:\rc-data\data and data/
+in the repo is now a junction (link) to it; every path works as before. Every command tonight
+sets TMP and TEMP to D:\rc-tmp. Ollama models are in D:\ollama-models. Tailscale is not
+installed on this PC.
 
 ## 2. Architecture overview and folder map
 One Python pipeline app (decision 001). Stages in reimbursement_council/pipeline/process_claim.py: read the primary receipt (adapters/readers.py), extraction with QR first and arithmetic checks (core/extraction.py), hard rules (core/rules.py), payout (core/payout.py), council (core/council/), combine and lanes (core/decision/), member message (core/explain.py), store (adapters/storage.py). Config loading in reimbursement_council/config/. Folder map in README.md and docs/CONVENTIONS.md.
@@ -112,10 +122,12 @@ Install uv (owner's machine: winget, lives in %LOCALAPPDATA%\Microsoft\WinGet\Li
   on C:. Please free space before the demo.
 
 ## 6. Next 3 tasks
-1. (b) Confidence per field instead of the row minimum; date confirm rule; calibration if safe;
-   new baseline on SROIE (60) and real e2e (50).
-2. (c) Ollama reader with its checks, measured one switch at a time.
-3. Merge track 2 (AI case reviewer) after (c) is on main; then (e) reports and Arabic, (f) docs.
+1. Finish (c) measurements: SROIE, real e2e and the synthetic check set with the model reader,
+   one switch at a time; default on only what keeps wrong approvals and false rejects at 0.
+2. Merge (c) to main (after all tests and the e2e demo test pass, tag demo-ready-N), then merge
+   core/day4-reviewer and measure E3 with the real model; run the golden set.
+3. (e) Arabic accuracy on the synthetic set, (f) MODEL_SAFETY.md, numbers page status line,
+   numbers.md and SUMMARY.md from one commit.
 
 ## 7. Project history
 - 2026-11-22: Solve for Bupa workshop day 1. Problem given: make insurance reimbursement claims frictionless and efficient.
