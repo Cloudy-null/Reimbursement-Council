@@ -11,6 +11,7 @@ import logging
 import os
 import threading
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Protocol
 
@@ -127,17 +128,21 @@ class VisionReader:
     def read(self, document: Document) -> ReaderOutput:
         image = document_image(document, self._settings)
         payloads = find_qr_payloads(image)
-        try:
-            lines: list[OcrLine] = self._engine.read(image)
-        except OcrNotInstalledError:
-            raise
-        except Exception as error:  # an untrusted file: OpenCV and torch raise their own types
-            raise ValueError(f"the file could not be read: {error}") from error
+        counts: Counter[str] = Counter()
+        # The model (GPU) and EasyOCR run at the same time: a new photo waits for the slower
+        # of the two, not for both one after the other.
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="vision") as pool:
+            asked = pool.submit(self._answer, image, counts)
+            try:
+                lines: list[OcrLine] = self._engine.read(image)
+            except OcrNotInstalledError:
+                raise
+            except Exception as error:  # an untrusted file: OpenCV and torch raise their own
+                raise ValueError(f"the file could not be read: {error}") from error
+            answer = asked.result()
         rows = group_rows(lines, self._settings.decision.ocr.row_overlap)
         text_lines = [join_row(row) for row in rows]
         qr = _first_invoice(payloads)
-        counts: Counter[str] = Counter()
-        answer = self._answer(image, counts)
         ocr_parse = parse_receipt_lines(document.document_id, lines, self._settings)
         ocr_cfg = self._settings.decision.ocr
         years = (ocr_cfg.min_date_year, ocr_cfg.max_date_year)
