@@ -5,9 +5,10 @@
   <input type="hidden" name="lang" value="{{ lang }}">
   <label for="patient">{{ t.who }}
     <select id="patient" name="patient">
-      {% for person in people %}<option value="{{ person.member_id }}">{{ person.display_name }}</option>{% endfor %}
+      {% for person in people %}<option value="{{ person.member_id }}"{% if person.member_id == selected %} selected{% endif %}>{{ person.display_name }}</option>{% endfor %}
     </select>
   </label>
+  <p class="note"><a href="/members/new?lang={{ lang }}">{{ t.member_add_link }}</a></p>
   <label for="photos">{{ t.photos }}
     <input id="photos" type="file" name="photos" accept="image/png,image/jpeg,application/pdf" multiple>
   </label>
