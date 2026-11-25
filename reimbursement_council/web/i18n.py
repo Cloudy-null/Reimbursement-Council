@@ -3,6 +3,7 @@
 from typing import Literal
 
 from reimbursement_council.web.i18n_members import MEMBER_TEXT
+from reimbursement_council.web.i18n_ui import UI_TEXT
 
 Language = Literal["en", "ar"]
 
@@ -288,6 +289,8 @@ TEXT: dict[str, dict[str, str]] = {
 }
 
 for _language, _strings in MEMBER_TEXT.items():
+    TEXT[_language].update(_strings)
+for _language, _strings in UI_TEXT.items():
     TEXT[_language].update(_strings)
 
 

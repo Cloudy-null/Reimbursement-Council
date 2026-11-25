@@ -3,11 +3,13 @@
 <section class="card">
   <h2>{{ t.queue }}</h2>
   {% if decisions %}
+  <p class="note">{{ t.queue_sorted }}</p>
   <div class="table-wrap">
     <table class="numbers">
       <tbody>
       {% for d in decisions %}
-      <tr>
+      <tr class="band band-{{ bands[d.claim_id] }}">
+        <td><span class="band-label">{{ t['band_' ~ bands[d.claim_id]] }}</span></td>
         <td class="num">{{ d.decided_at.strftime('%Y-%m-%d %H:%M') }}</td>
         <td dir="ltr">{{ d.lane_reason }}</td>
         <td class="num">{{ '%.2f' % (d.payout_calculated / 100) if d.payout_calculated is not none else '-' }}</td>

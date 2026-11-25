@@ -30,6 +30,7 @@ from reimbursement_council.web.export_routes import add_export_routes
 from reimbursement_council.web.i18n import text_for
 from reimbursement_council.web.member_routes import add_member_routes
 from reimbursement_council.web.numbers import find_reader_scores, find_runs
+from reimbursement_council.web.review_view import band, review_values, riskiest_first
 from reimbursement_council.web.reviewer_check import reviewer_health, reviewer_status_line
 
 __all__ = ["WebContext", "create_app"]
@@ -56,16 +57,20 @@ def create_app(ctx: WebContext) -> FastAPI:
             for d in ctx.store.list_decisions(lane="human_review")
             if ctx.store.load_review(d.claim_id) is None
         ]
-        return page(request, "queue.html", lang, decisions=waiting)
+        ordered = riskiest_first(waiting)
+        bands = {d.claim_id: band(d.p_good, ctx.settings) for d in ordered}
+        return page(request, "queue.html", lang, decisions=ordered, bands=bands)
 
     @app.get("/review/{claim_id}", response_class=HTMLResponse)
     def review_card(request: Request, claim_id: str, lang: str = "en") -> HTMLResponse:
+        values = claim_view(ctx, claim_id, lang)
         return page(
             request,
             "review.html",
             lang,
             opened=datetime.now(UTC).isoformat(),
-            **claim_view(ctx, claim_id, lang),
+            **values,
+            **review_values(ctx, claim_id, values["decision"].lane_reason),
         )
 
     @app.post("/review/{claim_id}")
