@@ -22,7 +22,7 @@ self_fix_p_good_limit: 0.6
 paid_right_tolerance_halalas: 100
 gemini_reader_enabled: false
 # reader for images: easyocr (QR plus OCR text) or qr_only (QR codes only, no OCR install needed)
-reader: easyocr
+reader: ollama
 # The local model reader (reader: ollama; docs/MODEL_SAFETY.md). It only reads. Every value it
 # returns must pass the checks in core/vision_checks.py or it is dropped.
 vision:

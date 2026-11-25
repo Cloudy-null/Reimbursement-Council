@@ -408,3 +408,26 @@ Why no automation: SROIE receipts are Malaysian shop receipts (glue, food). No i
          and the member is asked (15 about the provider, 14 to confirm the date). This set
          measures safety only; it cannot show automation for any reader.
 ```
+
+```
+Run: local model reader on the synthetic check set (one switch at a time)
+Date: 2026-11-25
+Commit: 5cff017 (code), runs started from it; calibration on
+Command: run-set data/sets/abl/check --reader ollama --set two_readers_enabled=true|false
+         --results-name results_core_ollama_tr_<true|false>.json
+Test set: synthetic check, 60 claims with documents (seed 12)
+Result:
+         EasyOCR (522713c, calibration on): automation 0.45, precision 1.0, false rejects 0,
+           reviews 116.7 per 1000, self_fix 433.3, ECE 0.0602, cross check false alarms 0 of 57
+         model + EasyOCR (two readers on): lanes auto_reject 10, auto_approve 26, human_review 13,
+           self_fix 11; automation 0.6, precision 1.0, false rejects 0.0, reviews 216.7,
+           self_fix 183.3, ECE 0.087, cost 325 SAR, document kind accuracy 1.0, cross checks
+           caught 3 of 3 with false alarm rate 0.0351 (2 of 57), heavy damage wrong approves 0.
+           Seconds per claim 5.811 mean (model answers not cached; read 5.757).
+         model alone (two readers off): auto_approve 27, self_fix 10, otherwise the same;
+           automation 0.6167, precision 1.0, false rejects 0.0, ECE 0.0879.
+Decision: reader ollama with two readers on is the new default. Both keep wrong approvals and
+         false rejects at 0 here and on real_e2e. Two readers costs 1 approval of 60 here but
+         raised the real date accuracy from 0.5167 to 0.6 and sends every disagreement to the
+         member, which is the safer side for documents judges hand us.
+```
