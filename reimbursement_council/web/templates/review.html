@@ -1,13 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
+<section class="why" id="why">
+  <h2>{{ t.why_title }}</h2>
+  {% if why_reasons %}<ul class="plain">{% for r in why_reasons %}<li dir="auto">{{ r }}</li>{% endfor %}</ul>{% else %}<p class="note">{{ t.why_none }}</p>{% endif %}
+</section>
 <div class="grid">
   <div class="doc-stack">
-    {% for doc in documents %}<img class="receipt-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="{{ kind_names[doc.kind] }}">{% endfor %}
+    <section class="card" id="claim-data"><h2>{{ t.claim_data_title }}</h2>
+      <dl class="fields">{% for f in field_rows %}
+        <div class="{{ 'typed' if f.typed }}"><dt>{{ kind_names[f.kind] if f.kind in kind_names else f.kind }} · {{ t['f_' ~ f.name] if ('f_' ~ f.name) in t else f.name }}</dt>
+          <dd dir="auto">{{ sar_text(f.name, f.value) }}{% if f.typed %}<span class="typed-tag">{{ t.typed_by_member }}</span>{% if f.read_value %}<span class="we-read">{{ t.we_read }}: {{ sar_text(f.name, f.read_value) }}</span>{% endif %}{% endif %}</dd></div>
+      {% endfor %}</dl>
+    </section>
+    <details class="card" id="documents"><summary>{{ t.view_documents }}</summary>
+      {% for doc in documents %}<img class="receipt-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="{{ kind_names[doc.kind] }}">{% endfor %}
+    </details>
   </div>
   <div class="card" style="background: none; border: 0; padding: 0">
     <section class="card result lane-{{ decision.lane }}">
       <span class="pill"><span class="dot"></span>{{ decision.lane }}</span>
-      <h2>{{ t.why }}</h2>
       <p class="message" dir="ltr" style="font-size: 16px">{{ decision.lane_reason }}</p>
       <div class="stats">
         <div class="stat"><span>{{ t.p_good }}</span><b class="mono">{{ '%.3f' % decision.p_good }}</b></div>
@@ -26,14 +37,9 @@
       </div>
       {% endfor %}
     </section>
-    <div class="two">
-      <section class="card"><h2>{{ t.rules }}</h2>
-        <ul class="list">{% for r in decision.rule_results %}<li><span class="state {{ r.outcome }}">{{ r.outcome }}</span><span dir="ltr"><b>{{ r.rule }}</b> {{ r.reason }}</span></li>{% endfor %}</ul>
-      </section>
-      <section class="card"><h2>{{ t.checks }}</h2>
-        <ul class="list">{% for c in decision.check_results %}<li><span class="state {{ 'pass' if c.passed else 'fail' }}">{{ 'pass' if c.passed else 'fail' }}</span><span dir="ltr"><b>{{ c.name }}</b> {{ c.details }}</span></li>{% else %}<li><span></span><span class="note">-</span></li>{% endfor %}</ul>
-      </section>
-    </div>
+    <details class="card" id="all-checks"><summary>{{ t.show_all_checks }}</summary>
+      <ul class="list">{% for item in passed_items %}<li><span class="state pass">pass</span><span dir="auto">{{ item }}</span></li>{% else %}<li><span></span><span class="note">-</span></li>{% endfor %}</ul>
+    </details>
     {% if edits %}
     <section class="card"><h2>{{ t.edits_title }}</h2>
       <div class="table-wrap"><table class="numbers">
@@ -46,9 +52,6 @@
       </table></div>
     </section>
     {% endif %}
-    <section class="card"><h2>{{ t.read_title }}</h2>
-      <div class="rows">{% for f in fields %}<div class="row{{ ' low' if f.low }}"><span class="label">{{ t['f_' ~ f.name] }}</span><span dir="auto">{{ f.value }}</span><span><span class="tag">{{ t['src_' ~ f.source] }}</span> <span class="mono">{{ f.confidence }}</span></span></div>{% endfor %}</div>
-    </section>
     <section class="card"><h2>{{ t.pay_math }}</h2>{% include "_money.html" %}</section>
     <form class="card" method="post" action="/review/{{ claim.claim_id }}">
       <h2>{{ t.decide }}</h2>

@@ -112,3 +112,26 @@ details.card summary { cursor: pointer; font-weight: 600; }
 .row input { width: 100%; }
 .consent { display: flex; gap: 10px; align-items: flex-start; color: var(--ink); }
 .consent input { margin-top: 4px; width: 20px; height: 20px; flex: none; }
+/* Final website pass (docs/DESIGN.md tokens only). */
+h3.sub { margin: 0; font-size: 15px; font-weight: 600; }
+.choices { border-inline-start: 4px solid var(--lane-selffix); }
+.choices h2 { font-size: 18px; }
+.choice { border: 1px solid var(--line); border-radius: 8px; padding: 16px; align-content: start; }
+.choice h3 { margin: 0; font-size: 16px; }
+.primary-choice { border: 2px solid var(--accent); background: var(--tint-approve); }
+.band { border-inline-start: 4px solid var(--lane); background: var(--tint); }
+.band-likely_ok { --lane: var(--lane-approve); --tint: var(--tint-approve); }
+.band-unsure { --lane: var(--lane-review); --tint: var(--tint-review); }
+.band-likely_not { --lane: var(--lane-reject); --tint: var(--tint-reject); }
+.band-label { font-size: 12px; font-weight: 600; color: var(--lane); white-space: nowrap; }
+.why { border-inline-start: 4px solid var(--lane-review); background: var(--tint-review); border-radius: 8px; padding: 12px 16px; }
+.why h2 { margin: 0 0 6px; font-size: 16px; }
+dl.fields { display: grid; margin: 0; }
+dl.fields div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 12px; padding: 8px; border-block-end: 1px solid var(--line); }
+dl.fields dt { color: var(--ink-muted); font-size: 14px; }
+dl.fields dd { margin: 0; overflow-wrap: anywhere; }
+dl.fields div.typed { background: var(--tint-selffix); border-inline-start: 4px solid var(--lane-selffix); }
+.typed-tag { display: inline-block; margin-inline-start: 6px; font-size: 12px; font-weight: 600; color: var(--lane-selffix); border: 1px solid currentColor; border-radius: 999px; padding: 0 8px; }
+.we-read { display: block; color: var(--ink-muted); font-size: 13px; }
+@media (max-width: 560px) { dl.fields div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+

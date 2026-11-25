@@ -153,6 +153,11 @@ class VisionConfig(ConfigModel):
     item_type_services: dict[str, str] = Field(default_factory=dict)
 
 
+class ReviewBands(ConfigModel):
+    likely_ok: Score
+    unsure: Score
+
+
 class DecisionConfig(ConfigModel):
     hard_rule_confidence_floor: Score
     disagreement_limit: Score
@@ -168,6 +173,9 @@ class DecisionConfig(ConfigModel):
     cost_lanes_enabled: bool
     fixed_p_good_threshold: Score
     always_review_amount_enabled: bool
+    review_bands: ReviewBands = Field(
+        default_factory=lambda: ReviewBands(likely_ok=0.8, unsure=0.5)
+    )
     always_review_amount_halalas: Halalas
     self_fix_enabled: bool
     self_fix_max_retries: int = Field(ge=0)
