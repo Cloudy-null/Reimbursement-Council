@@ -161,6 +161,21 @@ def _digits_printed(digits: str, all_digits: str) -> bool:
     )
 
 
+def one_digit_off(a: str, b: str) -> bool:
+    """Same length and at most one different character: small OCR noise ("2013" for "2018")."""
+    return len(a) == len(b) and sum(x != y for x, y in zip(a, b, strict=True)) <= 1
+
+
+def _money_printed(amount: int, printed: set[int]) -> bool:
+    return amount in printed or any(one_digit_off(str(amount), str(p)) for p in printed)
+
+
+def _date_printed(day: date, printed: set[date]) -> bool:
+    return day in printed or any(
+        one_digit_off(day.strftime("%Y%m%d"), p.strftime("%Y%m%d")) for p in printed
+    )
+
+
 Verdict = Literal["kept", "made_up", "implausible", "unparsed"]
 
 
@@ -185,7 +200,8 @@ def _check(
         if amount <= 0:
             return "implausible", None
         qr_money = set() if qr is None else {qr.total_with_vat, qr.vat_total}
-        return ("kept" if amount in evidence.money | qr_money else "made_up"), str(amount)
+        printed = amount in qr_money or _money_printed(amount, evidence.money)
+        return ("kept" if printed else "made_up"), str(amount)
     if name == "treatment_date":
         found = first_date(fix_digits(raw)[0], years)
         if found is None:
@@ -194,7 +210,8 @@ def _check(
         if day > uploaded + timedelta(days=cfg.future_days):
             return "implausible", None
         qr_day = None if qr is None else date.fromisoformat(qr.timestamp[:10])
-        return ("kept" if day in evidence.dates or day == qr_day else "made_up"), day.isoformat()
+        printed = day == qr_day or _date_printed(day, evidence.dates)
+        return ("kept" if printed else "made_up"), day.isoformat()
     if name == "vat_number":
         digits = "".join(c for c in fix_digits(raw)[0] if c.isdigit())
         if not re.fullmatch(cfg.vat_number_pattern, digits):
@@ -235,7 +252,8 @@ def _items(
         described = name_is_printed(
             item.description, evidence.text, settings.decision.vision.ground_ratio
         )
-        if amount is None or amount <= 0 or amount not in evidence.money or not described:
+        printed = amount is not None and _money_printed(amount, evidence.money)
+        if amount is None or amount <= 0 or not printed or not described:
             counts["items_made_up"] += 1
             continue
         first_number = re.search(r"\d+", fix_digits(item.quantity or "1")[0])

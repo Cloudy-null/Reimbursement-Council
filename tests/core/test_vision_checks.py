@@ -180,3 +180,17 @@ def test_a_printed_quantity_like_2_point_0_is_two() -> None:
     item = {"description": "Bandage", "quantity": "2.0", "amount": "30.00"}
     result = check(answer(items=[item]), rows=rows)
     assert [(i.quantity, i.unit_price) for i in result.items] == [(2, 1500)]
+
+
+def test_one_digit_of_ocr_noise_in_a_date_or_amount_still_counts_as_printed() -> None:
+    noisy = [
+        r.replace("2026-11-17", "2026-11-11").replace("Total 345.00", "Total 346.00")
+        for r in OCR_ROWS
+    ]
+    kept = values(check(answer(), rows=noisy))
+    assert kept["treatment_date"] == "2026-11-17" and kept["total"] == "34500"
+
+
+def test_two_digits_off_is_not_printed() -> None:
+    noisy = [r.replace("Total 345.00", "Total 395.50") for r in OCR_ROWS]
+    assert "total" not in values(check(answer(subtotal=None, vat_total=None), rows=noisy))
