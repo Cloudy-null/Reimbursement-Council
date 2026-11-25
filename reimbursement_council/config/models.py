@@ -147,6 +147,8 @@ class VisionConfig(ConfigModel):
     vat_number_pattern: str
     future_days: int = Field(ge=0)
     parallel_ocr: bool
+    rotation_retry: bool = True
+    rotation_strong_below: int = Field(default=3, ge=0)
     staff_words: list[str] = Field(default_factory=list)
     item_type_services: dict[str, str] = Field(default_factory=dict)
 
@@ -233,6 +235,8 @@ class DocumentsConfig(ConfigModel):
     pdf_render_scale: float = Field(gt=0)
     max_pdf_pixels: int = Field(gt=0)
     max_files_per_upload: int = Field(gt=0)
+    patient_name_min_confidence: Score = 0.8
+    prescription_before_days: int = Field(default=30, ge=0)
     bupa_rules: BupaRulesConfig
 
 

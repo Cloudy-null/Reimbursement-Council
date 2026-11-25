@@ -24,8 +24,13 @@ kind_keywords:
 kind_match_ratio: 0.85
 # How close a patient or provider name must be to count as the same.
 name_match_ratio: 0.85
+# A patient name read below this confidence cannot tell (web/final: low-confidence names were
+# every false patient alarm on the optical set).
+patient_name_min_confidence: 0.8
 # How many days treatment dates on different documents may differ and still agree.
 date_tolerance_days: 0
+# A prescription or eye test may be this many days older than the bill (web/final).
+prescription_before_days: 30
 # A failed cross check multiplies the document checker's score by this.
 cross_check_score_factor: 0.5
 # Provider names are compared between a medical report and the invoice only for these

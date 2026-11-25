@@ -20,10 +20,12 @@ from PIL import Image
 
 from reimbursement_council.adapters.local_model import LocalModelError
 from reimbursement_council.adapters.ocr_engine import OcrEngine, OcrNotInstalledError
+from reimbursement_council.adapters.orientation import rotated
 from reimbursement_council.adapters.qr_image import find_qr_payloads
 from reimbursement_council.adapters.readers import document_image
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Document, LineItem, ReaderOutput
+from reimbursement_council.core.reading_strength import reading_strength
 from reimbursement_council.core.receipt_parsing import match_service, parse_receipt_lines
 from reimbursement_council.core.receipt_rows import OcrLine, group_rows, join_row
 from reimbursement_council.core.two_readers import merge_readers
@@ -141,7 +143,25 @@ class VisionReader:
         return None
 
     def read(self, document: Document) -> ReaderOutput:
+        """Read the photo; when the reading is weak, also try it turned 90, 180 and 270 degrees
+        and keep the strongest (a photo taken on its side)."""
         image = document_image(document, self._settings)
+        best = self._read_image(document, image)
+        cfg = self._settings.decision.vision
+        floor = self._settings.decision.hard_rule_confidence_floor
+        if not cfg.rotation_retry or reading_strength(best, floor) >= cfg.rotation_strong_below:
+            return best
+        best_strength, best_angle = reading_strength(best, floor), 0
+        for angle in (90, 180, 270):
+            turned = self._read_image(document, rotated(image, angle))
+            strength = reading_strength(turned, floor)
+            if strength > best_strength:
+                best, best_strength, best_angle = turned, strength, angle
+        logger.info("document %s: read turned %d degrees", document.document_id, best_angle)
+        counts = dict(best.reader_counts) | {"rotated_degrees": best_angle}
+        return best.model_copy(update={"reader_counts": counts})
+
+    def _read_image(self, document: Document, image: bytes) -> ReaderOutput:
         payloads = find_qr_payloads(image)
         counts: Counter[str] = Counter()
         # With EasyOCR on the CPU, the model (GPU) and EasyOCR run at the same time. With both on

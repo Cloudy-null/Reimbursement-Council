@@ -12,6 +12,7 @@ Missing data gives passed = None ("cannot tell"), never a failure.
 """
 
 from collections.abc import Sequence
+from datetime import date
 from difflib import SequenceMatcher
 from itertools import combinations
 
@@ -20,6 +21,7 @@ from reimbursement_council.core.models.claim import Document, ExtractionResult
 from reimbursement_council.core.models.common import BILLING_KINDS, FieldName
 from reimbursement_council.core.models.decision import CrossCheckResult
 from reimbursement_council.core.models.reference import Member
+from reimbursement_council.core.name_match import is_a_name, same_person
 from reimbursement_council.core.receipt_rows import ARABIC_LETTERS
 from reimbursement_council.core.text import normalize_text
 
@@ -41,19 +43,23 @@ def _value(extraction: ExtractionResult, name: FieldName) -> str | None:
 
 
 def _patient_check(
-    documents: Sequence[DocumentReading], patient: Member, ratio: float
+    documents: Sequence[DocumentReading], patient: Member, ratio: float, min_confidence: float
 ) -> CrossCheckResult:
+    """A name read below min_confidence, or one that is not a name, cannot tell (web/final:
+    every false alarm on the optical set was such a name)."""
     compared: list[str] = []
     wrong: list[str] = []
     for document, extraction in documents:
-        read = _value(extraction, "patient_name")
-        if read is None:
+        field = extraction.best("patient_name")
+        if field is None or field.confidence < min_confidence or not is_a_name(field.value):
             continue
-        account = patient.name_ar if ARABIC_LETTERS.search(read) else patient.display_name
-        if account is None:
+        read = field.value
+        same_script = patient.name_ar if ARABIC_LETTERS.search(read) else patient.display_name
+        accounts = [n for n in (same_script, patient.display_name, patient.name_ar) if n]
+        if not accounts:
             continue
         compared.append(document.document_id)
-        if not _same_name(read, account, ratio):
+        if not any(same_person(read, account, ratio) for account in accounts):
             wrong.append(document.document_id)
     if not compared:
         details = "no patient name could be compared with the account"
@@ -77,9 +83,13 @@ def _patient_check(
     )
 
 
-def _dates_check(documents: Sequence[DocumentReading], tolerance_days: int) -> CrossCheckResult:
+def _dates_check(
+    documents: Sequence[DocumentReading], tolerance_days: int, prescription_days: int
+) -> CrossCheckResult:
+    """A prescription or eye test is written before the purchase: it may be up to
+    prescription_days older than the bill (web/final: an eye test 3 days before was an alarm)."""
     dated = [
-        (document.document_id, day)
+        (document.document_id, day, document.kind)
         for document, extraction in documents
         if (day := extraction.day("treatment_date")) is not None
     ]
@@ -88,22 +98,37 @@ def _dates_check(documents: Sequence[DocumentReading], tolerance_days: int) -> C
             name="dates_agree",
             passed=None,
             field="treatment_date",
-            document_ids=[d for d, _ in dated],
+            document_ids=[d for d, _, _ in dated],
             details="fewer than two documents have a treatment date",
         )
     apart = [
         (a, b)
-        for (a, day_a), (b, day_b) in combinations(dated, 2)
-        if abs((day_a - day_b).days) > tolerance_days
+        for (a, day_a, kind_a), (b, day_b, kind_b) in combinations(dated, 2)
+        if not _dates_fit(day_a, kind_a, day_b, kind_b, tolerance_days, prescription_days)
     ]
     ids = sorted({d for pair in apart for d in pair})
     return CrossCheckResult(
         name="dates_agree",
         passed=not apart,
         field="treatment_date",
-        document_ids=ids or [d for d, _ in dated],
+        document_ids=ids or [d for d, _, _ in dated],
         details="treatment dates differ between documents" if apart else "treatment dates agree",
     )
+
+
+def _dates_fit(
+    day_a: date, kind_a: str, day_b: date, kind_b: str, tolerance: int, prescription: int
+) -> bool:
+    if abs((day_a - day_b).days) <= tolerance:
+        return True
+    for (rx_day, rx_kind), (bill_day, bill_kind) in (
+        ((day_a, kind_a), (day_b, kind_b)),
+        ((day_b, kind_b), (day_a, kind_a)),
+    ):
+        before = (bill_day - rx_day).days
+        if rx_kind == "prescription" and bill_kind in BILLING_KINDS and 0 <= before <= prescription:
+            return True
+    return False
 
 
 def _same_provider(left: Sequence[str], right: Sequence[str], ratio: float) -> bool | None:
@@ -170,7 +195,9 @@ def cross_checks(
 ) -> list[CrossCheckResult]:
     config = settings.documents
     return [
-        _patient_check(documents, patient, config.name_match_ratio),
-        _dates_check(documents, config.date_tolerance_days),
+        _patient_check(
+            documents, patient, config.name_match_ratio, config.patient_name_min_confidence
+        ),
+        _dates_check(documents, config.date_tolerance_days, config.prescription_before_days),
         _providers_check(documents, categories, settings),
     ]

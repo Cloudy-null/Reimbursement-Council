@@ -218,3 +218,22 @@ def test_the_salesperson_is_not_taken_for_the_patient() -> None:
     result = check(answer(patient_name="مجد المرعي"), rows=rows)
     assert "patient_name" not in values(result)
     assert values(check(answer(patient_name="سارة أحمد"), rows=rows))["patient_name"] == "سارة أحمد"
+
+
+def test_arabic_indic_numbers_scrambled_by_ocr_are_kept_for_the_member_to_confirm() -> None:
+    """OCR read 264.50 as ٢٦٤٠٥ and 12-11-2026 as ١٢٠١١٠٢٠٢٦ (a slash as a zero)."""
+    rows = ["التاريخ ١٢٠١١٠٢٠٢٦ ٥٣؛١٩", "الإجمالى ٢٦٤٠٥"]
+    found = check(
+        answer(date="١٢-١١-٢٠٢٦", total="٢٦٤.٥٠", subtotal=None, vat_total=None, items=[]),
+        rows=rows,
+    )
+    kept = {f.name: (f.value, f.confidence) for f in found.fields}
+    floor = repo_settings().decision.hard_rule_confidence_floor
+    assert kept["total"][0] == "26450" and kept["total"][1] < floor
+    assert kept["treatment_date"][0] == "2026-11-12" and kept["treatment_date"][1] < floor
+
+
+def test_a_made_up_amount_is_not_saved_by_the_digit_set_match() -> None:
+    rows = ["الإجمالى ٢٦٤٠٥"]
+    found = check(answer(total="٩٩٩.٠٠", subtotal=None, vat_total=None, items=[]), rows=rows)
+    assert "total" not in values(found)
