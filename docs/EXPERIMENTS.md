@@ -625,3 +625,44 @@ Held-out run, once (commit 0da2ec5, prompt 5): 0.95 (19 of 20), limit 0.90: pass
 Decision: the held-out set becomes the startup golden set. The reviewer is re-enabled only if
   the synthetic check set also shows 0 wrong approvals with it on (final run).
 ```
+
+```
+Run: FINAL CHECK of core day 4b, every number from one commit
+Date: 2026-11-25
+Commit: ac2a7e4 (reader ollama qwen3-vl:8b-instruct, two readers, calibration on, AI reviewer on
+        and healthy after check-reviewer 0.95 and reviewer-enable, Bupa FAQ rules on)
+Scripts: D:\rc-tmp\f5\run.sh and check_only.sh (results named m_*.json)
+Synthetic check set, 60 claims (seed 12; regenerated as data/sets/abl/check_v2 so the truth
+  payouts follow the new rules: same images, VAT not paid, share cap):
+  default, reviewer on   auto_approve 20, self_fix 20, human_review 10, auto_reject 10;
+                         automation 0.5, precision 1.0, false rejects 0.0, reviews 166.7/1000,
+                         1.961 s per claim; reviewer used on 30, skipped 30 (lanes it does not
+                         review), discarded 0, score spread 0.42
+  reviewer off           automation 0.5167, precision 1.0, false rejects 0.0 (the reviewer moved
+                         1 claim to a person)
+  calibration off        automation 0.5167, ECE 0.1059 (on: 0.0991)
+  two readers off        automation 0.3667; EasyOCR only: automation 0.35 (precision 1.0 both)
+  arithmetic checks off  precision 0.9545 (wrong approvals appear)
+  --simulate-fix         automation 0.6, 8 fixes tried, 6 then paid right (0.75)
+  self-fix off + fix     human_review 29, reviews 483.3/1000 (with self-fix: 183.3)
+  cross checks off       catch rate 0.0 (on: 3 of 3, false alarms 0 of 57)
+  export                 60 of 60 valid, 21 ready for processing
+Real-derived synthetic optical set, 20 claims: self_fix 12, human_review 6, auto_reject 2;
+  false rejects 0; expected lane matched. Patient name false alarms 0.45 (from 0.65 at
+  82a1e98 and 0.70 at 3924032): the model took the salesperson, the OCR parser took a city
+  for the patient label; both fixed, the rest is still a CHECK.
+Dental set, 6 claims: self_fix 4, human_review 1, auto_approve 1; precision 1.0.
+Real e2e, 50: self_fix 50, 0 wrong approvals, 0 false rejects.
+Real SROIE, 60 (read-sroie): model + EasyOCR provider 0.5167, date 0.6, total 0.6167, made-up
+  rate 0.2885; EasyOCR alone 0.35, 0.5333, 0.3333.
+Synthetic receipts, 60 (read-accuracy eval_s1): model + EasyOCR provider 0.950, date 1.000,
+  patient 0.900, VAT 0.933, total 1.000, item codes 0.811 (EasyOCR 0.900, 1.000, 0.800, 0.867,
+  0.967, 0.622).
+Languages (synthetic, 6 each, D:\rc-tmp\lang_detect.py on the OCR text): translation asked for
+  French 6 of 6 and Urdu 6 of 6; Arabic, English, mixed, Hijri and Arabic-Indic 0 of 6 each.
+  Reading by language (a5c7cb3): Arabic-Indic digits date 0 and total 0 of 6 (OCR garbles
+  them; the model's right value cannot be confirmed); Hijri date 1 of 6.
+Damage suite (synthetic robustness): 5 clean optical claims x 10 damage kinds x levels 1, 3, 5
+  (150 claims): 0 wrong approvals at every level. Lanes per level in docs/pitch/damage_chart.svg:
+  as damage grows, claims go to the member (retake) or a person, never to a wrong approval.
+```
