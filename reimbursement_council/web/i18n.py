@@ -57,6 +57,13 @@ TEXT: dict[str, dict[str, str]] = {
         "save": "Save decision",
         "reviewed": "Reviewed",
         "metrics": "Measured numbers",
+        "reviewer_state_off": "AI reviewer: off",
+        "reviewer_state_unchecked": "AI reviewer: not checked yet",
+        "reviewer_state_healthy": "AI reviewer: healthy",
+        "reviewer_state_benched": "AI reviewer: benched",
+        "reviewer_last_check": "last check",
+        "reviewer_golden": "golden set",
+        "reviewer_reason": "reason",
         "metrics_note": (
             "Every number here comes from a harness run on synthetic data. "
             "Nothing is from real claims."
@@ -189,6 +196,13 @@ TEXT: dict[str, dict[str, str]] = {
         "save": "احفظ القرار",
         "reviewed": "تمت المراجعة",
         "metrics": "أرقام مقاسة",
+        "reviewer_state_off": "المراجع الذكي: متوقف",
+        "reviewer_state_unchecked": "المراجع الذكي: لم يفحص بعد",
+        "reviewer_state_healthy": "المراجع الذكي: سليم",
+        "reviewer_state_benched": "المراجع الذكي: موقوف",
+        "reviewer_last_check": "آخر فحص",
+        "reviewer_golden": "المجموعة المرجعية",
+        "reviewer_reason": "السبب",
         "metrics_note": "كل رقم هنا ناتج عن تشغيل على بيانات تجريبية. لا شيء من مطالبات حقيقية.",
         "no_metrics": "لا توجد نتائج بعد. شغل make-claims ثم run-set أولا.",
         "reader_accuracy": "دقة القراءة على فواتير تجريبية",

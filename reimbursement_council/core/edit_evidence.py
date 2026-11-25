@@ -36,8 +36,16 @@ def _qr_verdict(edit: FieldEdit, own: ExtractionResult) -> bool | None:
     return any(_same(edit.field, edit.typed_value, value) for value in values)
 
 
-def _other_documents_verdict(edit: FieldEdit, others: Sequence[ExtractionResult]) -> bool | None:
-    values = [field.value for other in others if (field := other.best(edit.field)) is not None]
+def _other_documents_verdict(
+    edit: FieldEdit, others: Sequence[ExtractionResult], floor: float
+) -> bool | None:
+    """Only a value read above the floor on another document can back or contradict an edit
+    (data review, core day 4: a weak reading must not let a tap decide a hard rule)."""
+    values = [
+        field.value
+        for other in others
+        if (field := other.best(edit.field)) is not None and field.confidence >= floor
+    ]
     if not values:
         return None
     return any(_same(edit.field, edit.typed_value, value) for value in values)
@@ -81,7 +89,7 @@ def judge_edit(
             "does not match the QR code on this document",
         ),
         (
-            _other_documents_verdict(edit, others),
+            _other_documents_verdict(edit, others, settings.decision.hard_rule_confidence_floor),
             "matches another document in this claim",
             "does not match another document in this claim",
         ),

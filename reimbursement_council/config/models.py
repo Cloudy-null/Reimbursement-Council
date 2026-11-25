@@ -1,22 +1,27 @@
 """Shapes of config/*.yaml. Every number the app uses is declared here and set in YAML."""
 
+__all__ = ["TEMPLATE_PLACEHOLDERS", "LanguageMessages", "MessageConfig"]
+
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
+from reimbursement_council.config.config_base import ConfigModel
+from reimbursement_council.config.message_models import (
+    TEMPLATE_PLACEHOLDERS,
+    LanguageMessages,
+    MessageConfig,
+)
 from reimbursement_council.core.decision.calibration import PlattParams
 from reimbursement_council.core.models.common import (
     DocumentKind,
     FieldName,
     Halalas,
+    Lane,
     MemberName,
     Score,
 )
 from reimbursement_council.core.models.reference import PriceListItem
-
-
-class ConfigModel(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class TierConfig(ConfigModel):
@@ -56,18 +61,48 @@ class HistoryMemberConfig(MemberConfig):
     provider_trust_weight: Score
 
 
+class CaseReviewerConfig(MemberConfig):
+    """The AI case reviewer (decision 010). It can only send a claim to a person."""
+
+    timeout_seconds: float = Field(gt=0)
+    check_timeout_seconds: float = Field(gt=0)
+    review_lanes: list[Lane]
+    score_floor: Score
+    disagreement_gap: Score
+    min_cited_fields: int = Field(ge=0)
+    max_reason_characters: int = Field(gt=0)
+    golden_good_min_score: Score
+    golden_bad_max_score: Score
+    golden_pass_rate: Score
+    monitor_window: int = Field(ge=1)
+    monitor_min_votes: int = Field(ge=1)
+    max_discarded_rate: Score
+    min_score_spread: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def usable_limits(self) -> Self:
+        if self.monitor_min_votes > self.monitor_window:
+            raise ValueError("monitor_min_votes cannot be more than monitor_window")
+        if self.golden_bad_max_score >= self.golden_good_min_score:
+            raise ValueError("golden_bad_max_score must be below golden_good_min_score")
+        return self
+
+
 class MembersConfig(ConfigModel):
     document_checker: DocumentCheckerConfig
     coverage_checker: CoverageCheckerConfig
     price_checker: PriceCheckerConfig
     history_member: HistoryMemberConfig
-    case_reviewer: MemberConfig
+    case_reviewer: CaseReviewerConfig
 
     @model_validator(mode="after")
     def usable_council(self) -> Self:
-        if self.case_reviewer.enabled:
-            raise ValueError("case_reviewer is not built yet, keep it disabled")
-        if not any(config.enabled and config.weight > 0 for _, config in self.in_order()):
+        # The case reviewer does not count: the council must be able to decide without it.
+        if not any(
+            config.enabled and config.weight > 0
+            for name, config in self.in_order()
+            if name != "case_reviewer"
+        ):
             raise ValueError("at least one council member must be enabled with weight above 0")
         return self
 
@@ -143,87 +178,6 @@ class DecisionConfig(ConfigModel):
         return self
 
 
-TEMPLATE_PLACEHOLDERS = {
-    "amount": "0.00",
-    "requested": "0.00",
-    "reason": "",
-    "request": "",
-    "claim_window_days": 0,
-    "field": "",
-    "documents": "",
-}
-"""Every value a member message template may use."""
-
-
-class LaneMessages(ConfigModel):
-    approved: str
-    approved_partial: str
-    rejected: str
-    self_fix: str
-    human_review: str
-
-
-class RuleMessages(ConfigModel):
-    late: str
-    policy_inactive: str
-    person_not_covered: str
-    excluded_service: str
-    duplicate: str
-    multiple_patients: str
-    member_edit: str
-
-
-class RequestMessages(ConfigModel):
-    retake_photo: str
-    add_document: str
-    confirm_field: str
-    missing_document: str
-    mismatch: str
-    check_photo: str
-
-
-class LanguageMessages(ConfigModel):
-    lanes: LaneMessages
-    rules: RuleMessages
-    requests: RequestMessages
-    fields: dict[str, str]
-    documents: dict[DocumentKind, str]
-    or_word: str
-
-
-class MessageConfig(ConfigModel):
-    en: LanguageMessages
-    ar: LanguageMessages
-
-    @model_validator(mode="after")
-    def same_field_labels(self) -> Self:
-        missing = set(self.en.fields) ^ set(self.ar.fields)
-        if missing:
-            raise ValueError(f"field labels must exist in both languages: {sorted(missing)}")
-        missing = set(self.en.documents) ^ set(self.ar.documents)
-        if missing:
-            raise ValueError(f"document names must exist in both languages: {sorted(missing)}")
-        return self
-
-    @model_validator(mode="after")
-    def known_placeholders(self) -> Self:
-        """A typo like {amout} fails here at startup, not when a member gets a message."""
-        for language_name, language in (("en", self.en), ("ar", self.ar)):
-            for section_name, section in (
-                ("lanes", language.lanes),
-                ("rules", language.rules),
-                ("requests", language.requests),
-            ):
-                for key, template in section.model_dump().items():
-                    try:
-                        template.format(**TEMPLATE_PLACEHOLDERS)
-                    except (KeyError, IndexError, ValueError) as error:
-                        raise ValueError(
-                            f"{language_name}.{section_name}.{key}: bad placeholder {error}"
-                        ) from error
-        return self
-
-
 class DocumentsConfig(ConfigModel):
     """Which documents each benefit category needs, how a document type is recognized, and
     how strict the cross-document checks are (config/documents.yaml)."""
@@ -269,6 +223,7 @@ class LocalModelConfig(ConfigModel):
     num_ctx: int = Field(gt=0)
     num_predict: int = Field(gt=0)
     prompt_version: str = Field(min_length=1)
+    reviewer_prompt_version: str = Field(min_length=1)
     max_image_side: int = Field(gt=0)
     cache_dir: str
 

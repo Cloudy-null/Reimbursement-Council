@@ -9,7 +9,7 @@ Built for the Solve for Bupa hackathon, November 2026 (brief: docs/brief/project
 ## What it does
 
 1. The member uploads their documents (photos, scans or PDFs): the invoice or receipt, and the prescription or medical report the claim needs. Nothing is typed.
-2. Each document is read offline (ZATCA QR code first, then OCR), and its type is found.
+2. Each document is read offline by a local vision AI model and by OCR at the same time (the ZATCA QR code is the truth). The model only reads: every value must be found on the document or the QR, or it is dropped (docs/MODEL_SAFETY.md).
 3. A check step shows what was read, names any missing document or mismatch (another patient's name, another date), and lets the member correct a value. The member fixes it before the claim is sent, not days later.
 4. Hard rules (late, not covered, duplicate, ...) can reject. A council of checks scores the rest, and the claim goes to one lane: approved, asked to fix one thing, or a person with every piece of evidence on one card.
 5. Every decided claim exports as structured JSON with a published schema (docs/INTEGRATION.md), ready for a claims system.
@@ -55,7 +55,7 @@ uv run pytest
 uv run reimbursement-council serve
 ```
 
-Open http://127.0.0.1:8000, tick the consent box and press a demo claim. The site reads the demo files in the background at start (about a minute the first time each day); `GET /api/ready` says when it is done. `--reader qr_only` starts it without OCR.
+Open http://127.0.0.1:8000, tick the consent box and press a demo claim. The site reads the demo files in the background at start (about a minute the first time each day); `GET /api/ready` says when it is done. The default reader needs [Ollama](https://ollama.com) running with `ollama pull qwen3-vl:8b-instruct`; `--reader easyocr` starts it with OCR only, `--reader qr_only` without OCR. The live demo steps are in docs/DEMO.md.
 
 ## Numbers
 

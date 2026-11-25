@@ -4,6 +4,7 @@ from typing import Self
 
 from pydantic import AwareDatetime, Field, model_validator
 
+from reimbursement_council.core.models.case_review import CaseReview
 from reimbursement_council.core.models.claim import CheckResult, FieldEdit
 from reimbursement_council.core.models.common import (
     CrossCheckName,
@@ -111,3 +112,5 @@ class Decision(Model):
     document_kinds: dict[str, DocumentKind] = Field(default_factory=dict)
     needs_missing: list[list[DocumentKind]] = Field(default_factory=list)
     cross_checks: list[CrossCheckResult] = Field(default_factory=list)
+    # The AI case reviewer (decision 010). None when it is switched off in config.
+    case_review: CaseReview | None = None

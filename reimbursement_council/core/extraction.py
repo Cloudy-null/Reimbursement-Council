@@ -207,6 +207,7 @@ def _corroborate(
     line_items: Sequence[LineItem],
     checks: Sequence[CheckResult],
     floor: float,
+    disagree_confidence: float,
 ) -> tuple[list[ExtractedField], list[LineItem]]:
     """When two or more arithmetic checks ran and all passed, the amounts agree with each
     other, so the money fields and items they used are trusted at least up to floor."""
@@ -216,7 +217,11 @@ def _corroborate(
     used = {name for check in arithmetic for name in check.fields}
     new_fields = [
         field.model_copy(update={"confidence": max(field.confidence, floor)})
-        if field.name in used and field.source != "qr"
+        if field.name in used
+        and field.source != "qr"
+        # the two readers disagreed (or the model only nearly matched the print): the member
+        # is asked; arithmetic must not lift it back over the floor (data review, core day 4)
+        and not (field.source == "vision" and field.confidence <= disagree_confidence)
         else field
         for field in fields
     ]
@@ -250,7 +255,13 @@ def extract_document(
     fields, items = _apply_penalties(
         fields, reading.line_items, checks, decision.failed_check_confidence_factor
     )
-    fields, items = _corroborate(fields, items, checks, decision.passed_check_confidence)
+    fields, items = _corroborate(
+        fields,
+        items,
+        checks,
+        decision.passed_check_confidence,
+        decision.vision.disagree_confidence,
+    )
     failed = [check.name for check in checks if not check.passed]
     logger.info(
         "document %s: %d fields, QR %s, failed checks %s",

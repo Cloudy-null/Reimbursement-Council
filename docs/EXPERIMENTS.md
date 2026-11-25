@@ -408,3 +408,140 @@ Why no automation: SROIE receipts are Malaysian shop receipts (glue, food). No i
          and the member is asked (15 about the provider, 14 to confirm the date). This set
          measures safety only; it cannot show automation for any reader.
 ```
+
+```
+Run: local model reader on the synthetic check set (one switch at a time)
+Date: 2026-11-25
+Commit: 5cff017 (code), runs started from it; calibration on
+Command: run-set data/sets/abl/check --reader ollama --set two_readers_enabled=true|false
+         --results-name results_core_ollama_tr_<true|false>.json
+Test set: synthetic check, 60 claims with documents (seed 12)
+Result:
+         EasyOCR (522713c, calibration on): automation 0.45, precision 1.0, false rejects 0,
+           reviews 116.7 per 1000, self_fix 433.3, ECE 0.0602, cross check false alarms 0 of 57
+         model + EasyOCR (two readers on): lanes auto_reject 10, auto_approve 26, human_review 13,
+           self_fix 11; automation 0.6, precision 1.0, false rejects 0.0, reviews 216.7,
+           self_fix 183.3, ECE 0.087, cost 325 SAR, document kind accuracy 1.0, cross checks
+           caught 3 of 3 with false alarm rate 0.0351 (2 of 57), heavy damage wrong approves 0.
+           Seconds per claim 5.811 mean (model answers not cached; read 5.757).
+         model alone (two readers off): auto_approve 27, self_fix 10, otherwise the same;
+           automation 0.6167, precision 1.0, false rejects 0.0, ECE 0.0879.
+Decision: reader ollama with two readers on is the new default. Both keep wrong approvals and
+         false rejects at 0 here and on real_e2e. Two readers costs 1 approval of 60 here but
+         raised the real date accuracy from 0.5167 to 0.6 and sends every disagreement to the
+         member, which is the safer side for documents judges hand us.
+```
+
+```
+Run: AI case reviewer golden set with the real model (check-reviewer)
+Date: 2026-11-25
+Model: qwen3-vl:8b-instruct, text only, temperature 0, seed 7
+Command: check-reviewer --data-dir <separate folder>
+Test set: tests/golden, 20 claim summaries (6 clear good, 5 clear bad, 5 tricky, 4 injection)
+Result:
+         8d239e3, reviewer prompt 2: pass rate 0.35 (limit 0.90), benched. 13 answers discarded
+           by the schema check: the model wrote a whole number score (0), and repeated the same
+           cited field until the answer was cut off.
+         first run (e59b4e6, prompt 1): pass rate 0.25, benched. Reasons longer than 300
+           characters were discarded.
+         6b60397, reviewer prompt 3: pass rate 0.85 (17 of 20), benched (limit 0.90). Every clear
+           good, clear bad and injection case passed. Failed: tricky_bad_cosmetic_as_consult,
+           tricky_bad_date_in_future, tricky_bad_huge_quantity (scored 1.0, expected bad).
+Honesty note: prompts 2 and 3 were written after seeing golden failures (format fixes, and
+         one sentence that the calculated payout is normally lower than the requested one after
+         co-pay). So 0.85 is not a clean held-out score. No more changes were made against it.
+Decision: the reviewer stays off by default and benched. The circuit breaker worked as built.
+```
+
+```
+Run: E3, council with vs without the AI case reviewer
+Date: 2026-11-25
+Commit: 6b60397 (reader ollama with two readers, calibration on; model answers cached)
+Command: run-set data/sets/abl/check --results-name results_core_e3_off.json
+         run-set data/sets/abl/check --set members.case_reviewer.enabled=true
+           --set members.case_reviewer.golden_pass_rate=0.85 --data-dir <separate folder>
+           --results-name results_core_e3_on.json
+         (the pass limit was lowered for this measurement only, so the benched reviewer runs)
+Test set: synthetic check, 60 claims (seed 12)
+Result: off: auto_approve 26, human_review 13, self_fix 11, auto_reject 10; automation 0.6,
+         precision 1.0, false rejects 0.0, reviews 216.7 per 1000, ECE 0.087, 0.145 s per claim.
+         on: auto_approve 25, human_review 14; automation 0.5833, precision 1.0, false rejects
+         0.0, reviews 233.3, ECE 0.0715, 2.549 s per claim. Reviewer used on 39 claims, skipped
+         on 21 (lanes it does not review), 0 discarded. It moved 1 claim, claim_12_0036
+         (payable, overpriced: paid in part) from auto_approve to a person.
+Meaning: on this set the reviewer only costs: there was no wrong approval for it to stop.
+```
+
+```
+Run: (e) Arabic and English reading on the synthetic receipts, EasyOCR vs the local model
+Date: 2026-11-25
+Commit: 9671aea (model answers cached from the first run at 1625c6a; the code change in
+         between only turns a name printed in both scripts into its Latin words)
+Command: read-accuracy data/receipts/eval_s1 --reader easyocr --results-name accuracy_core_easyocr.json
+         read-accuracy data/receipts/eval_s1 --reader ollama --two-readers on --results-name accuracy_core_ollama.json
+Test set: SYNTHETIC receipts, 60 (seed 1): 29 Arabic-first clinic invoices, 23 bilingual clinic
+         invoices, 8 bilingual pharmacy receipts, with light and heavy photo damage. Not real data.
+Result: EasyOCR: provider 0.900, VAT number 0.983, date 1.000, time 0.967, patient 0.800,
+         subtotal 0.983, VAT 0.867, total 0.967, item codes 0.622.
+         Model + EasyOCR: provider 0.950, VAT number 0.983, date 1.000, time 0.983,
+         patient 0.917, subtotal 0.983, VAT 0.933, total 1.000, item codes 0.803.
+         Made-up rate 0.05 (values not found in the OCR text or QR, dropped). QR mismatch rate
+         0.0 (0 of 78 compared). Readers agreed on 442 fields and disagreed on 7.
+         Arabic-first layout (29): provider 0.966, total 1.0. Bilingual clinic (23): provider
+         0.913, total 1.0. Pharmacy (8): provider 1.0, total 1.0.
+         First run at 1625c6a gave provider 0.683: the model wrote both names together
+         ("مركز الشفاء الطبي Al Shifa Medical Center"); fixed in core with a test.
+```
+
+```
+Run: FINAL CHECK, every headline number from one commit (core day 4)
+Date: 2026-11-25
+Commit: 38cc89d (after the code and data reviews; calibration refitted on the tune set with
+         the model reader: a=12.744003, b=-9.393948, 105 claims, 15 hard rule rejects left out)
+Script: D:\rc-tmp\final\run_all.sh (each command below; results named f_*.json)
+Defaults: reader ollama (qwen3-vl:8b-instruct) with two readers on, calibration on, AI case
+         reviewer off.
+
+Synthetic check set, 60 claims (seed 12): run-set data/sets/abl/check [switch]
+  default          auto_approve 24, human_review 18, self_fix 8, auto_reject 10; automation 0.5667,
+                   precision 1.0, false rejects 0.0, reviews 300.0/1000, ECE 0.0991, cost 450 SAR
+  --calibration off   automation 0.6, precision 1.0, false rejects 0.0, reviews 266.7, ECE 0.1059
+  E2 arithmetic off   automation 0.55, precision 0.8889, false rejects 0.0, ECE 0.1952, cost 892.5
+  E3 one member       automation 0.6667, precision 1.0, false rejects 0.0, reviews 200.0
+  E5 routing off      automation 0.5833, precision 1.0, false rejects 0.0, reviews 283.3
+  E7 cost lanes off   automation 0.55, precision 1.0, false rejects 0.0, reviews 316.7
+  E9 history off      automation 0.6167, precision 1.0, false rejects 0.0, reviews 250.0
+  two readers off     automation 0.3667, precision 1.0, false rejects 0.0, self_fix 466.7
+  --reader easyocr    automation 0.3833, precision 1.0, false rejects 0.0, self_fix 433.3
+  E8 --simulate-fix   auto_approve 27, human_review 23, none left waiting; automation 0.6167,
+                      precision 1.0, 8 fixes tried, 5 then paid right (0.625), cost 575 SAR
+  E8 self-fix off + fix  human_review 26, automation 0.5667, cost 650 SAR
+  E3 AI reviewer on (golden limit 0.85 for this run only)  automation 0.55, precision 1.0,
+                      false rejects 0.0, reviews 316.7, 2.745 s per claim
+E12 cross checks: run-set data/sets/docs/check|tune --cross-checks on|off
+  check (60): on: 3 of 3 caught, false alarms 0 of 57, automation 0.5667; off: 0 caught,
+              automation 0.6 (precision 1.0 both)
+  tune (120): on: 7 of 7 caught, false alarm rate 0.0177 (2 of 113), automation 0.4;
+              off: 0 caught, automation 0.4167 (precision 1.0 both)
+Real SROIE, 60 scans: read-sroie data/real/sroie --reader ollama|easyocr [--two-readers on|off]
+  EasyOCR: provider 0.35, date 0.5333, total 0.3333
+  model + EasyOCR: provider 0.5167, date 0.6, total 0.6167; made-up rate 0.2865 (104 of 363
+              returned values not found in the OCR text; 15 more only one digit away, kept under
+              the floor); readers agreed 87, disagreed 27
+  model alone: provider 0.5167, date 0.5167, total 0.6167
+Real e2e, 50: run-set data/sets/real_e2e: model reader self_fix 48, human_review 2; EasyOCR
+              self_fix 50. Automation 0.0, precision n/a (no approvals), false rejects 0.0.
+Synthetic receipts, 60 (Arabic-first and bilingual): read-accuracy data/receipts/eval_s1
+  EasyOCR: provider 0.900, date 1.000, patient 0.800, VAT 0.867, total 0.967, item codes 0.622
+  model + EasyOCR: provider 0.950, date 1.000, patient 0.917, VAT 0.933, total 1.000,
+              item codes 0.803
+Export: export-set data/sets/docs/check|tune: 60 of 60 and 120 of 120 valid; 24 and 33 ready
+              for processing.
+Live, through the website: live-test data/live_standin_final --url http://127.0.0.1:8011
+  (STAND-IN set, not the owner's photos: 4 real SROIE scans, 4 synthetic Arabic-first receipts
+  of which 2 heavily damaged, 1 receipt with its report; re-saved so no answer was cached):
+  9 of 9 finished, 0 errors, 9 schema valid; seconds per claim mean 13.855, median 13.31,
+  max 23.193 (upload and read 13.802, send and decide 0.054). Before the model and EasyOCR
+  read at the same time (1cdb625): mean 20.766 (8 claims re-saved once, 0e8b746).
+Browser e2e demo test: uv run pytest -m e2e: 2 passed in 81.37 s.
+```

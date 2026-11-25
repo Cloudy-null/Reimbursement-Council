@@ -8,7 +8,10 @@ image hash, model and prompt version), the checks, then the merge with EasyOCR's
 import hashlib
 import io
 import logging
+import os
+import threading
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Protocol
 
@@ -89,6 +92,17 @@ class VisionReader:
         safe_model = "".join(c if c.isalnum() else "_" for c in local.model)
         return self._cache / f"{digest}-{safe_model}-p{local.prompt_version}.json"
 
+    def _save(self, path: Path, answer: VisionAnswer) -> None:
+        """Cache a valid answer. A temporary name per process and thread, so two requests for
+        the same photo never collide; a failed write (full disk) is logged, never fatal."""
+        partial = path.with_name(f"{path.name}.{os.getpid()}-{threading.get_ident()}.partial")
+        try:
+            self._cache.mkdir(parents=True, exist_ok=True)
+            partial.write_text(answer.model_dump_json(), encoding="utf-8")
+            partial.replace(path)
+        except OSError as error:
+            logger.warning("could not cache the model answer: %s", error)
+
     def _answer(self, image: bytes, counts: Counter[str]) -> VisionAnswer | None:
         path = self._cache_path(image)
         if path.is_file():
@@ -105,10 +119,7 @@ class VisionReader:
                 return None
             answer = parse_answer(text)
             if answer is not None:
-                self._cache.mkdir(parents=True, exist_ok=True)
-                temporary = path.with_suffix(".tmp")
-                temporary.write_text(answer.model_dump_json(), encoding="utf-8")
-                temporary.replace(path)
+                self._save(path, answer)
                 return answer
             counts["schema_failed"] += 1
             logger.warning("local model answer %d is not in the agreed shape", attempt)
@@ -117,17 +128,21 @@ class VisionReader:
     def read(self, document: Document) -> ReaderOutput:
         image = document_image(document, self._settings)
         payloads = find_qr_payloads(image)
-        try:
-            lines: list[OcrLine] = self._engine.read(image)
-        except OcrNotInstalledError:
-            raise
-        except Exception as error:  # an untrusted file: OpenCV and torch raise their own types
-            raise ValueError(f"the file could not be read: {error}") from error
+        counts: Counter[str] = Counter()
+        # The model (GPU) and EasyOCR run at the same time: a new photo waits for the slower
+        # of the two, not for both one after the other.
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="vision") as pool:
+            asked = pool.submit(self._answer, image, counts)
+            try:
+                lines: list[OcrLine] = self._engine.read(image)
+            except OcrNotInstalledError:
+                raise
+            except Exception as error:  # an untrusted file: OpenCV and torch raise their own
+                raise ValueError(f"the file could not be read: {error}") from error
+            answer = asked.result()
         rows = group_rows(lines, self._settings.decision.ocr.row_overlap)
         text_lines = [join_row(row) for row in rows]
         qr = _first_invoice(payloads)
-        counts: Counter[str] = Counter()
-        answer = self._answer(image, counts)
         ocr_parse = parse_receipt_lines(document.document_id, lines, self._settings)
         ocr_cfg = self._settings.decision.ocr
         years = (ocr_cfg.min_date_year, ocr_cfg.max_date_year)

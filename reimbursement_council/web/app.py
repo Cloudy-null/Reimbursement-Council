@@ -26,7 +26,9 @@ from reimbursement_council.web.context import (
 )
 from reimbursement_council.web.errors import add_error_pages
 from reimbursement_council.web.export_routes import add_export_routes
+from reimbursement_council.web.i18n import text_for
 from reimbursement_council.web.numbers import find_reader_scores, find_runs
+from reimbursement_council.web.reviewer_check import reviewer_health, reviewer_status_line
 
 __all__ = ["WebContext", "create_app"]
 
@@ -97,6 +99,7 @@ def create_app(ctx: WebContext) -> FastAPI:
     def numbers(request: Request, lang: str = "en") -> HTMLResponse:
         runs = find_runs(ctx.results_root)
         readers = find_reader_scores(ctx.results_root)
-        return page(request, "metrics.html", lang, runs=runs, readers=readers)
+        line = reviewer_status_line(reviewer_health(ctx), text_for(lang))
+        return page(request, "metrics.html", lang, runs=runs, readers=readers, reviewer_line=line)
 
     return app

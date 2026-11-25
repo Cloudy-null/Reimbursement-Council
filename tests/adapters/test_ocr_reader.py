@@ -119,7 +119,10 @@ def test_missing_easyocr_says_how_to_install(monkeypatch: pytest.MonkeyPatch) ->
 def test_reader_setting_picks_the_image_reader(tmp_path: Path) -> None:
     engine = FakeEngine([])
     png = document(tmp_path / "a.png")
-    assert isinstance(make_reader_for(repo_settings(), engine)(png), QrOcrReader)
+    assert isinstance(make_reader_for(settings_with(reader="easyocr"), engine)(png), QrOcrReader)
+    from reimbursement_council.adapters.vision_reader import VisionReader
+
+    assert isinstance(make_reader_for(repo_settings(), engine)(png), VisionReader)  # the default
     qr_only = make_reader_for(settings_with(reader="qr_only"), engine)
     assert isinstance(qr_only(png), QrImageReader)
     assert isinstance(qr_only(document(tmp_path / "a.reading.json")), FixtureReader)

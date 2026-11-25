@@ -174,4 +174,5 @@ def build_claim_export(
             rule_results=list(decision.rule_results),
         ),
         review=review,
+        case_review=decision.case_review,
     )

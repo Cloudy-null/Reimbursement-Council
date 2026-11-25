@@ -7,13 +7,17 @@ from amount and unit price when OCR misses it.
 """
 
 import re
-from datetime import date
 from difflib import SequenceMatcher
 from statistics import mean
 
 from reimbursement_council.config.models import OcrConfig, Settings
 from reimbursement_council.core.models.claim import ExtractedField, LineItem, ReaderOutput
 from reimbursement_council.core.models.common import FieldName, FieldSource
+from reimbursement_council.core.receipt_dates import (
+    date_confidence,
+    date_values,
+    fix_digits,
+)
 from reimbursement_council.core.receipt_rows import LATIN_LETTERS, OcrLine, group_rows, join_row
 from reimbursement_council.core.text import digits_to_ascii, normalize_text
 
@@ -65,29 +69,7 @@ PATIENT_LABEL_WORDS = frozenset(word for label in LABELS["patient"] for word in 
 
 _MONEY = re.compile(r"(?<![\d.])(\d{1,3}(?:,\d{3})+|\d+)\.\s?(\d{2})(?![\d])")
 _VAT_NUMBER = re.compile(r"(?<!\d)3\d{13}3(?!\d)")
-_DATE_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}):(\d{2}))?")
-# Day first: 08/11/2026, 29-12-2017, 5.6.2018, and two digit years 12/03/18 (found on real
-# receipts, E1 failure review). A dot with a two digit year is left out: it looks like a time.
-_DATE_DMY = re.compile(
-    r"(?<!\d)(\d{1,2})([/.-])(\d{1,2})\2(\d{4}|\d{2})(?!\d)(?!\.\d)(?:\s+(\d{1,2}):(\d{2}))?"
-)
-_TIME = re.compile(r"(?<!\d)\d{1,2}\s?:\s?\d{2}(?!\d)")
-_DATE_WORD = re.compile(r"date|تاريخ", re.IGNORECASE)
-_DIGITISH = re.compile(r"[0-9OoIl]{2,}")
 _LONE_INT = re.compile(r"^\d{1,2}$")
-
-
-def _fix_digits(text: str) -> tuple[str, bool]:
-    """Letter O, I or l inside a number becomes 0 or 1. Returns the text and whether it changed."""
-
-    def fix(match: re.Match[str]) -> str:
-        token = match.group(0)
-        if not any(char.isdigit() for char in token):
-            return token
-        return token.replace("O", "0").replace("o", "0").replace("I", "1").replace("l", "1")
-
-    fixed = _DIGITISH.sub(fix, digits_to_ascii(text))
-    return fixed, fixed != digits_to_ascii(text)
 
 
 def _similar(a: str, b: str, ratio: float) -> bool:
@@ -114,7 +96,7 @@ def _label_size(words: list[str], field: str, ratio: float) -> int:
 
 def _classify(row: list[OcrLine], cfg: OcrConfig) -> str | None:
     """The field whose longest, then closest, label is in the row."""
-    words = normalize_text(_fix_digits(join_row(row))[0]).split()
+    words = normalize_text(fix_digits(join_row(row))[0]).split()
     scores = {field: _label_match(words, field, cfg.label_match_ratio) for field in LABELS}
     field, (size, _) = max(scores.items(), key=lambda pair: pair[1])
     return field if size else None
@@ -140,7 +122,7 @@ def _is_the_total(row: list[OcrLine]) -> bool:
 
 
 def _money_in(line: OcrLine) -> list[int]:
-    text, _ = _fix_digits(line.text)
+    text, _ = fix_digits(line.text)
     return [int(whole.replace(",", "")) * 100 + int(cents) for whole, cents in _MONEY.findall(text)]
 
 
@@ -170,7 +152,7 @@ def _is_header(row: list[OcrLine], cfg: OcrConfig) -> bool:
 
 def _match_service(texts: list[str], settings: Settings) -> str | None:
     """The service whose longest alias has every word in the item text."""
-    words = normalize_text(" ".join(_fix_digits(t)[0] for t in texts)).split()
+    words = normalize_text(" ".join(fix_digits(t)[0] for t in texts)).split()
     best: tuple[int, str] | None = None
     ratio = settings.decision.ocr.alias_match_ratio
     for code, price in settings.prices.items():
@@ -188,6 +170,7 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
     cfg = settings.decision.ocr
     items: list[LineItem] = []
     texts: list[list[str]] = []
+    word_confidence: list[float] = []
     for row in rows:
         money = [(m, line) for line in row for m in _money_in(line)]
         ints = [line for line in row if _LONE_INT.match(digits_to_ascii(line.text.strip()))]
@@ -222,73 +205,20 @@ def _items(rows: list[list[OcrLine]], document_id: str, settings: Settings) -> l
             )
         )
         texts.append([description])
+        word_confidence.append(min((w.confidence for w in words), default=confidence))
     matched = []
-    for item, item_texts in zip(items, texts, strict=True):
+    for item, item_texts, words_sure in zip(items, texts, word_confidence, strict=True):
         english = next((t for t in item_texts if LATIN_LETTERS.search(t)), item.description)
+        code = _match_service(item_texts, settings)
+        # A matched service code rests on the description words too (an excluded service is a
+        # hard rule): then the item is only as sure as its least sure part (data review).
+        sure = min(item.confidence, words_sure) if code else item.confidence
         matched.append(
             item.model_copy(
-                update={
-                    "service_code": _match_service(item_texts, settings),
-                    "description": english,
-                }
+                update={"service_code": code, "description": english, "confidence": sure}
             )
         )
     return matched
-
-
-def _first_date(text: str, years: tuple[int, int]) -> tuple[date, str | None, str | None] | None:
-    """The date in the text, with the time after it if there is one. A YYYY-MM-DD date wins over
-    a day-first one (a receipt may print the Hijri date first). Only real calendar dates in the
-    year range count. A two digit year counts with slashes (12/03/18), or with dashes or dots
-    when the row also has a time or the word date (17-03-18 14:49): a code like "Ref 10-10-10"
-    has neither."""
-    stamped = bool(_TIME.search(text) or _DATE_WORD.search(text))
-    candidates: list[tuple[int, int, str, str, str, str | None, str | None]] = []
-    for match in _DATE_ISO.finditer(text):
-        year, month, day, hour, minute = match.groups()
-        candidates.append((0, match.start(), year, month, day, hour, minute))
-    for match in _DATE_DMY.finditer(text):
-        day, sep, month, year, hour, minute = match.groups()
-        if len(year) == 2 and sep != "/" and not stamped:
-            continue
-        full_year = f"20{year}" if len(year) == 2 else year
-        candidates.append((1, match.start(), full_year, month, day, hour, minute))
-    for _, _, year, month, day, hour, minute in sorted(candidates):
-        if not years[0] <= int(year) <= years[1]:
-            continue
-        try:
-            return date(int(year), int(month), int(day)), hour, minute
-        except ValueError:
-            continue
-    return None
-
-
-_DATE_PART = re.compile(r"\d{1,4}\s*[/.\-]\s*\d{1,2}|\d{1,2}:\d{2}")
-
-
-def _date_confidence(row: list[OcrLine]) -> float:
-    """Confidence per field: the boxes that hold the date (and its time), not a label such as
-    "Date:" beside it. A misread label used to pull a right date under the floor."""
-    fixed = [(_fix_digits(x.text)[0], x) for x in row]
-    parts = [x for text, x in fixed if _DATE_PART.search(text)]
-    digits = [x for text, x in fixed if any(c.isdigit() for c in text)]
-    return min(x.confidence for x in (parts or digits or row))
-
-
-def _date_fields(
-    document_id: str, row_text: str, confidence: float, years: tuple[int, int]
-) -> list[ExtractedField]:
-    text, _ = _fix_digits(row_text)
-    found = _first_date(text, years)
-    if found is None:
-        return []
-    day_value, hour, minute = found
-    date_text = day_value.isoformat()
-    fields = [_field(document_id, "treatment_date", date_text, row_text, confidence)]
-    if hour and minute:
-        stamp = f"{date_text}T{int(hour):02d}:{minute}:00"
-        fields.append(_field(document_id, "invoice_timestamp", stamp, row_text, confidence))
-    return fields
 
 
 def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settings) -> ReaderOutput:
@@ -300,7 +230,7 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
 
     for row in rows:  # VAT number: a 15 digit run that starts and ends with 3
         for line in row:
-            text, fixed = _fix_digits(line.text.replace(" ", ""))
+            text, fixed = fix_digits(line.text.replace(" ", ""))
             match = _VAT_NUMBER.search(text)
             if match and "vat_number" not in found:
                 factor = cfg.pattern_miss_factor if fixed else 1.0
@@ -326,7 +256,11 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
                 found.add(kind)
         if "treatment_date" not in found:
             years = (cfg.min_date_year, cfg.max_date_year)
-            dated = _date_fields(document_id, join_row(row), _date_confidence(row), years)
+            confidence = date_confidence(row)
+            dated = [
+                _field(document_id, name, value, join_row(row), confidence)
+                for name, value in date_values(join_row(row), years)
+            ]
             if dated:
                 fields.extend(dated)
                 found.add("treatment_date")
@@ -365,8 +299,4 @@ def parse_receipt_lines(document_id: str, lines: list[OcrLine], settings: Settin
     return ReaderOutput(fields=fields, line_items=items, qr_payloads=[])
 
 
-# Shared with the model reader's checks (core/vision_checks.py).
-first_date = _first_date
-fix_digits = _fix_digits
-MONEY_PATTERN = _MONEY
-match_service = _match_service
+MONEY_PATTERN, match_service = _MONEY, _match_service  # shared with core/vision_checks.py

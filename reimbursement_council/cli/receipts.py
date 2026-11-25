@@ -119,7 +119,9 @@ def read_accuracy(args: argparse.Namespace) -> int:
             name: summarize([row for row in rows if row["layout"] == name])
             for name in sorted({row["layout"] for row in rows})
         },
-        "two_readers": settings.decision.two_readers_enabled,
+        "two_readers": (
+            settings.decision.two_readers_enabled if settings.decision.reader == "ollama" else None
+        ),
         "rows": rows,
     }
     (args.folder / args.results_name).write_text(json.dumps(report, indent=1), encoding="utf-8")

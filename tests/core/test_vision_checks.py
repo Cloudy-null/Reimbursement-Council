@@ -103,6 +103,7 @@ def test_qr_is_the_truth_for_total_date_and_vat_number() -> None:
     result = check(answer(), qr=qr)
     assert result.counts["qr_compared"] == 3
     assert result.counts["qr_mismatch"] == 1  # the model's total 345.00 is not the QR's 346.00
+    assert "total" not in values(result)  # the QR is the truth: the model's total is dropped
 
 
 def test_implausible_values_are_dropped() -> None:
@@ -187,10 +188,24 @@ def test_one_digit_of_ocr_noise_in_a_date_or_amount_still_counts_as_printed() ->
         r.replace("2026-11-17", "2026-11-11").replace("Total 345.00", "Total 346.00")
         for r in OCR_ROWS
     ]
-    kept = values(check(answer(), rows=noisy))
+    result = check(answer(), rows=noisy)
+    kept = values(result)
     assert kept["treatment_date"] == "2026-11-17" and kept["total"] == "34500"
+    # Only near the print: kept for the member to confirm, under the 0.90 floor
+    low = {f.name: f.confidence for f in result.fields}
+    floor = repo_settings().decision.hard_rule_confidence_floor
+    assert low["total"] < floor and low["treatment_date"] < floor
+    assert result.counts["near"] == 2
 
 
 def test_two_digits_off_is_not_printed() -> None:
     noisy = [r.replace("Total 345.00", "Total 395.50") for r in OCR_ROWS]
     assert "total" not in values(check(answer(subtotal=None, vat_total=None), rows=noisy))
+
+
+def test_a_name_in_both_scripts_keeps_the_latin_words() -> None:
+    from reimbursement_council.core.vision_checks import one_script
+
+    assert one_script("مركز الشفاء الطبي Al Shifa Medical Center") == "Al Shifa Medical Center"
+    assert one_script("عيادة النور") == "عيادة النور"
+    assert one_script("Al Noor Clinic") == "Al Noor Clinic"

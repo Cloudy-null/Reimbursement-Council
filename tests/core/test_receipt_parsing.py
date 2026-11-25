@@ -269,3 +269,18 @@ def test_an_item_amount_confidence_comes_from_its_numbers_not_the_description() 
     reading = parse_receipt_lines(DOC_ID, rows, settings)
     if reading.line_items:  # the header words decide if this row is an item row
         assert reading.line_items[0].confidence == pytest.approx(0.94)
+
+
+def test_a_matched_service_rests_on_its_description_confidence_too() -> None:
+    settings = repo_settings()
+    alias = next(iter(settings.prices.values())).aliases[0]
+    rows = [
+        line("Item Qty Price Amount", 100, width=400),
+        line(alias, 140, x=40, confidence=0.40),
+        line("1", 140, x=200, confidence=0.96, width=20),
+        line("50.00", 140, x=260, confidence=0.94, width=60),
+        line("50.00", 140, x=340, confidence=0.95, width=60),
+    ]
+    items = parse_receipt_lines(DOC_ID, rows, settings).line_items
+    assert items and items[0].service_code is not None
+    assert items[0].confidence == pytest.approx(0.40)
