@@ -75,5 +75,6 @@ def test_reader_for_picks_by_suffix(tmp_path: Path) -> None:
     assert isinstance(reader_for(document(tmp_path / "a.reading.json")), FixtureReader)
     assert isinstance(reader_for(document(tmp_path / "a.PNG")), QrImageReader)
     assert isinstance(reader_for(document(tmp_path / "a.jpeg")), QrImageReader)
-    with pytest.raises(ValueError, match=r"\.pdf"):
-        reader_for(document(tmp_path / "a.pdf"))
+    assert isinstance(reader_for(document(tmp_path / "a.pdf")), QrImageReader)
+    with pytest.raises(ValueError, match=r"\.tiff"):
+        reader_for(document(tmp_path / "a.tiff"))

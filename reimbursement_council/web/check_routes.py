@@ -5,11 +5,15 @@ Also: add documents to a draft, and go back to the check step from a self-fix re
 """
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
+from reimbursement_council.adapters.readers import PDF_SUFFIX
+from reimbursement_council.adapters.readers import document_image as document_image_bytes
 from reimbursement_council.core.decision.document_requests import (
     document_label,
     mismatch_documents,
@@ -120,9 +124,13 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         claim = load_claim(ctx, claim_id)
         if claim.status != "draft":
             raise HTTPException(status_code=409, detail="This claim was already sent.")
-        kept, refused = accept(await collect(photos), ctx.settings.documents.max_upload_megabytes)
+        kept, refused = accept(
+            await collect(photos),
+            ctx.settings.documents.max_upload_megabytes,
+            ctx.settings.documents.max_files_per_upload,
+        )
         added = store_documents(ctx, claim_id, kept, datetime.now(UTC))
-        read_and_store(ctx, claim_id, added)
+        await run_in_threadpool(read_and_store, ctx, claim_id, added)  # OCR: off the loop
         claim = claim.model_copy(update={"documents": [*claim.documents, *added]})
         ctx.store.save_claim(claim)
         if refused:
@@ -160,7 +168,7 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
                 "submitted_at": datetime.now(UTC),
             }
         )
-        decide(ctx, sent)
+        await run_in_threadpool(decide, ctx, sent)
         return RedirectResponse(f"/claims/{claim_id}?lang={lang}", status_code=303)
 
     @app.post("/claims/{claim_id}/fix", response_model=None)
@@ -183,7 +191,11 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             or claim.retries_used >= ctx.settings.decision.self_fix_max_retries
         ):
             raise HTTPException(status_code=409, detail="This claim is not waiting for a fix.")
-        kept, refused = accept(await collect(photos), ctx.settings.documents.max_upload_megabytes)
+        kept, refused = accept(
+            await collect(photos),
+            ctx.settings.documents.max_upload_megabytes,
+            ctx.settings.documents.max_files_per_upload,
+        )
         if refused or not kept:  # change nothing, so a bad file never removes a good one
             values = claim_view(ctx, claim_id, lang) | {"refused": refused, "status_code": 400}
             return page(request, "claim.html", lang, **values)
@@ -192,7 +204,7 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         if asked_request.kind in ASKED_KINDS and asked_request.field not in asked:
             asked.append(asked_request.field)
         added = store_documents(ctx, claim_id, kept, datetime.now(UTC))
-        read_and_store(ctx, claim_id, added)
+        await run_in_threadpool(read_and_store, ctx, claim_id, added)  # OCR: off the loop
         documents = [d for d in claim.documents if d.document_id != replace]
         draft = claim.model_copy(
             update={
@@ -207,9 +219,13 @@ def add_check_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         return RedirectResponse(f"/claims/{claim_id}/check?lang={lang}", status_code=303)
 
     @app.get("/claims/{claim_id}/documents/{document_id}")
-    def document_image(claim_id: str, document_id: str) -> FileResponse:
+    def document_image(claim_id: str, document_id: str) -> Response:
+        """The document's file; a PDF is shown as the image the reader reads."""
         claim = load_claim(ctx, claim_id)
         for document in claim.documents:
             if document.document_id == document_id:
+                if Path(document.file_path).suffix.lower() == PDF_SUFFIX:
+                    image = document_image_bytes(document, ctx.settings)
+                    return Response(image, media_type="image/png")
                 return FileResponse(document.file_path)
         raise HTTPException(status_code=404, detail="No such document.")

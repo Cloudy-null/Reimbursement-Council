@@ -2,18 +2,28 @@
 {% block content %}
 <div class="grid">
   <div class="doc-stack">
-    {% for doc in documents %}<img class="receipt-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="">{% endfor %}
+    {% for doc in documents %}<img class="receipt-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="{{ kind_names[doc.kind] }}">{% endfor %}
   </div>
   <div class="card" style="background: none; border: 0; padding: 0">
     <section class="card result lane-{{ decision.lane }}">
       <span class="pill"><span class="dot"></span>{{ t['lane_' ~ decision.lane] }}</span>
       <p class="message" dir="auto">{{ decision.member_message[lang] }}</p>
+      {% if decision.lane == 'self_fix' and confirm_date %}
+      <form class="stack" method="post" action="/claims/{{ claim.claim_id }}/confirm-date">
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <p class="message" dir="auto">{{ t.confirm_date_q }} <b class="mono" dir="ltr">{{ confirm_date }}</b></p>
+        <div class="btns">
+          <button class="btn primary" type="submit" name="answer" value="yes">{{ t.confirm_yes }}</button>
+          <button class="btn" type="submit" name="answer" value="no">{{ t.confirm_no }}</button>
+        </div>
+      </form>
+      {% endif %}
       {% if decision.lane == 'self_fix' %}
       {% include "_refused.html" %}
       <form class="stack" method="post" action="/claims/{{ claim.claim_id }}/fix" enctype="multipart/form-data">
         <input type="hidden" name="lang" value="{{ lang }}">
         <label for="fix-photos">{{ t.add_or_replace }}
-          <input id="fix-photos" type="file" name="photos" accept="image/png,image/jpeg" multiple required>
+          <input id="fix-photos" type="file" name="photos" accept="image/png,image/jpeg,application/pdf" multiple required>
         </label>
         <label for="replace">{{ t.replace_which }}
           <select id="replace" name="replace">
@@ -28,6 +38,7 @@
         <button class="btn" type="submit">{{ t.to_reviewer }}</button>
       </form>
       {% endif %}
+      <div class="btns"><a class="btn" href="/api/claims/{{ claim.claim_id }}/export?download=1" download>{{ t.export }}</a></div>
     </section>
     <section class="card">
       <h2>{{ t.read_title }}</h2>

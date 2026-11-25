@@ -38,6 +38,11 @@ class RunRow(Model):
     cross_check_failed: bool = False
     cross_check_expected: bool = False
     expected_lane: Lane | None = None
+    # Self-fix simulation (run-set --simulate-fix): the lane before the fixed file was sent.
+    first_lane: Lane | None = None
+    fix_tried: bool = False
+    # The patient's past claims, for the fairness check (E9: new vs tenured members).
+    past_claims: int | None = None
 
 
 def paid_right(row: RunRow, tolerance: int) -> bool:
@@ -88,10 +93,10 @@ def heavy_damage_metrics(rows: Sequence[RunRow], tolerance: int) -> dict[str, fl
     result: dict[str, float] = {"heavy_damage_claims": len(damaged)}
     for lane in HEAVY_DAMAGE_LANES:
         result[f"heavy_damage_{lane}_share"] = _share(
-            sum(r.lane == lane for r in damaged), len(damaged)
+            sum((r.first_lane or r.lane) == lane for r in damaged), len(damaged)
         )
     result["heavy_damage_wrong_auto_approves"] = sum(
-        r.lane == "auto_approve" and not paid_right(r, tolerance) for r in damaged
+        (r.first_lane or r.lane) == "auto_approve" and not paid_right(r, tolerance) for r in damaged
     )
     return result
 
@@ -133,3 +138,36 @@ def metrics(rows: Sequence[RunRow], reviewer_time_value: int, tolerance: int) ->
         "ece": expected_calibration_error([r.p_good for r in judged], labels),
         "total_cost_sar": round((wrong_money + reviews * reviewer_time_value) / 100, 2),
     } | heavy_damage_metrics(rows, tolerance)
+
+
+def self_fix_metrics(rows: Sequence[RunRow], tolerance: int) -> dict[str, float]:
+    """For runs with --simulate-fix: of the claims where the member sent the fixed file, the
+    share that were then paid right with no person (success), and the share that went to a
+    person. Without the simulation the counts are 0."""
+    tried = [r for r in rows if r.fix_tried]
+    success = sum(r.lane == "auto_approve" and paid_right(r, tolerance) for r in tried)
+    return {
+        "self_fix_tried": len(tried),
+        "self_fix_success_rate": _share(success, len(tried)),
+        "self_fix_to_human_rate": _share(sum(r.lane == "human_review" for r in tried), len(tried)),
+    }
+
+
+def fairness_metrics(rows: Sequence[RunRow], min_past_claims: int) -> dict[str, float]:
+    """E9 fairness: is a payable claim from a new member (fewer past claims than the history
+    member needs) rejected or sent away from auto approve more often than a tenured one's?"""
+    known = [r for r in rows if r.past_claims is not None and r.should_pay]
+    groups = {
+        "new": [r for r in known if (r.past_claims or 0) < min_past_claims],
+        "tenured": [r for r in known if (r.past_claims or 0) >= min_past_claims],
+    }
+    result: dict[str, float] = {}
+    for name, group in groups.items():
+        result[f"payable_{name}_members"] = len(group)
+        result[f"false_reject_rate_{name}"] = _share(
+            sum(r.lane == "auto_reject" for r in group), len(group)
+        )
+        result[f"payable_recall_{name}"] = _share(
+            sum(r.lane == "auto_approve" for r in group), len(group)
+        )
+    return result

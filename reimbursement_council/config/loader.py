@@ -16,6 +16,7 @@ from reimbursement_council.config.models import (
     MessageConfig,
     PolicyConfig,
     Settings,
+    SyntheticConfig,
 )
 from reimbursement_council.core.decision.calibration import PlattParams
 from reimbursement_council.core.models.reference import PriceListItem
@@ -23,7 +24,14 @@ from reimbursement_council.core.text import normalize_text
 
 logger = logging.getLogger(__name__)
 
-CONFIG_FILES = ("decision.yaml", "documents.yaml", "messages.yaml", "policy.yaml", "prices.yaml")
+CONFIG_FILES = (
+    "decision.yaml",
+    "documents.yaml",
+    "messages.yaml",
+    "policy.yaml",
+    "prices.yaml",
+    "synthetic.yaml",
+)
 CALIBRATION_FILE = "calibration.yaml"
 VERSION_LENGTH = 12
 TRUE_WORDS = frozenset({"true", "1", "yes"})
@@ -145,6 +153,9 @@ def load_settings(config_dir: Path, env: Mapping[str, str] | None = None) -> Set
             raise ConfigError(
                 f"documents.yaml: category {category} from prices.yaml has no required documents"
             )
+    synthetic = _validate(
+        SyntheticConfig, _read_yaml(config_dir / "synthetic.yaml"), "synthetic.yaml"
+    )
     calibration = _load_calibration(config_dir, decision)
     settings = Settings(
         calibration=calibration,
@@ -153,6 +164,7 @@ def load_settings(config_dir: Path, env: Mapping[str, str] | None = None) -> Set
         decision=decision,
         prices=prices,
         messages=messages,
+        synthetic=synthetic,
         config_version=_config_version(config_dir),
         gemini_api_key=environment.get("GEMINI_API_KEY") or None,
         demo_mode=_demo_mode(environment),

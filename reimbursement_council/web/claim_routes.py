@@ -9,6 +9,7 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from reimbursement_council.adapters.receipt_drawing import DAMAGE_PRESETS, draw_receipt
@@ -20,7 +21,9 @@ from reimbursement_council.synthetic.receipt_content import (
     make_receipt_content,
 )
 from reimbursement_council.web.check_routes import check_values
+from reimbursement_council.web.confirm_routes import confirm_date_for
 from reimbursement_council.web.context import Page, WebContext, claim_view
+from reimbursement_council.web.demo import DEMO_NAMES, ensure_demo_files
 from reimbursement_council.web.i18n import text_for
 from reimbursement_council.web.uploads import accept, collect, read_and_store, store_documents
 
@@ -66,6 +69,7 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             "new_claim.html",
             lang,
             people=ctx.reference.members,
+            demos=DEMO_NAMES,
             samples=ensure_samples(ctx),
         )
 
@@ -76,20 +80,33 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         lang: Annotated[str, Form()] = "en",
         sample: Annotated[str, Form()] = "",
         photos: Annotated[list[UploadFile] | None, File()] = None,
+        consent: Annotated[str, Form()] = "",
+        demo: Annotated[str, Form()] = "",
     ) -> Response:
-        """Step 1 (spec 6.5): save the files as a draft claim. Nothing is decided yet."""
+        """Step 1 (spec 6.5): save the files as a draft claim. Nothing is decided yet. Nothing
+        is read before the member agrees (consent step); the time they agreed is kept."""
+        if consent != "yes":
+            raise HTTPException(status_code=400, detail=text_for(lang)["consent_needed"])
         try:
             person = ctx.reference.member(patient)
         except LookupError as error:
             raise HTTPException(status_code=400, detail="Pick a person from the list.") from error
-        if sample:
+        if demo:
+            if demo not in DEMO_NAMES:
+                raise HTTPException(status_code=400, detail="Unknown demo claim.")
+            files = [(p.name, p.read_bytes()) for p in ensure_demo_files(ctx)[demo]]
+        elif sample:
             if sample not in SAMPLES:
                 raise HTTPException(status_code=400, detail="Unknown sample.")
             ensure_samples(ctx)
             files = [(f"{sample}.png", (ctx.samples / f"{sample}.png").read_bytes())]
         else:
             files = await collect(photos)
-        kept, refused = accept(files, ctx.settings.documents.max_upload_megabytes)
+        kept, refused = accept(
+            files,
+            ctx.settings.documents.max_upload_megabytes,
+            ctx.settings.documents.max_files_per_upload,
+        )
         if not kept:
             text = text_for(lang)
             detail = "; ".join(f"{r.name}: {text[r.reason]}" for r in refused)
@@ -98,7 +115,7 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
         claim_id = str(uuid4())
         now = datetime.now(UTC)
         documents = store_documents(ctx, claim_id, kept, now)
-        read_and_store(ctx, claim_id, documents)
+        await run_in_threadpool(read_and_store, ctx, claim_id, documents)  # OCR: off the loop
         policy = ctx.reference.policy(person.policy_id)
         claimant = patient if patient in policy.covered_people else policy.covered_people[0]
         claim = Claim(
@@ -110,6 +127,7 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             status="draft",
             documents=documents,
             retries_used=0,
+            consented_at=now,
         )
         ctx.store.save_claim(claim)
         if refused:
@@ -123,7 +141,9 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
 
     @app.get("/claims/{claim_id}", response_class=HTMLResponse)
     def show_claim(request: Request, claim_id: str, lang: str = "en") -> HTMLResponse:
-        return page(request, "claim.html", lang, **claim_view(ctx, claim_id, lang))
+        values = claim_view(ctx, claim_id, lang)
+        values["confirm_date"] = confirm_date_for(ctx, values["claim"], values["decision"])
+        return page(request, "claim.html", lang, **values)
 
     @app.post("/claims/{claim_id}/to-reviewer")
     def to_reviewer(claim_id: str, lang: Annotated[str, Form()] = "en") -> RedirectResponse:
@@ -148,10 +168,3 @@ def add_claim_routes(app: FastAPI, ctx: WebContext, page: Page) -> None:
             raise HTTPException(status_code=404, detail="No such sample.")
         ensure_samples(ctx)
         return FileResponse(ctx.samples / f"{name}.png")
-
-    @app.get("/claims/{claim_id}/document")
-    def document(claim_id: str) -> FileResponse:
-        claim = ctx.store.load_claim(claim_id)
-        if claim is None or not claim.documents:
-            raise HTTPException(status_code=404, detail="No such document.")
-        return FileResponse(claim.documents[0].file_path)

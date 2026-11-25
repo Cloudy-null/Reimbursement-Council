@@ -10,7 +10,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
-from reimbursement_council.adapters.ocr_engine import OcrEngine
+from reimbursement_council.adapters.ocr_engine import OcrEngine, OcrNotInstalledError
+from reimbursement_council.adapters.pdf_pages import pdf_as_image
 from reimbursement_council.adapters.qr_image import find_qr_payloads
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.models.claim import Document, ReaderOutput
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 FIXTURE_SUFFIX = ".reading.json"
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg"})
+PDF_SUFFIX = ".pdf"
 
 
 class DocumentReader(Protocol):
@@ -46,11 +48,27 @@ class FixtureReader:
         return output
 
 
+def document_image(document: Document, settings: Settings | None) -> bytes:
+    """The document as image bytes: a photo as it is, a PDF drawn as one image."""
+    data = Path(document.file_path).read_bytes()
+    if Path(document.file_path).suffix.lower() != PDF_SUFFIX:
+        return data
+    if settings is None:
+        raise ValueError("reading a PDF needs the settings (max pages and zoom)")
+    documents = settings.documents
+    return pdf_as_image(
+        data, documents.max_pdf_pages, documents.pdf_render_scale, documents.max_pdf_pixels
+    )
+
+
 class QrImageReader:
-    """Reads only the QR codes of an image for now."""
+    """Reads only the QR codes of an image or PDF."""
+
+    def __init__(self, settings: Settings | None = None) -> None:
+        self._settings = settings
 
     def read(self, document: Document) -> ReaderOutput:
-        payloads = find_qr_payloads(Path(document.file_path).read_bytes())
+        payloads = find_qr_payloads(document_image(document, self._settings))
         logger.info("document %s: %d QR codes found", document.document_id, len(payloads))
         return ReaderOutput(fields=[], line_items=[], qr_payloads=payloads)
 
@@ -63,9 +81,15 @@ class QrOcrReader:
         self._settings = settings
 
     def read(self, document: Document) -> ReaderOutput:
-        image = Path(document.file_path).read_bytes()
+        image = document_image(document, self._settings)
         payloads = find_qr_payloads(image)
-        lines = self._engine.read(image)
+        try:
+            lines = self._engine.read(image)
+        except OcrNotInstalledError:
+            raise
+        except Exception as error:  # an untrusted file: OpenCV and torch raise their own
+            # error types (cv2.error is not a ValueError); here they mean an unread file.
+            raise ValueError(f"the file could not be read: {error}") from error
         parsed = parse_receipt_lines(document.document_id, lines, self._settings)
         logger.info(
             "document %s: %d QR codes, %d text boxes, %d fields, %d items",
@@ -85,8 +109,10 @@ def make_reader_for(settings: Settings, engine: OcrEngine) -> Callable[[Document
 
     def pick(document: Document) -> DocumentReader:
         reader = reader_for(document)
-        if isinstance(reader, QrImageReader) and settings.decision.reader == "easyocr":
-            return QrOcrReader(engine, settings)
+        if isinstance(reader, QrImageReader):
+            if settings.decision.reader == "easyocr":
+                return QrOcrReader(engine, settings)
+            return QrImageReader(settings)
         return reader
 
     return pick
@@ -98,6 +124,6 @@ def reader_for(document: Document) -> DocumentReader:
     if name.endswith(FIXTURE_SUFFIX):
         return FixtureReader()
     suffix = Path(name).suffix
-    if suffix in IMAGE_SUFFIXES:
+    if suffix in IMAGE_SUFFIXES or suffix == PDF_SUFFIX:
         return QrImageReader()
     raise ValueError(f"no reader for file type {suffix or name!r}")

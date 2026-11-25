@@ -54,6 +54,8 @@ class Claim(Model):
     detected_categories: list[str] = Field(default_factory=list)
     edits: list[FieldEdit] = Field(default_factory=list)
     retake_fields: list[str] = Field(default_factory=list)
+    # When the member agreed that their documents may be read and processed (consent step).
+    consented_at: AwareDatetime | None = None
 
 
 class FieldLocation(Model):

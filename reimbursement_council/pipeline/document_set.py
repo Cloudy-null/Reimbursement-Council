@@ -11,6 +11,8 @@ document).
 import logging
 from collections.abc import Callable, Mapping
 
+from pydantic import Field
+
 from reimbursement_council.adapters.readers import DocumentReader
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.claim_categories import claim_categories
@@ -50,6 +52,9 @@ class DocumentSet(Model):
     edit_rule_results: list[RuleResult]
     billing_documents_differ: bool
     notes: list[str]
+    # What each reader returned, before anything was changed: stored so an export or a later
+    # check can be rebuilt without reading the photos again.
+    raw_readings: dict[str, ReaderOutput] = Field(default_factory=dict)
 
     @property
     def missing(self) -> list[DocumentNeed]:
@@ -190,6 +195,7 @@ def read_document_set(
         reading, note = _read(document, stored, reader_for)
         raw[document.document_id] = reading
         notes += [note] if note else []
+    as_read = dict(raw)
     documents = [_with_kind(d, raw[d.document_id], settings) for d in documents]
     raw = {
         d.document_id: (
@@ -237,4 +243,5 @@ def read_document_set(
         edit_rule_results=_edit_rules(edits, detected_needs, needs),
         billing_documents_differ=_billing_documents_differ(documents, final),
         notes=notes + edit_notes,
+        raw_readings=as_read,
     )

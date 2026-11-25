@@ -2,7 +2,7 @@
 
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from reimbursement_council.core.decision.calibration import PlattParams
 from reimbursement_council.core.models.common import (
@@ -88,6 +88,8 @@ class OcrConfig(ConfigModel):
     pattern_miss_factor: Score
     heuristic_factor: Score
     row_overlap: Score
+    min_date_year: int = Field(ge=1900)
+    max_date_year: int = Field(le=2200)
 
 
 class DecisionConfig(ConfigModel):
@@ -220,6 +222,24 @@ class DocumentsConfig(ConfigModel):
     provider_check_categories: list[str]
     unbacked_edit_confidence: Score
     max_upload_megabytes: int = Field(gt=0)
+    max_pdf_pages: int = Field(gt=0)
+    pdf_render_scale: float = Field(gt=0)
+    max_pdf_pixels: int = Field(gt=0)
+    max_files_per_upload: int = Field(gt=0)
+
+
+class SyntheticConfig(ConfigModel):
+    """How the synthetic claim generator mixes its claims (config/synthetic.yaml)."""
+
+    qr_share: Score
+    defect_weights: dict[str, int]
+
+    @field_validator("defect_weights")
+    @classmethod
+    def weights_are_usable(cls, weights: dict[str, int]) -> dict[str, int]:
+        if any(w < 0 for w in weights.values()) or not any(weights.values()):
+            raise ValueError("defect weights must be 0 or more, and not all 0")
+        return weights
 
 
 class Settings(ConfigModel):
@@ -228,6 +248,7 @@ class Settings(ConfigModel):
     decision: DecisionConfig
     prices: dict[str, PriceListItem]
     messages: MessageConfig
+    synthetic: SyntheticConfig
     config_version: str
     calibration: PlattParams | None = None
     gemini_api_key: str | None

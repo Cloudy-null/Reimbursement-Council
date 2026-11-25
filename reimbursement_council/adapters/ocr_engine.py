@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import os
+import threading
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
 from pathlib import Path
@@ -43,11 +44,13 @@ class EasyOcrEngine:
     """EasyOCR on the CPU. The model loads once, on the first read (about 15 to 30 seconds).
 
     The name is fixed when the engine is made, so the cache key is the same before and after
-    the model loads.
+    the model loads. One read at a time: the website's warm-up and a member's upload can both
+    read, and one EasyOCR model must not be used by two threads at once (found by the e2e test).
     """
 
     def __init__(self) -> None:
         self._reader: Any = None
+        self._lock = threading.Lock()
         self.name = _easyocr_name()
 
     def _load(self) -> Any:
@@ -63,7 +66,8 @@ class EasyOcrEngine:
         return self._reader
 
     def read(self, image_bytes: bytes) -> list[OcrLine]:
-        results = self._load().readtext(image_bytes)
+        with self._lock:
+            results = self._load().readtext(image_bytes)
         lines = []
         for box, text, confidence in results:
             xs = [int(point[0]) for point in box]
@@ -105,7 +109,8 @@ class CachedOcrEngine:
         self._dir.mkdir(parents=True, exist_ok=True)
         # Write to a temporary file first, then rename: a run killed mid-write leaves no cut off
         # cache file behind.
-        partial = path.with_suffix(".json.partial")
+        # A name of its own per write, so two readers of the same image never collide.
+        partial = path.with_suffix(f".{os.getpid()}-{threading.get_ident()}.partial")
         partial.write_text(
             json.dumps([line.model_dump() for line in lines], ensure_ascii=False), encoding="utf-8"
         )

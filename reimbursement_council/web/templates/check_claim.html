@@ -19,7 +19,7 @@
   <form class="stack" method="post" action="/claims/{{ claim.claim_id }}/documents" enctype="multipart/form-data">
     <input type="hidden" name="lang" value="{{ lang }}">
     <label for="more">{{ t.add_files }}
-      <input id="more" type="file" name="photos" accept="image/png,image/jpeg" multiple>
+      <input id="more" type="file" name="photos" accept="image/png,image/jpeg,application/pdf" multiple>
     </label>
     <div class="btns"><button class="btn" type="submit">{{ t.add_files }}</button></div>
   </form>
@@ -31,7 +31,7 @@
   <div class="doc-grid">
     {% for doc in documents %}
     <section class="card">
-      <img class="doc-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="">
+      <img class="doc-img" src="/claims/{{ claim.claim_id }}/documents/{{ doc.document_id }}" alt="{{ kind_names[doc.kind] }}">
       <label for="kind-{{ doc.document_id }}">{{ t.doc_type }}
         <select id="kind-{{ doc.document_id }}" name="kind_{{ doc.document_id }}">
           {% for kind in kinds %}<option value="{{ kind }}"{{ ' selected' if kind == selected_kinds[doc.document_id] }}>{{ kind_names[kind] }}</option>{% endfor %}

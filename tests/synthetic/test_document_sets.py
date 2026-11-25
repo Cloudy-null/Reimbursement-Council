@@ -90,3 +90,12 @@ def test_truth_lists_kinds_missing_needs_and_expected_lane() -> None:
 def test_members_have_arabic_names() -> None:
     reference = big_set().reference
     assert all(m.name_ar for m in reference.members)
+
+
+def test_a_duplicate_never_carries_an_edit_label_without_the_edit() -> None:
+    for case in big_set().cases:
+        if case.duplicate_of and set(case.truth.defects) & {
+            "member_edit_supported",
+            "member_edit_contradicts",
+        }:
+            assert case.claim.edits

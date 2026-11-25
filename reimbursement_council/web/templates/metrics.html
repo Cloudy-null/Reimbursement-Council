@@ -6,10 +6,10 @@
   {% if runs %}
   <div class="table-wrap">
     <table class="numbers">
-      <thead><tr><th>run</th><th>reader</th><th>calibration</th><th>claims</th><th>automation</th><th>approve precision</th><th>payable recall</th><th>false reject</th><th>reviews / 1000</th><th>ECE</th><th>cost SAR</th></tr></thead>
+      <thead><tr><th>run</th><th>changed</th><th>reader</th><th>claims</th><th>automation</th><th>approve precision</th><th>payable recall</th><th>false reject</th><th>reviews / 1000</th><th>ECE</th><th>cost SAR</th></tr></thead>
       <tbody>
       {% for run in runs %}{% set m = run.report.metrics %}
-      <tr><td dir="ltr">{{ run.name }}</td><td>{{ run.report.reader }}</td><td>{{ 'on' if run.report.calibration else 'off' }}</td>
+      <tr><td dir="ltr">{{ run.name }}</td><td dir="ltr">{{ run.changed }}</td><td>{{ run.report.reader }}</td>
         <td class="num">{{ m.claims }}</td><td class="num">{{ m.automation_rate }}</td><td class="num">{{ m.auto_approve_precision }}</td>
         <td class="num">{{ m.payable_recall }}</td><td class="num">{{ m.false_reject_rate }}</td><td class="num">{{ m.reviews_per_1000 }}</td>
         <td class="num">{{ m.ece }}</td><td class="num">{{ m.total_cost_sar }}</td></tr>
