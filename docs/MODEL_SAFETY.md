@@ -1,7 +1,7 @@
 # Model safety: what the local AI may and may not do
 
-For questions in the pitch. Every number here comes from the test harness at commit 38cc89d
-unless it says otherwise; the commands are in docs/EXPERIMENTS.md ("FINAL CHECK").
+For questions in the pitch. Numbers come from the test harness; core day 4b numbers are from
+commit ac2a7e4 and the earlier ones from 38cc89d; the commands are in docs/EXPERIMENTS.md ("FINAL CHECK").
 
 ## The model
 
@@ -104,8 +104,9 @@ unless it says otherwise; the commands are in docs/EXPERIMENTS.md ("FINAL CHECK"
 - Held-out score, one run with prompt 5: 0.95 (19 of 20), above the 0.90 limit. The one miss
   was a good dental claim scored 0, the cautious side.
 - The held-out set is now the golden set run at startup (adapters/golden_set.py).
-- The reviewer is switched back on only if wrong approvals also stay 0 on the synthetic check
-  set with it on (EXPERIMENTS, final check of core day 4b).
+- With it on, the synthetic check set kept precision 1.0 and 0 wrong approvals; it moved 1 claim
+  to a person and threw out no answer (commit ac2a7e4). So it is on again: a person ran
+  check-reviewer (0.95) and then reviewer-enable, as the circuit breaker requires.
 
 ## If the model is down
 
