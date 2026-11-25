@@ -12,127 +12,47 @@ Arithmetic (items sum, VAT 15 percent) runs later on every reading in core/extra
 
 import re
 from collections import Counter
-from collections.abc import Sequence
 from datetime import date, timedelta
-from difflib import SequenceMatcher
 from typing import Literal
 
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.dates import local_date_from_text
 from reimbursement_council.core.models.claim import ExtractedField, LineItem
 from reimbursement_council.core.models.common import DocumentKind, FieldName, Model
-from reimbursement_council.core.money import parse_sar_to_halalas
 from reimbursement_council.core.receipt_dates import first_date, fix_digits
-from reimbursement_council.core.receipt_parsing import MONEY_PATTERN
-from reimbursement_council.core.text import normalize_text
 from reimbursement_council.core.vision_answer import ANSWER_SCHEMA, VisionAnswer, parse_answer
+from reimbursement_council.core.vision_grounding import (
+    Evidence,
+    date_near,
+    digits_printed,
+    evidence_from,
+    indic_digits,
+    money_near,
+    money_value,
+    name_is_printed,
+    on_a_staff_row,
+    one_digit_off,
+    one_script,
+)
 from reimbursement_council.core.zatca import ZatcaInvoice
 
-__all__ = ["ANSWER_SCHEMA", "VisionAnswer", "parse_answer"]
+__all__ = [
+    "ANSWER_SCHEMA",
+    "Evidence",
+    "VisionAnswer",
+    "evidence_from",
+    "money_value",
+    "name_is_printed",
+    "one_digit_off",
+    "one_script",
+    "parse_answer",
+]
 
 _TIME = re.compile(r"(\d{1,2}):(\d{2})")
 NAME_FIELDS: tuple[FieldName, ...] = ("provider_name", "patient_name")
 MONEY_NAMES: tuple[FieldName, ...] = ("subtotal", "vat_total", "total")
 
 
-class Evidence(Model):
-    """What the OCR and the QR code show on the same document."""
-
-    text: str
-    raw: str
-    rows: list[str] = []  # each OCR row, normalized
-    money: set[int]
-    dates: set[date]
-    digits: str
-    qr: ZatcaInvoice | None
-
-
-def evidence_from(
-    text_lines: list[str], qr: ZatcaInvoice | None, years: tuple[int, int]
-) -> Evidence:
-    rows = [fix_digits(line)[0] for line in text_lines]
-    money = {
-        int(whole.replace(",", "")) * 100 + int(cents)
-        for row in rows
-        for whole, cents in MONEY_PATTERN.findall(row)
-    }
-    dates = {found[0] for row in rows if (found := first_date(row, years)) is not None}
-    return Evidence(
-        text=normalize_text(" ".join(rows)),
-        raw=" ".join(rows),
-        rows=[normalize_text(row) for row in rows],
-        money=money,
-        dates=dates,
-        digits="".join(c for c in "".join(rows) if c.isdigit()),
-        qr=qr,
-    )
-
-
-def money_value(text: str) -> int | None:
-    """Printed money to halalas: '1,150.50', 'RM 14.10', '345.00 SAR'."""
-    direct = parse_sar_to_halalas(text)
-    if direct is not None:
-        return direct
-    found = MONEY_PATTERN.findall(fix_digits(text)[0])
-    if len(found) != 1:
-        return None
-    whole, cents = found[0]
-    return int(whole.replace(",", "")) * 100 + int(cents)
-
-
-def name_is_printed(value: str, text: str, ratio: float) -> bool:
-    """The name, or something very close to it, appears in the text (small OCR noise allowed)."""
-    target = normalize_text(value)
-    if not target or not text:
-        return False
-    if target in text:
-        return True
-    size = len(target)
-    return any(
-        SequenceMatcher(None, target, text[start : start + size]).ratio() >= ratio
-        for start in range(max(1, len(text) - size + 1))
-    )
-
-
-def _digits_printed(digits: str, all_digits: str) -> bool:
-    if digits in all_digits:
-        return True
-    size = len(digits)
-    return any(
-        sum(a != b for a, b in zip(digits, all_digits[i : i + size], strict=True)) <= 1
-        for i in range(max(0, len(all_digits) - size + 1))
-    )
-
-
-def one_digit_off(a: str, b: str) -> bool:
-    """Same length and at most one different character: small OCR noise ("2013" for "2018")."""
-    return len(a) == len(b) and sum(x != y for x, y in zip(a, b, strict=True)) <= 1
-
-
-def _money_near(amount: int, printed: set[int]) -> bool:
-    return any(one_digit_off(str(amount), str(p)) for p in printed)
-
-
-def _date_near(day: date, printed: set[date]) -> bool:
-    return any(one_digit_off(day.strftime("%Y%m%d"), p.strftime("%Y%m%d")) for p in printed)
-
-
-_ARABIC_WORD = re.compile(r"[؀-ۿ]")
-_LATIN_WORD = re.compile(r"[A-Za-z]")
-
-
-def one_script(name: str) -> str:
-    """A name printed in both scripts ("مركز الشفاء Al Shifa") keeps its Latin words, as the
-    OCR parser does; a name in one script is kept as it is."""
-    words = name.split()
-    latin = [w for w in words if _LATIN_WORD.search(w)]
-    if latin and any(_ARABIC_WORD.search(w) for w in words):
-        return " ".join(latin)
-    return name
-
-
-# "near": printed only within one digit of OCR noise. Kept, but under the confidence floor, so
-# the member is asked (1,500.00 must never quietly become 2,500.00).
 Verdict = Literal["kept", "near", "made_up", "implausible", "unparsed"]
 
 
@@ -160,7 +80,8 @@ def _check(
         qr_money = {"total": qr.total_with_vat, "vat_total": qr.vat_total} if qr else {}
         if amount == qr_money.get(name) or amount in evidence.money:
             return "kept", str(amount)
-        return ("near" if _money_near(amount, evidence.money) else "made_up"), str(amount)
+        near = money_near(amount, evidence.money) or indic_digits(str(amount), evidence)
+        return ("near" if near else "made_up"), str(amount)
     if name == "treatment_date":
         found = first_date(fix_digits(raw)[0], years)
         if found is None:
@@ -172,32 +93,24 @@ def _check(
         qr_day = None if qr is None else local_date_from_text(qr.timestamp, offset)
         if day == qr_day or day in evidence.dates:
             return "kept", day.isoformat()
-        return ("near" if _date_near(day, evidence.dates) else "made_up"), day.isoformat()
+        near = date_near(day, evidence.dates) or indic_digits(day.strftime("%d%m%Y"), evidence)
+        return ("near" if near else "made_up"), day.isoformat()
     if name == "vat_number":
         digits = "".join(c for c in fix_digits(raw)[0] if c.isdigit())
         if not re.fullmatch(cfg.vat_number_pattern, digits):
             return "implausible", None
-        printed = _digits_printed(digits, evidence.digits) or (
+        printed = digits_printed(digits, evidence.digits) or (
             qr is not None and qr.vat_number == digits
         )
         return ("kept" if printed else "made_up"), digits
     value = one_script(raw.strip())
     if not value:
         return "unparsed", None
-    if name == "patient_name" and _on_a_staff_row(value, evidence.rows, cfg.staff_words):
+    if name == "patient_name" and on_a_staff_row(value, evidence.rows, cfg.staff_words):
         return "implausible", None  # the salesperson or cashier, not the patient (core day 4b)
     on_qr = qr is not None and name == "provider_name" and qr.seller_name.strip() == value
     printed = on_qr or name_is_printed(value, evidence.text, cfg.ground_ratio)
     return ("kept" if printed else "made_up"), value
-
-
-def _on_a_staff_row(value: str, rows: Sequence[str], staff_words: Sequence[str]) -> bool:
-    """The name is printed on a row labeled as staff (salesperson, cashier, pharmacist)."""
-    target = normalize_text(value)
-    labels = [normalize_text(word) for word in staff_words]
-    return bool(target) and any(
-        target in row and any(label in row for label in labels) for row in rows
-    )
 
 
 def _qr_truth(qr: ZatcaInvoice | None, offset_hours: int) -> dict[FieldName, str]:
