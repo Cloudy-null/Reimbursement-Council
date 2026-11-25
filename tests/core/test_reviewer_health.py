@@ -134,3 +134,22 @@ def test_health_report_states() -> None:
     benched = after_golden_check(healthy(), results(0), config(), MODEL, PROMPT, NOW)
     report = health_report(benched, True, MODEL, PROMPT)
     assert report.state == "benched" and report.bench_reason
+
+
+def test_monitors_wait_for_twenty_live_answers_so_a_short_demo_cannot_trip_them() -> None:
+    """fix/monitor: 4 of 10 answers thrown out once benched the reviewer during a test run."""
+    assert config().monitor_min_votes == 20
+    health = healthy()
+    for _ in range(19):
+        health = record_review(health, discarded(), config(), NOW)
+    assert health.status == "healthy"  # 19 answers, all thrown out: not judged yet
+    health = record_review(health, discarded(), config(), NOW)
+    assert health.status == "benched"  # the 20th: now judged
+
+
+def test_commands_in_tests_never_use_the_real_data_folder() -> None:
+    from pathlib import Path
+
+    from reimbursement_council.cli.data_dir import default_data_dir
+
+    assert default_data_dir().resolve() != Path("data").resolve()

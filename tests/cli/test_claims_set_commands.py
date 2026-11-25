@@ -15,7 +15,12 @@ from tests.factories import REPO_CONFIG
 
 
 def run(*argv: str) -> int:
-    return main(list(argv))
+    """run-set here measures the council, not the AI reviewer (it has its own tests): with the
+    reviewer on, every run would first run its golden check against the real local model."""
+    args = list(argv)
+    if args[:1] == ["run-set"] and not any("case_reviewer" in a for a in args):
+        args += ["--set", "members.case_reviewer.enabled=false"]
+    return main(args)
 
 
 def test_make_claims_writes_a_runnable_folder(tmp_path: Path) -> None:
@@ -393,7 +398,7 @@ def test_run_set_with_a_switch_off_and_the_fix_simulation(tmp_path: Path) -> Non
         == 0
     )
     off = json.loads((out / "off.json").read_text(encoding="utf-8"))
-    assert off["overrides"] == ["self_fix_enabled=false"] and "self_fix" not in off["lanes"]
+    assert off["overrides"][0] == "self_fix_enabled=false" and "self_fix" not in off["lanes"]
     assert run("run-set", str(out), "--simulate-fix", "--results-name", "fix.json", *common) == 0
     fixed = json.loads((out / "fix.json").read_text(encoding="utf-8"))
     assert fixed["simulate_fix"] is True and "self_fix_success_rate" in fixed["metrics"]

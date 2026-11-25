@@ -12,6 +12,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from reimbursement_council.adapters.storage import ClaimStore
+from reimbursement_council.cli.data_dir import default_data_dir
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.core.dates import local_date_of
 from reimbursement_council.core.new_member import NewMemberError, NewMemberForm, build_new_member
@@ -39,7 +40,7 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
         "--used", action="append", default=[], help="BENEFIT=SAR used so far. Repeat it."
     )
     command.add_argument("--config-dir", type=Path, default=Path("config"))
-    command.add_argument("--data-dir", type=Path, default=Path("data"))
+    command.add_argument("--data-dir", type=Path, default=default_data_dir())
 
 
 def _used(pairs: list[str]) -> dict[str, str]:

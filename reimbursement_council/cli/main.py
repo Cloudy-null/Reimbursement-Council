@@ -33,6 +33,7 @@ from reimbursement_council.cli import (
     run_set,
     sheet_sets,
 )
+from reimbursement_council.cli.data_dir import default_data_dir
 from reimbursement_council.config.loader import ConfigError, load_settings
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.core.money import format_sar
@@ -72,7 +73,7 @@ def _parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
     serve.add_argument("--config-dir", type=Path, default=Path("config"))
-    serve.add_argument("--data-dir", type=Path, default=Path("data"))
+    serve.add_argument("--data-dir", type=Path, default=default_data_dir())
     serve.add_argument("--reader", choices=["easyocr", "qr_only", "ollama"], default=None)
     return parser
 
