@@ -81,6 +81,7 @@ def test_live_test_runs_the_whole_member_path_and_writes_a_report(
     assert record["error"] is None
     assert record["lane"] in {"auto_approve", "auto_reject", "self_fix", "human_review"}
     assert record["schema_valid"] is True
+    assert isinstance(record["check_page"], list)
     assert record["seconds"]["total"] >= record["seconds"]["upload_and_read"] > 0
     assert report["summary"]["finished"] == 1
     assert (out / "one.export.json").is_file()
