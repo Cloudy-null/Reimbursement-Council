@@ -648,10 +648,11 @@ Synthetic check set, 60 claims (seed 12; regenerated as data/sets/abl/check_v2 s
   cross checks off       catch rate 0.0 (on: 3 of 3, false alarms 0 of 57)
   export                 60 of 60 valid, 21 ready for processing
 Real-derived synthetic optical set, 20 claims: self_fix 12, human_review 6, auto_reject 2;
-  false rejects 0; expected lane matched. Patient name false alarms 0.45 (from 0.65 at
+  false rejects 0; expected lane right on 8 of 8 claims that have one. Patient name false alarms 0.45 (from 0.65 at
   82a1e98 and 0.70 at 3924032): the model took the salesperson, the OCR parser took a city
   for the patient label; both fixed, the rest is still a CHECK.
-Dental set, 6 claims: self_fix 4, human_review 1, auto_approve 1; precision 1.0.
+Dental set, 6 claims: self_fix 4, human_review 1, auto_approve 1; precision 1.0; expected lane
+  right on 3 of 3.
 Real e2e, 50: self_fix 50, 0 wrong approvals, 0 false rejects.
 Real SROIE, 60 (read-sroie): model + EasyOCR provider 0.5167, date 0.6, total 0.6167, made-up
   rate 0.2885; EasyOCR alone 0.35, 0.5333, 0.3333.
