@@ -7,6 +7,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from reimbursement_council.cli.data_dir import default_data_dir
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.pipeline.case_review import make_case_reviewer
 
@@ -23,7 +24,7 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     ):
         command = commands.add_parser(name, help=text)
         command.add_argument("--config-dir", type=Path, default=Path("config"))
-        command.add_argument("--data-dir", type=Path, default=Path("data"))
+        command.add_argument("--data-dir", type=Path, default=default_data_dir())
 
 
 def check_reviewer(args: argparse.Namespace) -> int:

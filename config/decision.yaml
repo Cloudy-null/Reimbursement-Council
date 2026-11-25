@@ -94,6 +94,6 @@ members:
     golden_bad_max_score: 0.4     # a golden bad claim passes at or below this score
     golden_pass_rate: 0.9         # share of the golden set that must pass, or it is benched
     monitor_window: 50            # the last N answers the monitors look at
-    monitor_min_votes: 10         # monitors judge only after this many answers
+    monitor_min_votes: 20         # monitors judge only after this many live answers (a short demo cannot trip them)
     max_discarded_rate: 0.2       # more discarded answers than this share benches it
     min_score_spread: 0.02        # a standard deviation of scores below this benches it

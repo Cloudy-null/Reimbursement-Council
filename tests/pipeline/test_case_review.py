@@ -262,7 +262,7 @@ def test_a_reviewer_that_starts_answering_wrongly_is_benched(tmp_path: Path) -> 
 
     reviewer = service(tmp_path, FakeModel(goes_bad))
     statuses = []
-    for number in range(15):
+    for number in range(30):  # the monitors judge after 20 answers (fix/monitor)
         claim = fixture("clean").model_copy(update={"claim_id": f"claim-{number}"})
         decision = decide(claim, enabled_settings(), tmp_path / f"{number}.sqlite", reviewer)
         assert decision.case_review is not None

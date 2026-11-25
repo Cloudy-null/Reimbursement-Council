@@ -18,6 +18,7 @@ from reimbursement_council.adapters.ocr_engine import CachedOcrEngine, EasyOcrEn
 from reimbursement_council.adapters.readers import make_reader_for
 from reimbursement_council.adapters.storage import ClaimStore
 from reimbursement_council.cli.calibration import fit_calibration
+from reimbursement_council.cli.data_dir import default_data_dir
 from reimbursement_council.config.loader import load_settings
 from reimbursement_council.config.models import DecisionConfig, Settings
 from reimbursement_council.core.models.decision import Decision
@@ -61,7 +62,9 @@ def add_commands(commands: "argparse._SubParsersAction[argparse.ArgumentParser]"
     )
     run.add_argument("--config-dir", type=Path, default=Path("config"))
     run.add_argument("--ocr-cache", type=Path, default=Path("data/cache/ocr"))
-    run.add_argument("--data-dir", type=Path, default=Path("data"), help="Reviewer health file.")
+    run.add_argument(
+        "--data-dir", type=Path, default=default_data_dir(), help="Reviewer health file."
+    )
     run.add_argument(
         "--no-ocr-cache",
         action="store_true",
