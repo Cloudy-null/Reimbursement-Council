@@ -1,4 +1,5 @@
-"""SQLite storage for decisions and for receipts already sent (duplicate check)."""
+"""SQLite storage for decisions, receipts already sent (duplicate check) and members added
+by hand."""
 
 import logging
 import sqlite3
@@ -12,6 +13,7 @@ from pydantic import AwareDatetime
 from reimbursement_council.core.models.claim import Claim, ReaderOutput
 from reimbursement_council.core.models.common import Halalas, Model
 from reimbursement_council.core.models.decision import Decision
+from reimbursement_council.core.new_member import NewMember
 from reimbursement_council.core.rules import SeenReceipts
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,11 @@ CREATE TABLE IF NOT EXISTS receipts (
     fingerprint TEXT,
     weak_key TEXT,
     lane TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS added_members (
+    policy_id TEXT PRIMARY KEY,
+    added_at TEXT NOT NULL,
+    json TEXT NOT NULL
 );
 """
 
@@ -187,3 +194,20 @@ class ClaimStore:
             fingerprints=frozenset(row[1] for row in rows if row[1] is not None),
             weak_keys=frozenset(row[2] for row in rows if row[2] is not None),
         )
+
+    def save_new_member(self, added: NewMember, added_at: AwareDatetime) -> None:
+        """One row per added policy: the member, dependants, policy and history as JSON."""
+        with self._connection() as connection:
+            connection.execute(
+                "INSERT INTO added_members (policy_id, added_at, json) VALUES (?, ?, ?)",
+                (added.policy.policy_id, added_at.isoformat(), added.model_dump_json()),
+            )
+        logger.info("added policy %s with %d people", added.policy.policy_id, len(added.members))
+
+    def list_new_members(self) -> list[NewMember]:
+        """Oldest first, so the people list keeps its order."""
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT json FROM added_members ORDER BY added_at, rowid"
+            ).fetchall()
+        return [NewMember.model_validate_json(row[0]) for row in rows]

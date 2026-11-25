@@ -2,6 +2,8 @@
 
 from typing import Literal
 
+from reimbursement_council.web.i18n_members import MEMBER_TEXT
+
 Language = Literal["en", "ar"]
 
 TEXT: dict[str, dict[str, str]] = {
@@ -278,6 +280,9 @@ TEXT: dict[str, dict[str, str]] = {
         "cat_dental": "أسنان",
     },
 }
+
+for _language, _strings in MEMBER_TEXT.items():
+    TEXT[_language].update(_strings)
 
 
 def text_for(language: str) -> dict[str, str]:

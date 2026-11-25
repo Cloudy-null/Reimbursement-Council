@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<form class="card" method="post" action="/members">
+  <h2>{{ t.member_title }}</h2>
+  <p class="note">{{ t.member_intro }}</p>
+  {% if errors %}<p class="field-error" role="alert">{{ t.member_errors }}</p>{% endif %}
+  <input type="hidden" name="lang" value="{{ lang }}">
+  <label for="name">{{ t.member_name }}
+    <input id="name" type="text" name="name" value="{{ form.name }}" maxlength="80" required dir="auto">
+    {% if 'name' in errors %}<span class="field-error">{{ t[errors['name']] }}</span>{% endif %}
+  </label>
+  <label for="name_ar">{{ t.member_name_ar }}
+    <input id="name_ar" type="text" name="name_ar" value="{{ form.name_ar }}" maxlength="80" dir="rtl" lang="ar">
+    {% if 'name_ar' in errors %}<span class="field-error">{{ t[errors['name_ar']] }}</span>{% endif %}
+  </label>
+  <label for="tier">{{ t.member_tier }}
+    <select id="tier" name="tier">
+      {% for tier in tiers %}<option value="{{ tier }}"{% if tier == form.tier %} selected{% endif %}>{{ tier }}</option>{% endfor %}
+    </select>
+    {% if 'tier' in errors %}<span class="field-error">{{ t[errors['tier']] }}</span>{% endif %}
+  </label>
+  <label for="dependants">{{ t.member_dependants }}
+    <textarea id="dependants" name="dependants" rows="3" dir="auto">{{ form.dependants | join('\n') }}</textarea>
+    {% if 'dependants' in errors %}<span class="field-error">{{ t[errors['dependants']] }}</span>{% endif %}
+  </label>
+  <h2>{{ t.member_used_title }}</h2>
+  {% for benefit in benefits %}
+  <label for="{{ benefit.field }}">{{ benefit.label }}
+    <input id="{{ benefit.field }}" type="text" name="{{ benefit.field }}" value="{{ benefit.value }}" inputmode="decimal" placeholder="0.00" dir="ltr">
+    {% if benefit.field in errors %}<span class="field-error">{{ t[errors[benefit.field]] }}</span>{% endif %}
+  </label>
+  {% endfor %}
+  {% for field in unknown_benefits %}{% if field in errors %}
+  <p class="field-error"><span dir="ltr">{{ field[5:] }}</span>: {{ t[errors[field]] }}</p>
+  {% endif %}{% endfor %}
+  <div class="btns"><button class="btn primary" type="submit">{{ t.member_save }}</button></div>
+</form>
+{% endblock %}

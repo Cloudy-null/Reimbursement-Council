@@ -24,6 +24,7 @@ from reimbursement_council.cli import (
     claims_set,
     export,
     live_test,
+    members,
     real,
     receipts,
     reviewer,
@@ -60,6 +61,7 @@ def _parser() -> argparse.ArgumentParser:
     real.add_commands(commands)
     reviewer.add_commands(commands)
     live_test.add_commands(commands)
+    members.add_commands(commands)
     serve = commands.add_parser("serve", help="Start the website on this computer.")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -116,7 +118,7 @@ def _serve(args: argparse.Namespace) -> int:
     context = WebContext(
         settings=settings,
         reference=make_claim_set(7, 0, settings).reference,
-        store=ClaimStore(args.data_dir / "web" / "claims.sqlite"),
+        store=ClaimStore(members.web_database(args.data_dir)),
         reader_for=make_reader_for(settings, engine),
         uploads=args.data_dir / "web" / "uploads",
         samples=args.data_dir / "web" / "samples",
@@ -150,6 +152,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         **run_set.COMMANDS,
         **real.COMMANDS,
         **reviewer.COMMANDS,
+        **members.COMMANDS,
         "live-test": live_test.live_test,
     }
     if args.command in commands:

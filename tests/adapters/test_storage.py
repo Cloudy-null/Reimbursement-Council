@@ -134,3 +134,18 @@ def test_readings_round_trip_and_claims_list(tmp_path: Path) -> None:
     assert store.load_readings("claim-b") == {}
     store.save_claim(make_claim())
     assert [c.claim_id for c in store.list_claims()] == [make_claim().claim_id]
+
+
+def test_added_members_round_trip(tmp_path: Path) -> None:
+    from tests.core.test_new_member import build
+
+    store = ClaimStore(tmp_path / "db.sqlite")
+    assert store.list_new_members() == []
+    first = build(used={"dental": "600"})
+    second = build(name="Omar Saleh", dependants=("Lina Saleh",))
+    second = second.model_copy(
+        update={"policy": second.policy.model_copy(update={"policy_id": "policy-two"})}
+    )
+    store.save_new_member(first, SUBMITTED_AT)
+    store.save_new_member(second, SUBMITTED_AT)
+    assert ClaimStore(tmp_path / "db.sqlite").list_new_members() == [first, second]

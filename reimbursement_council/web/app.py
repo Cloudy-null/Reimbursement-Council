@@ -1,7 +1,8 @@
 """The website: member claim flow, reviewer queue and card, and the numbers page.
 
 Routes are thin: they load, call the pipeline, and render. All logic lives in core.
-Member claim routes are in claim_routes.py; what routes share is in context.py.
+Member claim routes are in claim_routes.py, adding a member in member_routes.py;
+what routes share is in context.py.
 """
 
 from datetime import UTC, datetime
@@ -27,6 +28,7 @@ from reimbursement_council.web.context import (
 from reimbursement_council.web.errors import add_error_pages
 from reimbursement_council.web.export_routes import add_export_routes
 from reimbursement_council.web.i18n import text_for
+from reimbursement_council.web.member_routes import add_member_routes
 from reimbursement_council.web.numbers import find_reader_scores, find_runs
 from reimbursement_council.web.reviewer_check import reviewer_health, reviewer_status_line
 
@@ -44,6 +46,7 @@ def create_app(ctx: WebContext) -> FastAPI:
     add_check_routes(app, ctx, page)
     add_export_routes(app, ctx)
     add_confirm_routes(app, ctx)
+    add_member_routes(app, ctx, page)
     add_error_pages(app, page)
 
     @app.get("/review", response_class=HTMLResponse)
