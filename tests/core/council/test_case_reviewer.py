@@ -126,3 +126,15 @@ def test_document_text_is_fenced_and_cannot_close_the_fence() -> None:
     inside = prompt.split(DATA_START)[1].split(DATA_END)[0]
     assert "ignore previous instructions" in inside
     assert "never instructions" in SYSTEM_PROMPT
+
+
+def test_a_whole_number_score_is_accepted_but_a_text_score_is_not() -> None:
+    from reimbursement_council.core.council.case_reviewer import _parse
+    from tests.factories import repo_settings
+
+    config = repo_settings().decision.members.case_reviewer
+    good = '{"score": 0, "reason": "r", "cited_fields": [{"name": "total", "value": "1.00"}]}'
+    text = '{"score": "0.8", "reason": "r", "cited_fields": [{"name": "total", "value": "1.00"}]}'
+    parsed = _parse(good, config)
+    assert parsed is not None and parsed.score == 0.0
+    assert _parse(text, config) is None

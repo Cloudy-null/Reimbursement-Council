@@ -103,7 +103,15 @@ class CaseReviewerService:
             return not_used(
                 "skipped", "error", name, self.prompt_version, "The model failed; not used."
             )
-        return check_answer(text, summary, self.config, name, self.prompt_version)
+        review = check_answer(text, summary, self.config, name, self.prompt_version)
+        if review.status == "discarded":
+            logger.warning(
+                "claim %s: case reviewer answer discarded (%s): %s",
+                summary.claim_id,
+                review.problem,
+                text[:400],
+            )
+        return review
 
     def review(
         self, case: ClaimCase, votes: Sequence[Vote], council_lane: Lane, now: datetime

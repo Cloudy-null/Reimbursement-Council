@@ -6,6 +6,7 @@ every cited field is a value we really read. Otherwise the answer is discarded (
 a claim to a person (core/decision/reviewer_guard.py).
 """
 
+import json
 from typing import Any, Literal, get_args
 
 from pydantic import Field, ValidationError
@@ -42,6 +43,7 @@ def answer_schema(config: CaseReviewerConfig) -> dict[str, Any]:
             "cited_fields": {
                 "type": "array",
                 "minItems": config.min_cited_fields,
+                "maxItems": len(FIELD_NAMES),
                 "items": {
                     "type": "object",
                     "properties": {
@@ -89,8 +91,11 @@ def bad_citations(cited: list[CitedField], summary: ReviewSummary) -> list[str]:
 
 def _parse(text: str, config: CaseReviewerConfig) -> ReviewerAnswer | None:
     try:
-        answer = ReviewerAnswer.model_validate_json(text, strict=True)
-    except ValidationError:
+        data = json.loads(text)
+        if isinstance(data, dict) and type(data.get("score")) is int:
+            data["score"] = float(data["score"])  # 0 and 1 are fine numbers; "0.8" text is not
+        answer = ReviewerAnswer.model_validate(data, strict=True)
+    except (ValueError, ValidationError):
         return None
     reason = " ".join(answer.reason.split())
     if len(reason) > config.max_reason_characters:
