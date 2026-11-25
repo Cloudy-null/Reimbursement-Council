@@ -9,6 +9,22 @@ Bupa claim is used as a case study (docs/pitch/real_claim_case.md) with the memb
 Defaults: the local model reader (qwen3-vl:8b-instruct on our own PC, EasyOCR on the GPU) checked
 by EasyOCR, calibration on, the Bupa FAQ rules on, and the AI case reviewer on.
 
+## Precision and recall (SYNTHETIC check set, 60 claims, commit 120febe)
+
+Command: `run-set data/sets/abl/check_v2` (results y_check.json), measures from
+`evaluation/flag_metrics.py`. A claim "has a problem" when the generator's truth lists a defect;
+"flagged" means asked the member, sent to a person, or rejected.
+
+| Measure | Value | Count | Meaning |
+|---|---|---|---|
+| Approval precision | 1.0 | 21 of 21 approved | every automatic approval should be paid, at that amount |
+| Payable recall | 0.42 | 21 of 50 payable | share of payable claims approved with no person |
+| Problem precision | 0.6923 | 27 of 39 flagged | of the claims we stopped, the share with a real problem |
+| Problem recall | 0.9 | 27 of 30 with a problem | the other 3 were over a limit or overpriced and were paid the right lower amount |
+
+Real e2e (50 SROIE scans): not computed. Its labels only say each claim is a real receipt and
+the right payout is unknown, so these four measures would not mean anything there.
+
 ## The real claim
 
 | Number | Source |

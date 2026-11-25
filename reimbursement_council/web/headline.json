@@ -1,0 +1,56 @@
+{
+ "tiles": [
+  {
+   "value": "90%",
+   "en": {"title": "Bad claims caught before payment", "text": "27 of 30 claims with a problem were stopped, asked about or rejected. The other 3 were over a limit or overpriced and were paid the right lower amount."},
+   "ar": {"title": "مطالبات فيها مشكلة اكتشفت قبل الدفع", "text": "أوقفنا 27 من 30 مطالبة فيها مشكلة أو سألنا عنها أو رفضناها. والثلاث الباقية تجاوزت حدا أو سعرا فدُفع لها المبلغ الأقل الصحيح."},
+   "n": "30 claims with a problem", "kind": "synthetic", "source": "run-set data/sets/abl/check_v2, commit 120febe"
+  },
+  {
+   "value": "100%",
+   "en": {"title": "Approvals that were right", "text": "Every claim we approved with no person was right and paid the right amount (21 of 21). On 50 real receipts: no wrong approval."},
+   "ar": {"title": "موافقات صحيحة", "text": "كل مطالبة وافقنا عليها دون موظف كانت صحيحة ودُفع لها المبلغ الصحيح (21 من 21). وعلى 50 إيصالا حقيقيا: لا موافقة خاطئة."},
+   "n": "21 approved claims", "kind": "synthetic", "source": "run-set data/sets/abl/check_v2, commit 120febe; real e2e at ac2a7e4"
+  },
+  {
+   "value": "0",
+   "en": {"title": "Good claims wrongly rejected", "text": "No claim that should be paid was rejected (0 of 50). On 50 real receipts: 0 as well."},
+   "ar": {"title": "مطالبات سليمة رُفضت خطأ", "text": "لم نرفض أي مطالبة تستحق الدفع (0 من 50). وعلى 50 إيصالا حقيقيا: 0 أيضا."},
+   "n": "50 payable claims", "kind": "synthetic", "source": "run-set data/sets/abl/check_v2, commit 120febe; real e2e at ac2a7e4"
+  },
+  {
+   "value": "52%",
+   "en": {"title": "Claims decided with no person", "text": "31 of 60 claims were approved or rejected with no person. The rest asked the member one thing or went to a reviewer."},
+   "ar": {"title": "مطالبات حُسمت دون موظف", "text": "حُسمت 31 من 60 مطالبة بالموافقة أو الرفض دون موظف. والباقي سُئل فيه العضو عن شيء واحد أو أُرسل إلى مراجع."},
+   "n": "60 claims", "kind": "synthetic", "source": "run-set data/sets/abl/check_v2, commit 120febe"
+  }
+ ],
+ "measures": {
+  "source": "synthetic check set, 60 claims, commit 120febe (evaluation/flag_metrics.py)",
+  "rows": [
+   ["Approval precision", "1.0", "21 of 21 approved"],
+   ["Payable recall", "0.42", "21 of 50 payable"],
+   ["Problem precision", "0.6923", "27 of 39 flagged"],
+   ["Problem recall", "0.9", "27 of 30 with a problem"]
+  ],
+  "real_note": "Not computed on real receipts: their labels say only that they are real, and the right payout is unknown."
+ },
+ "real_reading": {
+  "source": "read-sroie, 60 real SROIE scans (Malaysian shop receipts), commit ac2a7e4",
+  "rows": [
+   ["Total right", "0.3333", "0.6167"],
+   ["Date right", "0.5333", "0.6"],
+   ["Shop name right", "0.35", "0.5167"]
+  ]
+ },
+ "real_claim": {
+  "en": "One real Bupa optical claim (used with the member's consent): our check page said 450 SAR before submit. Bupa paid 450 SAR. The frame sub-limit usage came from Bupa's answer.",
+  "ar": "مطالبة بصرية حقيقية واحدة من بوبا (بموافقة العضو): قالت صفحة المراجعة 450 ريالا قبل الإرسال. ودفعت بوبا 450 ريالا. وأُخذ المستخدم من حد الإطارات من رد بوبا.",
+  "source": "docs/pitch/real_claim_case.md, commit a8dd032"
+ },
+ "damage": {
+  "en": "150 damaged photos (10 kinds of damage, 3 strengths): 0 wrong approvals at every level. As photos get worse, claims go to the member or a person.",
+  "ar": "150 صورة متضررة (10 أنواع من الضرر بثلاث شدات): لا موافقة خاطئة في أي مستوى. كلما ساءت الصورة ذهبت المطالبة إلى العضو أو إلى موظف.",
+  "source": "synthetic optical claims, commit ac2a7e4"
+ }
+}
