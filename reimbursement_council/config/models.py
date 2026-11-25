@@ -238,6 +238,17 @@ class SyntheticConfig(ConfigModel):
 
     qr_share: Score
     defect_weights: dict[str, int]
+    # make-damage-set: for each damage kind, its strength at levels 1 to 5 (level 0 is no
+    # damage). Units differ per kind; see config/synthetic.yaml.
+    damage_suite: dict[str, list[float]] = Field(default_factory=dict)
+
+    @field_validator("damage_suite")
+    @classmethod
+    def five_levels_each(cls, suite: dict[str, list[float]]) -> dict[str, list[float]]:
+        for kind, strengths in suite.items():
+            if len(strengths) != 5 or any(value <= 0 for value in strengths):
+                raise ValueError(f"damage_suite.{kind} needs 5 strengths above 0 (levels 1 to 5)")
+        return suite
 
     @field_validator("defect_weights")
     @classmethod

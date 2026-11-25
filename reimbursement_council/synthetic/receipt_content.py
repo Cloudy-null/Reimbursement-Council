@@ -160,7 +160,7 @@ LAYOUT_BY_KIND: dict[ProviderKind, tuple[Layout, ...]] = {
 SAUDI = timezone(timedelta(hours=3))
 
 
-def _arabic_name(item: PriceListItem) -> str:
+def arabic_name(item: PriceListItem) -> str:
     return next((alias for alias in item.aliases if _ARABIC.search(alias)), item.description)
 
 
@@ -185,7 +185,7 @@ def make_receipt_content(
             PrintedItem(
                 service_code=code,
                 description_en=price.description,
-                description_ar=_arabic_name(price),
+                description_ar=arabic_name(price),
                 quantity=quantity,
                 unit_price=unit,
                 amount=unit * quantity,

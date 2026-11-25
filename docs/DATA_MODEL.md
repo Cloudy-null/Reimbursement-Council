@@ -152,4 +152,29 @@ GroundTruth
 - expected_lane (the lane a document defect should lead to: self_fix for the missing and mismatch defects, human_review for a contradicting edit, empty otherwise)
 - Planned, not built yet: qr_mismatch, arithmetic_error, multiple_patients, and a fixed version of each fixable defect (fixable, fixed_version_document_ids). CHECK in HANDOVER.
 
+### Optical, dental, damage and language sets (core day 4b)
+
+These sets are written by their own commands. The claim sets use the make-claims file format, so run-set can score them.
+
+Set-only defects (in KNOWN_DEFECTS as SET_ONLY_DEFECTS, weight 0 in config/synthetic.yaml; make-claims refuses any other weight, so make-claims sets stay the same for a seed):
+- missing_eye_test: an optical claim with no eye test, neither printed on the invoice ("الوصفة الطبية" block) nor as its own prescription. needs_missing is [[prescription]]. expected_lane self_fix; the fix adds the eye test.
+- missing_payment_proof: a credit invoice ("آجل") with no proof of payment. expected_lane self_fix; the fix adds a payment receipt (kind receipt). A Tabby invoice ("تابي") with no proof has no defect.
+- invalid_invoice: the invoice number or the shop's VAT number is not printed. expected_lane self_fix; the fix replaces the invoice with a corrected one.
+- missing_tooth_number: a dental invoice with no "رقم السن 14 / Tooth 14" line. expected_lane self_fix; the fix replaces the invoice.
+- The optical set also uses late (treatment more than 90 days before submission): should_pay false, correct_payout 0, expected_lane auto_reject.
+
+Extra keys in N.truth.json of make-optical-claims and make-dental-claims:
+- scenario (what the claim tests, for example frames_partly_used)
+- fields (what a perfect reader gets from the invoice: provider_name, vat_number, invoice_number, treatment_date, subtotal, vat_total, total, items; optical adds invoice_time, payment_method and prescription_on_invoice; dental adds patient_name and tooth_number)
+- fix ({file, kind, replace} as in make-claims, or null)
+- correct_payout always comes from calculate_payout with the member's history in reference.json. VAT is never paid. The frame sub-limit usage is in MemberHistory.limits_used["optical_frames"].
+- set.json adds label ("real-derived synthetic": layouts copied from real documents, every value made up) and kind (optical or dental).
+
+make-damage-set adds damage_suite ({kind, level}) to every truth file and ({kind, level, source}) to set.json. Everything else in the truth stays the same, including the old damage key.
+
+make-language-set truth (receipt_SEED_NNNN.truth.json, the make-receipts format read-accuracy reads) adds:
+- language (arabic_only, english_only, mixed, arabic_indic_digits, hijri_date, french, urdu; layout holds the same value, so read-accuracy groups by language)
+- supported (false for french and urdu: we ask for a translation)
+- hijri_date (only for hijri_date receipts: the Hijri date printed, from the tabular Islamic calendar). treatment_date stays the Gregorian date. Arabic-Indic receipts keep Western digits in the truth.
+
 Review and GroundTruth are built in later layers.

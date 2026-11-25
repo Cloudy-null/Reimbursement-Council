@@ -10,7 +10,7 @@ import random
 from datetime import UTC, date, datetime, timedelta
 
 from reimbursement_council.config.models import Settings
-from reimbursement_council.core.models.claim import Claim, Document, ExtractionResult, LineItem
+from reimbursement_council.core.models.claim import Claim, Document, LineItem
 from reimbursement_council.core.models.reference import (
     Member,
     MemberHistory,
@@ -18,7 +18,6 @@ from reimbursement_council.core.models.reference import (
     Provider,
     ReferenceData,
 )
-from reimbursement_council.core.payout import calculate_payout
 from reimbursement_council.synthetic.cases import (
     PEOPLE,
     GroundTruth,
@@ -41,9 +40,26 @@ from reimbursement_council.synthetic.receipt_content import (
     ReceiptOptions,
     make_receipt_content,
 )
+from reimbursement_council.synthetic.sheet_cases import truth_payout
 
-__all__ = ["PEOPLE", "GroundTruth", "SyntheticCase", "SyntheticSet", "make_claim_set", "member_id"]
+__all__ = [
+    "PEOPLE",
+    "SET_ONLY_DEFECTS",
+    "GroundTruth",
+    "SyntheticCase",
+    "SyntheticSet",
+    "make_claim_set",
+    "member_id",
+]
 
+# Made only by the optical and dental sets (make-optical-claims, make-dental-claims). They are
+# listed so config/synthetic.yaml can name them, always with weight 0 for make-claims.
+SET_ONLY_DEFECTS: tuple[str, ...] = (
+    "missing_eye_test",
+    "missing_payment_proof",
+    "invalid_invoice",
+    "missing_tooth_number",
+)
 # The defects this generator knows how to make. How often each appears is in
 # config/synthetic.yaml (defect_weights), which may name only these.
 KNOWN_DEFECTS: tuple[str, ...] = (
@@ -59,8 +75,10 @@ KNOWN_DEFECTS: tuple[str, ...] = (
     "unreadable",
     "tampered_total",
     *DOCUMENT_DEFECTS,
+    *SET_ONLY_DEFECTS,
 )
-DEFECTS = tuple(name for name in KNOWN_DEFECTS if name != "clean")
+# The defects make-claims mixes in. The set-only ones keep weight 0 here.
+DEFECTS = tuple(name for name in KNOWN_DEFECTS if name not in {"clean", *SET_ONLY_DEFECTS})
 HARD_RULE_DEFECTS = frozenset({"late", "inactive", "not_covered", "excluded", "duplicate"})
 
 REGULAR = range(len(PATIENTS))
@@ -136,16 +154,6 @@ def _correct_payout(
     receipt: ReceiptContent, policy: Policy, history: MemberHistory, settings: Settings
 ) -> int:
     """Our policy applied to the receipt's true values: the oracle for 'paid right'."""
-    from reimbursement_council.core.models.claim import ExtractedField  # local: tiny helper
-
-    vat = ExtractedField(
-        document_id="truth",
-        name="vat_total",
-        value=str(receipt.vat_total),
-        original_text="",
-        source="qr",
-        confidence=1.0,
-    )
     items = [
         LineItem(
             description=i.description_en,
@@ -157,9 +165,7 @@ def _correct_payout(
         )
         for i in receipt.items
     ]
-    perfect = ExtractionResult(document_id="truth", fields=[vat], line_items=items, checks=[])
-    payout = calculate_payout(perfect, policy, history, settings)
-    return 0 if payout is None else payout.calculated
+    return truth_payout(items, receipt.vat_total, policy, history, settings)
 
 
 def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
@@ -169,6 +175,12 @@ def make_claim_set(seed: int, count: int, settings: Settings) -> SyntheticSet:
     if unknown:
         raise ValueError(
             f"synthetic.yaml names defects the generator cannot make: {sorted(unknown)}"
+        )
+    set_only = sorted(n for n in SET_ONLY_DEFECTS if settings.synthetic.defect_weights.get(n))
+    if set_only:
+        raise ValueError(
+            f"synthetic.yaml gives make-claims a weight for set-only defects: {set_only}. "
+            "Use make-optical-claims or make-dental-claims for them, and keep their weight 0."
         )
     names, weights = zip(*settings.synthetic.defect_weights.items(), strict=True)
     for index in range(count):
