@@ -17,6 +17,7 @@ from reimbursement_council.adapters.readers import DocumentReader
 from reimbursement_council.config.models import Settings
 from reimbursement_council.core.claim_categories import claim_categories
 from reimbursement_council.core.cross_checks import cross_checks
+from reimbursement_council.core.decision.document_requests import shown_value
 from reimbursement_council.core.document_kinds import detect_kind
 from reimbursement_council.core.document_needs import document_needs
 from reimbursement_council.core.edit_evidence import apply_edits, judge_edit
@@ -162,8 +163,9 @@ def _edit_rules(
             rule="member_edit",
             outcome="not_sure",
             reason=(
-                f"The member typed {edit.typed_value} for the {edit.field}, the document shows "
-                f"{edit.read_value or 'nothing'}: it {edit.evidence_note}."
+                f"The member typed {shown_value(edit.field, edit.typed_value)} "
+                f"for the {edit.field}, the document shows "
+                f"{shown_value(edit.field, edit.read_value or 'nothing')}: it {edit.evidence_note}."
             ),
             fields=[edit.field],
         )

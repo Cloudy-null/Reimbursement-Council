@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from reimbursement_council.config.models import Settings
+from reimbursement_council.core.decision.document_requests import shown_value
 from reimbursement_council.core.models.decision import Decision
 from reimbursement_council.pipeline.export_claim import export_claim
 from reimbursement_council.web.context import WebContext, load_claim
@@ -45,6 +46,11 @@ def riskiest_first(decisions: Sequence[Decision]) -> list[Decision]:
     return sorted(decisions, key=lambda d: d.p_good)
 
 
+def _shown(edit: dict[str, Any], key: str) -> str:
+    value = edit.get(key)
+    return shown_value(str(edit.get("field")), str(value)) if value else "nothing"
+
+
 def why_reasons(export: dict[str, Any], lane_reason: str) -> list[str]:
     """Only what sent the claim to a person: rules not passed, checks failed, documents that
     disagree, missing documents and edits the evidence does not back."""
@@ -64,8 +70,8 @@ def why_reasons(export: dict[str, Any], lane_reason: str) -> list[str]:
     for edit in export.get("member_edits") or []:
         if edit.get("evidence") != "supports":
             reasons.append(
-                f"The member typed {edit.get('typed_value')} for {edit.get('field')}; "
-                f"we read {edit.get('read_value') or 'nothing'}."
+                f"The member typed {_shown(edit, 'typed_value')} for {edit.get('field')}; "
+                f"we read {_shown(edit, 'read_value')}."
             )
     if not reasons and lane_reason:
         reasons.append(lane_reason)
