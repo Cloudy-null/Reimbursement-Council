@@ -36,7 +36,8 @@ def _label(field: str, settings: Settings) -> str:
     return settings.messages.en.fields.get(field, field)
 
 
-def _shown(field: str, value: str) -> str:
+def shown_value(field: str, value: str) -> str:
+    """A money field in riyals (it is stored in halalas); any other field as it is."""
     if field in MONEY_FIELDS and value.isdigit():
         return f"{format_sar(int(value))} SAR"
     return value
@@ -126,7 +127,7 @@ def human_reasons(
         if edit.field in asked_fields:
             reasons.append(
                 f"The {_label(edit.field, settings)} is still not clear after a new photo; "
-                f"the member typed {_shown(edit.field, edit.typed_value)}."
+                f"the member typed {shown_value(edit.field, edit.typed_value)}."
             )
     for check in cross_checks:
         if check.passed is False and check.field in asked_fields:

@@ -77,3 +77,9 @@
 ## 2026-11-25: core day 4b, finished after the pause
 - Done: final reruns at ac2a7e4, reviewer back on (held-out 0.95, 0 wrong approvals), staff names and cities no longer read as the patient, Urdu found by its words, damage chart, numbers, summary, model safety, startup check only for an unchecked reviewer, e2e 4 of 4.
 - Tag: demo-ready-final-4.
+
+## 2026-11-26: final pitch deck
+- Done: 17 slide deck from the Tuwaiq template (python-pptx), PDF copy, QA_PREP.md with 12 judge questions, fresh English desktop screenshots of demo claims, stack icons from simple-icons (EasyOCR as a text badge).
+- Broke and fixed: the reviewer's why box printed typed money in halalas; now riyals (test added).
+- Decisions: sources go in speaker notes (the template's corner squares covered footers); "31 of 60" instead of a rounded percent.
+- Next: rehearse with the notes (timings add to about 12 minutes), check the reviewer status line before 09:00.
