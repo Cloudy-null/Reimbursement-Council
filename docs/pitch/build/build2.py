@@ -528,7 +528,7 @@ text(s, px + 0.4, 6.0, 5.4, 2.6, [
 status = card(s, px + 0.4, 8.75, 5.4, 1.4, fill="2A1A63", line=TEAL, radius=0.12)
 text(s, px + 0.65, 8.82, 4.9, 1.3, [
     [("Status now: healthy", {"bold": True, "color": TEAL, "font": HEAD, "size": 20})],
-    "Last check 2026-11-25 22:26 UTC, golden set 0.95"], size=16, color=WHITE, space=2,
+    "Last check 2026-11-26 03:19 UTC, golden set 0.95"], size=16, color=WHITE, space=2,
     anchor=MSO_ANCHOR.MIDDLE)
 footer(s, "Checks: docs/MODEL_SAFETY.md. Reviewer: tests/golden_v2/heldout, run once.")
 notes(s, "About 45 seconds.\n"
