@@ -1,5 +1,9 @@
 # Handover
 
+## pitch/final note (read first)
+Final deck: docs/pitch/Reimbursement_Council_Final.pptx (17 slides, Tuwaiq x Solve For Bupa template) and a PDF copy; Q&A answers in docs/pitch/QA_PREP.md. Built with python-pptx by docs/pitch/build/build.py from fresh demo-claim screenshots (docs/pitch/build/shots.py, a private server on a new data folder, no real claims); rendered with PowerPoint (render.ps1). Sources for each number are in the speaker notes. Fixed on the way (tag demo-ready-final-9): the reviewer's "Why this needs you" showed a typed total in halalas (99900) instead of 999.00 SAR. 897 unit tests and e2e 4 of 4 pass.
+CHECK: the deck's lines "Before she pressed send, we told her 450" follow the owner's wording; MODEL_SAFETY records the member differently, so change to "the member" if wanted. CHECK: the reviewer card's claim data shows the typed total with the read value (172.50, "Typed by member") instead of the typed 999.00. CHECK: the numbers page tile says 52% for 31 of 60 (0.5167): the deck uses "31 of 60".
+
 ## fix/monitor note (read first)
 Cause of the reviewer bench: the "discarded answers" monitor, 0.40 (4 of the last 10 answers) above the 0.20 limit, after 10 answers. A test-run artifact: unit tests ran run-set with the reviewer on (repo config) and the default data folder, so they asked the real model about tiny test claims and wrote the real data/reviewer/health.json. Fixed (tag demo-ready-final-8): commands take their data folder from RC_DATA_DIR (tests set a temporary one, checked by a test), run-set tests run without the reviewer, and the rolling monitors judge only after 20 live answers. check-reviewer: golden 0.95 (19 of 20, the miss is the cautious dental crown case), reviewer-enable done; the numbers page says "AI reviewer: healthy". 895 unit tests and e2e 4 of 4 pass.
 
