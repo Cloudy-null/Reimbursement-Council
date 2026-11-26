@@ -1,5 +1,8 @@
 # Handover
 
+## pitch/v2 note (read first)
+Deck v2: docs/pitch/Reimbursement_Council_Final_v2.pptx (20 slides) with a PDF copy and a read-aloud presenter script (Reimbursement_Council_Final_v2_script.md, made from the speaker notes, 11:55 planned). Changes from v1: every paragraph left to right (the template marked them all right to left), one large element screenshot per prototype slide (7 slides, about 2 minutes, from docs/pitch/build/shots2.py), "tuwaiq.club" moved clear of "Thank You", speed tile "about 8 s" tagged "Mixed, n=9" (real SROIE plus synthetic Arabic, per the owner), estimate "about 69 hours" (4,133 min). Build: docs/pitch/build/build2.py, script_from_notes.py. v1 files are kept.
+
 ## pitch/final note (read first)
 Final deck: docs/pitch/Reimbursement_Council_Final.pptx (17 slides, Tuwaiq x Solve For Bupa template) and a PDF copy; Q&A answers in docs/pitch/QA_PREP.md. Built with python-pptx by docs/pitch/build/build.py from fresh demo-claim screenshots (docs/pitch/build/shots.py, a private server on a new data folder, no real claims); rendered with PowerPoint (render.ps1). Sources for each number are in the speaker notes. Fixed on the way (tag demo-ready-final-9): the reviewer's "Why this needs you" showed a typed total in halalas (99900) instead of 999.00 SAR. 897 unit tests and e2e 4 of 4 pass.
 CHECK: the deck's lines "Before she pressed send, we told her 450" follow the owner's wording; MODEL_SAFETY records the member differently, so change to "the member" if wanted. CHECK: the reviewer card's claim data shows the typed total with the read value (172.50, "Typed by member") instead of the typed 999.00. CHECK: the numbers page tile says 52% for 31 of 60 (0.5167): the deck uses "31 of 60".

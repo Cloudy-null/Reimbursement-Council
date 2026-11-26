@@ -83,3 +83,8 @@
 - Broke and fixed: the reviewer's why box printed typed money in halalas; now riyals (test added).
 - Decisions: sources go in speaker notes (the template's corner squares covered footers); "31 of 60" instead of a rounded percent.
 - Next: rehearse with the notes (timings add to about 12 minutes), check the reviewer status line before 09:00.
+
+## 2026-11-26: pitch deck v2
+- Done: v2 deck (20 slides), PDF, presenter script from the speaker notes; left-to-right text on every slide; one large screenshot per prototype slide; Thank You spacing; speed and estimate wording.
+- Decisions: the speed tile is tagged Mixed (real SROIE plus synthetic Arabic), as the owner described the 9 stand-in claims.
+- Next: rehearse from the script; reviewer check before 09:00.
